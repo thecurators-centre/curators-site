@@ -322,13 +322,20 @@
             Спасибо! Ваша заявка успешно отправлена. Мы свяжемся с вами в ближайшее время.
         </div>
 
-        <form class="form-card" action="https://formsubmit.co/thecurators@mail.ru" method="POST">
+        <form class="form-card" action="https://api.web3forms.com/submit" method="POST">
 
-            <!-- Настройки FormSubmit -->
-            <input type="hidden" name="_subject" value="Новая заявка с сайта The Curator’s">
-            <input type="hidden" name="_captcha" value="true">
-            <!-- Вот та самая строка перенаправления, которую я по ошибке удалил -->
-            <input type="hidden" name="_next" value="https://tumanov-creator.github.io/curators-site/enroll.html?success=1">
+            <!-- Твой ключ Web3Forms -->
+            <input type="hidden" name="access_key" value="948046a5-72db-4117-ab0d-3ec047fd0397">
+            
+            <!-- Настройки письма -->
+            <input type="hidden" name="subject" value="Новая заявка с сайта The Curator’s">
+            <input type="hidden" name="from_name" value="The Curator's Site">
+            
+            <!-- Перенаправление после отправки (возврат на сайт) -->
+            <input type="hidden" name="redirect" value="https://tumanov-creator.github.io/curators-site/enroll.html?success=1">
+            
+            <!-- Скрытый чекбокс для защиты от спам-ботов -->
+            <input type="checkbox" name="botcheck" style="display: none;">
 
             <!-- Имя и фамилия родителя -->
             <div class="form-group">
@@ -419,11 +426,8 @@
 
     <!-- Скрипт для показа сообщения об успехе -->
     <script>
-        // Проверяем, есть ли в адресе ?success=1
         if (window.location.search.includes('success=1')) {
-            // Показываем сообщение
             document.getElementById('success-message').style.display = 'block';
-            // Прокручиваем страницу к сообщению, чтобы его было видно
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
