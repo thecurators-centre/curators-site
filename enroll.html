@@ -265,6 +265,20 @@
             margin-top: 20px;
         }
 
+        /* Сообщение об успехе */
+        .success-message {
+            display: none;
+            background: rgba(197, 240, 90, 0.1);
+            border: 1px solid var(--accent-lime);
+            color: var(--accent-lime);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+
         footer {
             padding: 50px 10%;
             text-align: center;
@@ -302,11 +316,19 @@
     </section>
 
     <section class="form-section">
+        
+        <!-- Блок сообщения об успехе -->
+        <div id="success-message" class="success-message">
+            Спасибо! Ваша заявка успешно отправлена. Мы свяжемся с вами в ближайшее время.
+        </div>
+
         <form class="form-card" action="https://formsubmit.co/thecurators@mail.ru" method="POST">
 
             <!-- Настройки FormSubmit -->
             <input type="hidden" name="_subject" value="Новая заявка с сайта The Curator’s">
             <input type="hidden" name="_captcha" value="true">
+            <!-- Вот та самая строка перенаправления, которую я по ошибке удалил -->
+            <input type="hidden" name="_next" value="https://tumanov-creator.github.io/curators-site/enroll.html?success=1">
 
             <!-- Имя и фамилия родителя -->
             <div class="form-group">
@@ -368,7 +390,7 @@
                         <span>WhatsApp</span>
                     </label>
                     <label class="checkbox-item">
-                        <input type="checkbox" name="social[]" value="VK">
+                        <input type="checkbox" name="social[]" value="ВК">
                         <span>ВК</span>
                     </label>
                     <label class="checkbox-item">
@@ -394,6 +416,17 @@
         &copy; 2026 The Curator’s. Все права защищены. <br>
         Прогресс, у которого есть маршрут.
     </footer>
+
+    <!-- Скрипт для показа сообщения об успехе -->
+    <script>
+        // Проверяем, есть ли в адресе ?success=1
+        if (window.location.search.includes('success=1')) {
+            // Показываем сообщение
+            document.getElementById('success-message').style.display = 'block';
+            // Прокручиваем страницу к сообщению, чтобы его было видно
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
 
 </body>
 </html>
