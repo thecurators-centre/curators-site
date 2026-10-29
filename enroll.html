@@ -331,8 +331,8 @@
             <input type="hidden" name="subject" value="Новая заявка с сайта The Curator’s">
             <input type="hidden" name="from_name" value="The Curator's Site">
             
-            <!-- Перенаправление после отправки (возврат на сайт) -->
-            <input type="hidden" name="redirect" value="https://tumanov-creator.github.io/curators-site/enroll.html?success=1">
+            <!-- ИСПРАВЛЕНО: правильное имя параметра redirect_url -->
+            <input type="hidden" name="redirect_url" value="https://tumanov-creator.github.io/curators-site/enroll.html?success=1">
             
             <!-- Скрытый чекбокс для защиты от спам-ботов -->
             <input type="checkbox" name="botcheck" style="display: none;">
@@ -358,7 +358,8 @@
             <!-- Предмет -->
             <div class="form-group">
                 <label>Какой предмет нужен? <span class="req">*</span></label>
-                <select name="subject" required>
+                <!-- ИСПРАВЛЕНО: переименовано name="subject" в name="form_subject", добавлены value -->
+                <select name="form_subject" required>
                     <option value="" disabled selected>Выберите направление</option>
                     <option value="Русский язык ОГЭ и олимпиады">Русский язык ОГЭ и олимпиады</option>
                     <option value="Японский язык">Японский язык</option>
