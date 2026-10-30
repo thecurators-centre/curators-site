@@ -48,6 +48,7 @@
         }
         .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
         .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
+        
         .profile-header {
             background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
             padding: 40px;
@@ -82,6 +83,7 @@
             margin-top: 10px;
             backdrop-filter: blur(5px);
         }
+        
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -94,11 +96,8 @@
             border-radius: 24px;
             border: 1px solid rgba(244, 243, 238, 0.05);
         }
-        .info-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            color: var(--accent-lime);
-        }
+        .info-card h3 { font-size: 1.1rem; margin-bottom: 20px; color: var(--accent-lime); }
+        
         .level-bar-container {
             background: var(--bg-color);
             height: 20px;
@@ -117,7 +116,9 @@
             font-size: 0.8rem;
             font-weight: 800;
             color: var(--bg-color);
+            transition: width 1s ease-in-out;
         }
+        
         .topics-list, .iom-list { list-style: none; }
         .topics-list li, .iom-list li {
             padding: 12px 0;
@@ -129,6 +130,7 @@
         .topics-list li:last-child, .iom-list li:last-child { border-bottom: none; }
         .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
         .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
+        
         .highlight-card {
             background: var(--card-bg);
             padding: 30px;
@@ -136,6 +138,7 @@
             border-left: 4px solid var(--accent-purple);
         }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
+
         @media (max-width: 768px) {
             .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
             .info-grid { grid-template-columns: 1fr; }
@@ -144,50 +147,123 @@
     </style>
 </head>
 <body>
+
     <header>
         <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
-            <span>Ученик: Каин Адамсон</span>
+            <span id="header-name">Ученик</span>
             <a href="login.html" class="btn-logout">Выйти</a>
         </div>
     </header>
+
     <div class="container">
+        <!-- Профиль -->
         <div class="profile-header">
-            <div class="avatar">К</div>
+            <div class="avatar" id="avatar-letter">К</div>
             <div class="profile-info">
-                <h1>Каин Адамсон</h1>
-                <p>Возраст: 14 лет • 8 класс</p>
-                <div class="subject-tag">Предмет: Английский язык</div>
+                <h1 id="full-name">Загрузка...</h1>
+                <p id="age-class">...</p>
+                <div class="subject-tag" id="subject-tag">...</div>
             </div>
         </div>
+
         <div class="info-grid">
+            <!-- Уровень знаний -->
             <div class="info-card">
                 <h3>Уровень знаний</h3>
-                <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">4 / 5</p>
+                <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;" id="level-text">- / 5</p>
                 <div class="level-bar-container">
-                    <div class="level-bar-fill" style="width: 80%;">80%</div>
+                    <div class="level-bar-fill" id="level-bar" style="width: 0%;"></div>
                 </div>
-                <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Отличный прогресс! Осталось совсем немного до идеала.</p>
+                <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
             </div>
+
+            <!-- Пройденные темы -->
             <div class="info-card">
                 <h3>Пройденные темы</h3>
-                <ul class="topics-list">
-                    <li>Present Simple & Continuous</li>
-                    <li>Past Simple & Present Perfect</li>
-                    <li>Модальные глаголы (Can, Could, May)</li>
-                    <li>Фразовые глаголы (базовый уровень)</li>
+                <ul class="topics-list" id="topics-list">
+                    <li>Пока нет данных</li>
                 </ul>
             </div>
         </div>
+
+        <!-- ИОМ -->
         <div class="highlight-card">
             <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
-            <ul class="iom-list">
-                <li><strong>Цель:</strong> Подготовка к международному экзамену Cambridge PET.</li>
-                <li><strong>Ближайшая задача:</strong> Освоить тему "Условные предложения" (Conditionals 1, 2, 3).</li>
-                <li><strong>Рекомендация:</strong> Начать читать адаптированную книгу "The Little Prince" на английском языке.</li>
-                <li><strong>Следующее занятие:</strong> Разбор устной части экзамена, практика диалогов.</li>
+            <ul class="iom-list" id="iom-list">
+                <li>Пока нет данных</li>
             </ul>
         </div>
     </div>
+
+    <script>
+        // 1. Пытаемся найти Каина в базе данных (localStorage)
+        let students = JSON.parse(localStorage.getItem('curators_students')) || [];
+        
+        // Ищем ученика, в имени или фамилии которого есть "Каин"
+        let cain = students.find(s => 
+            (s.name && s.name.toLowerCase().includes('каин')) || 
+            (s.surname && s.surname.toLowerCase().includes('каин'))
+        );
+
+        // Если админ не создал Каина, используем тестовые данные
+        if (!cain) {
+            cain = {
+                surname: 'Адамсон',
+                name: 'Каин',
+                patronymic: '',
+                age: '14',
+                grade: '8',
+                subject: 'Английский язык',
+                level: '4',
+                topics: 'Present Simple & Continuous\nPast Simple & Present Perfect\nМодальные глаголы (Can, Could, May)\nФразовые глаголы (базовый уровень)',
+                iom: 'Цель: Подготовка к международному экзамену Cambridge PET.\nБлижайшая задача: Освоить тему "Условные предложения" (Conditionals 1, 2, 3).\nРекомендация: Начать читать адаптированную книгу "The Little Prince".'
+            };
+        }
+
+        // 2. Заполняем страницу данными
+        document.getElementById('header-name').innerText = `Ученик: ${cain.name}`;
+        document.getElementById('full-name').innerText = `${cain.surname} ${cain.name}`;
+        document.getElementById('age-class').innerText = `Возраст: ${cain.age || '?'} лет • ${cain.grade || '?'} класс`;
+        document.getElementById('subject-tag').innerText = `Предмет: ${cain.subject || 'Не указан'}`;
+        document.getElementById('avatar-letter').innerText = cain.name.charAt(0).toUpperCase();
+
+        // Уровень
+        const level = parseInt(cain.level) || 0;
+        document.getElementById('level-text').innerText = `${level} / 5`;
+        const bar = document.getElementById('level-bar');
+        bar.style.width = `${(level / 5) * 100}%`;
+        bar.innerText = level > 0 ? `${level * 20}%` : '';
+
+        // Пройденные темы (разбиваем по переносу строки)
+        const topicsList = document.getElementById('topics-list');
+        topicsList.innerHTML = '';
+        if (cain.topics) {
+            cain.topics.split('\n').forEach(topic => {
+                if (topic.trim()) {
+                    const li = document.createElement('li');
+                    li.innerText = topic.trim();
+                    topicsList.appendChild(li);
+                }
+            });
+        } else {
+            topicsList.innerHTML = '<li>Пока нет пройденных тем</li>';
+        }
+
+        // ИОМ (разбиваем по переносу строки)
+        const iomList = document.getElementById('iom-list');
+        iomList.innerHTML = '';
+        if (cain.iom) {
+            cain.iom.split('\n').forEach(item => {
+                if (item.trim()) {
+                    const li = document.createElement('li');
+                    li.innerHTML = item.trim();
+                    iomList.appendChild(li);
+                }
+            });
+        } else {
+            iomList.innerHTML = '<li>ИОМ пока не составлен</li>';
+        }
+    </script>
 </body>
 </html>
