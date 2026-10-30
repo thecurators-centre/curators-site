@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
     <title>Вход в личный кабинет | The Curator’s</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -16,9 +16,7 @@
             --card-bg: #313452;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -30,7 +28,6 @@
             min-height: 100vh;
             padding: 20px;
         }
-
         .login-card {
             background: var(--card-bg);
             padding: 40px;
@@ -41,36 +38,12 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
             text-align: center;
         }
-
-        .login-card img {
-            width: 120px;
-            margin-bottom: 20px;
-        }
-
-        .login-card h1 {
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
+        .login-card img { width: 120px; margin-bottom: 20px; }
+        .login-card h1 { font-size: 1.8rem; margin-bottom: 10px; }
         .login-card h1 span { color: var(--accent-lime); }
-        
-        .login-card p {
-            opacity: 0.7;
-            margin-bottom: 30px;
-            font-size: 0.95rem;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            opacity: 0.8;
-        }
-
+        .login-card p { opacity: 0.7; margin-bottom: 30px; font-size: 0.95rem; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-size: 0.9rem; margin-bottom: 8px; opacity: 0.8; }
         .form-group input {
             width: 100%;
             padding: 15px;
@@ -82,13 +55,11 @@
             font-size: 1rem;
             transition: var(--transition);
         }
-
         .form-group input:focus {
             outline: none;
             border-color: var(--accent-lime);
             box-shadow: 0 0 0 3px rgba(197, 240, 90, 0.15);
         }
-
         .btn-login {
             width: 100%;
             background: var(--accent-lime);
@@ -102,12 +73,7 @@
             transition: var(--transition);
             margin-top: 10px;
         }
-
-        .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(197, 240, 90, 0.3);
-        }
-
+        .btn-login:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(197, 240, 90, 0.3); }
         .back-link {
             display: inline-block;
             margin-top: 25px;
@@ -118,13 +84,6 @@
             transition: var(--transition);
         }
         .back-link:hover { opacity: 1; color: var(--accent-lime); }
-
-        #error-msg {
-            color: #ff6b6b;
-            font-size: 0.9rem;
-            margin-top: 15px;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -144,7 +103,6 @@
                 <input type="password" id="password" placeholder="Введите пароль" required>
             </div>
             <button type="submit" class="btn-login">Войти</button>
-            <div id="error-msg">Неверный логин или пароль</div>
         </form>
 
         <a href="index.html" class="back-link">← Вернуться на главный сайт</a>
@@ -152,14 +110,10 @@
 
     <script>
         const form = document.getElementById('login-form');
-        
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            // Берем значения, убираем пробелы по краям и приводим к нижнему регистру
             const user = document.getElementById('username').value.trim().toLowerCase();
             const pass = document.getElementById('password').value.trim();
-
-            // Проверяем: логин 'админ' (в любом регистре) и пароль '1369631'
             if (user === 'админ' && pass === '1369631') {
                 window.location.href = 'admin.html';
             } else {
