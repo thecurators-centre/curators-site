@@ -21,8 +21,9 @@
         .profile-header { background: linear-gradient(135deg, #313452 0%, #7455d9 100%); padding: 40px; border-radius: 30px; margin-bottom: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
         .avatar { width: 100px; height: 100px; background: var(--accent-lime); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: 800; color: var(--bg-color); flex-shrink: 0; }
         .profile-info h1 { font-size: 2rem; margin-bottom: 5px; }
-        .profile-info p { opacity: 0.9; font-size: 1.1rem; }
-        .profile-info .subject-tag { display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; margin-top: 10px; backdrop-filter: blur(5px); }
+        .profile-info p { opacity: 0.9; font-size: 1.1rem; margin-bottom: 10px; }
+        .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .subject-tag { display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; backdrop-filter: blur(5px); }
         
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 30px; }
         .info-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border: 1px solid rgba(244, 243, 238, 0.05); }
@@ -31,17 +32,23 @@
         .level-bar-container { background: var(--bg-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
         .level-bar-fill { background: var(--accent-lime); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.8rem; font-weight: 800; color: var(--bg-color); transition: width 1s ease-in-out; }
         
-        /* Общие стили для списков */
+        /* Стили для календаря ученика */
+        .calendar-student { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-top: 15px; }
+        .cal-header-st { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
+        .cal-day-st { padding: 8px 5px; text-align: center; border-radius: 8px; font-size: 0.9rem; border: 1px solid transparent; }
+        .cal-day-st.lesson-day { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; position: relative; }
+        .cal-day-st.lesson-day::after { content: '●'; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; }
+        .cal-month-title { font-size: 1.2rem; font-weight: 800; color: white; margin-bottom: 10px; }
+
+        /* Списки */
         .custom-list { list-style: none; }
         .custom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
         .custom-list li:last-child { border-bottom: none; }
-        
-        .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
-        .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
         .homework-list li::before { content: '📝'; }
         .tests-list li::before { content: '📊'; }
-        .schedule-list li::before { content: '📅'; }
-
+        .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
+        .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
+        
         .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); margin-bottom: 30px; }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
@@ -87,64 +94,86 @@
             renderProfile(data);
         }
 
-        // Вспомогательная функция для создания списков
         function createList(text, className) {
             if (!text || text.trim() === '') return '<li>Пока нет данных</li>';
             return text.split('\n').filter(t => t.trim() !== '').map(t => `<li>${t}</li>`).join('');
         }
 
-        function renderProfile(cain) {
-            document.getElementById('header-name').innerText = `Ученик: ${cain.name}`;
-            const main = document.getElementById('main-content');
-            const level = parseInt(cain.level) || 0;
+        // Генерация календаря для ученика
+        function renderStudentCalendar(month, year, daysArr, timeStr) {
+            if (!month || !year) return '<p style="opacity:0.5;">Расписание еще не составлено.</p>';
             
+            const m = parseInt(month);
+            const y = parseInt(year);
+            const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            
+            const firstDay = new Date(y, m, 1).getDay();
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+            
+            let html = `<div class="cal-month-title">${months[m]} ${y} ${timeStr ? '• ' + timeStr : ''}</div>`;
+            html += `<div class="calendar-student">`;
+            
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => html += `<div class="cal-header-st">${d}</div>`);
+            for (let i = 0; i < startOffset; i++) html += `<div></div>`;
+
+            const days = daysArr ? daysArr.split(',').map(Number) : [];
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const isLesson = days.includes(day);
+                html += `<div class="cal-day-st ${isLesson ? 'lesson-day' : ''}">${day}</div>`;
+            }
+            
+            html += `</div>`;
+            return html;
+        }
+
+        function renderProfile(s) {
+            document.getElementById('header-name').innerText = `Ученик: ${s.name}`;
+            const main = document.getElementById('main-content');
+            const level = parseInt(s.level) || 0;
+            
+            // Формируем теги предметов
+            let subs = (s.subjects || '').split(',').map(x=>x.trim()).filter(x=>x);
+            let subsHtml = subs.length > 0 ? subs.map(sub => `<span class="subject-tag">${sub}</span>`).join('') : '<span class="subject-tag">Предмет не указан</span>';
+
             main.innerHTML = `
                 <div class="profile-header">
-                    <div class="avatar">${cain.name.charAt(0).toUpperCase()}</div>
+                    <div class="avatar">${s.name.charAt(0).toUpperCase()}</div>
                     <div class="profile-info">
-                        <h1>${cain.surname} ${cain.name}</h1>
-                        <p>Возраст: ${cain.age || '?'} лет • ${cain.grade || '?'} класс</p>
-                        <div class="subject-tag">Предмет: ${cain.subject || 'Не указан'}</div>
+                        <h1>${s.surname} ${s.name}</h1>
+                        <p>Возраст: ${s.age || '?'} лет • ${s.grade || '?'} класс</p>
+                        <div class="tags-container">${subsHtml}</div>
                     </div>
                 </div>
 
-                <!-- Расписание и Домашка -->
                 <div class="info-grid">
-                    <div class="info-card">
-                        <h3>Расписание</h3>
-                        <ul class="custom-list schedule-list">${createList(cain.schedule)}</ul>
+                    <!-- КАЛЕНДАРЬ -->
+                    <div class="info-card" style="grid-column: 1 / -1;">
+                        <h3>Расписание занятий</h3>
+                        ${renderStudentCalendar(s.schedule_month, s.schedule_year, s.schedule_days, s.schedule_time)}
                     </div>
+                </div>
+
+                <div class="info-grid">
                     <div class="info-card">
                         <h3>Домашняя работа</h3>
-                        <ul class="custom-list homework-list">${createList(cain.homework)}</ul>
-                    </div>
-                </div>
-
-                <!-- Уровень и Тесты -->
-                <div class="info-grid">
-                    <div class="info-card">
-                        <h3>Уровень знаний</h3>
-                        <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">${level} / 5</p>
-                        <div class="level-bar-container">
-                            <div class="level-bar-fill" style="width: ${(level / 5) * 100}%;">${level > 0 ? level * 20 + '%' : ''}</div>
-                        </div>
+                        <ul class="custom-list homework-list">${createList(s.homework)}</ul>
                     </div>
                     <div class="info-card">
                         <h3>Результаты тестирований</h3>
-                        <ul class="custom-list tests-list">${createList(cain.tests)}</ul>
+                        <ul class="custom-list tests-list">${createList(s.tests)}</ul>
                     </div>
                 </div>
 
-                <!-- Пройденные темы -->
                 <div class="highlight-card">
                     <h3>Пройденные темы</h3>
-                    <ul class="custom-list topics-list">${createList(cain.topics)}</ul>
+                    <ul class="custom-list topics-list">${createList(s.topics)}</ul>
                 </div>
 
-                <!-- ИОМ -->
                 <div class="highlight-card">
                     <h3>ИОМ</h3>
-                    <ul class="custom-list iom-list">${createList(cain.iom)}</ul>
+                    <ul class="custom-list iom-list">${createList(s.iom)}</ul>
                 </div>
             `;
         }

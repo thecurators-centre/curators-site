@@ -10,51 +10,48 @@
         :root { --bg-color: #25283d; --text-main: #f4f3ee; --accent-lime: #c5f05a; --card-bg: #313452; --danger: #ff6b6b; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         h1 { color: var(--accent-lime); margin-bottom: 20px; }
         .btn { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
         
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
         
-        /* Базовый стиль карточки */
+        /* Карточки с мульти-градиентом */
         .card { 
             padding: 20px; 
             border-radius: 15px; 
             cursor: pointer; 
             transition: all 0.3s ease; 
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
         }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); filter: brightness(1.1); }
-        .card h3 { margin-bottom: 5px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
-        .card p { color: rgba(255,255,255,0.8); font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
+        .card h3 { margin-bottom: 5px; color: white; }
+        .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; }
 
-        /* Цвета для предметов */
-        .card[data-subject="Русский язык"] { background: linear-gradient(135deg, #7f1d1d, #ef4444); } /* Алый */
-        .card[data-subject="Японский язык"] { background: linear-gradient(135deg, #94a3b8, #f1f5f9); color: #25283d; } /* Белый (сделаем чуть темнее для читаемости) */
-        .card[data-subject="Японский язык"] h3, .card[data-subject="Японский язык"] p { color: #1e293b; text-shadow: none; }
-        .card[data-subject="Литература"] { background: linear-gradient(135deg, #78350f, #d97706); } /* Бежевый/Золотистый */
-        .card[data-subject="Физика"] { background: linear-gradient(135deg, #0f766e, #2dd4bf); } /* Бирюзовый */
-        .card[data-subject="Обществознание"] { background: linear-gradient(135deg, #312e81, #4f46e5); } /* Индиго */
-        .card[data-subject="История"] { background: linear-gradient(135deg, #3f6212, #84cc16); } /* Хаки */
-        .card[data-subject="Английский язык"] { background: linear-gradient(135deg, #0369a1, #0ea5e9); } /* Небесно-голубой */
-        .card[data-subject="Подготовка к школе"] { background: linear-gradient(135deg, #9d174d, #ec4899); } /* Розовый */
-        .card[data-subject="Вся школьная программа"] { background: linear-gradient(135deg, #334155, #64748b); } /* Серый */
-        .card[data-subject=""] { background: var(--card-bg); } /* По умолчанию */
-
-        .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; }
+        /* Модалка */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
-        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 800px; max-height: 95vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #555; background: var(--card-bg); color: white; font-family: inherit; }
-        .form-group textarea { min-height: 70px; }
-        .form-row { display: flex; gap: 10px; }
-        .form-row .form-group { flex: 1; }
-        .btn-save { width: 100%; padding: 12px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-delete { background: var(--danger); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
+        .btn-save { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
+        
+        /* Стили для календаря в админке */
+        .calendar-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+        .calendar-controls select { flex: 1; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
+        .cal-day { padding: 10px 5px; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; border: 1px solid transparent; font-size: 0.9rem; }
+        .cal-day:hover { background: rgba(255,255,255,0.1); }
+        .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
+        .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -73,11 +70,12 @@
             <h2 style="margin-bottom: 20px;">Карточка ученика</h2>
             <form id="form">
                 <input type="hidden" id="id">
+                
                 <div class="form-row">
                     <div class="form-group"><label>Логин</label><input type="text" id="login" required></div>
                     <div class="form-group"><label>Пароль</label><input type="text" id="password" required></div>
                 </div>
-                <hr style="border-color: #444; margin: 15px 0;">
+                
                 <div class="form-row">
                     <div class="form-group"><label>Фамилия</label><input type="text" id="surname" required></div>
                     <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
@@ -87,9 +85,10 @@
                     <div class="form-group"><label>Возраст</label><input type="number" id="age"></div>
                     <div class="form-group"><label>Класс</label><input type="text" id="grade"></div>
                 </div>
+
                 <div class="form-group">
-                    <label>Предмет</label>
-                    <select id="subject">
+                    <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
+                    <select id="subjects" multiple size="5">
                         <option value="Русский язык">Русский язык</option>
                         <option value="Японский язык">Японский язык</option>
                         <option value="Английский язык">Английский язык</option>
@@ -98,23 +97,48 @@
                         <option value="История">История</option>
                         <option value="Физика">Физика</option>
                         <option value="Подготовка к школе">Подготовка к школе</option>
-                        <option value="Вся школьная программа">Вся школьная программа</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label>Уровень знаний (1-5)</label>
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
                 
+                <hr style="border-color: #444; margin: 20px 0;">
+                <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
+                
+                <div class="calendar-controls">
+                    <select id="cal-month">
+                        <option value="0">Январь</option><option value="1">Февраль</option><option value="2">Март</option>
+                        <option value="3">Апрель</option><option value="4">Май</option><option value="5">Июнь</option>
+                        <option value="6">Июль</option><option value="7">Август</option><option value="8">Сентябрь</option>
+                        <option value="9">Октябрь</option><option value="10">Ноябрь</option><option value="11">Декабрь</option>
+                    </select>
+                    <select id="cal-year">
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                    <input type="text" id="schedule-time" placeholder="Время (напр. 16:00)" style="width: 150px;">
+                </div>
+                
+                <!-- Интерактивный календарь -->
+                <div class="calendar-grid" id="calendar-admin">
+                    <!-- Генерируется через JS -->
+                </div>
+                <input type="hidden" id="schedule-days" value="">
+
+                <hr style="border-color: #444; margin: 20px 0;">
+
                 <div class="form-group"><label>Домашняя работа</label><textarea id="homework" placeholder="Что задано..."></textarea></div>
                 <div class="form-group"><label>Результаты тестирований</label><textarea id="tests" placeholder="Баллы, оценки..."></textarea></div>
-                <div class="form-group"><label>Расписание</label><textarea id="schedule" placeholder="Пн 15:00, Ср 16:00..."></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
                 
                 <button type="submit" class="btn-save">Сохранить</button>
-                <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">Удалить</button>
+                <button type="button" class="btn-delete" id="deleteBtn" style="display: none; background: var(--danger); color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer;">Удалить</button>
             </form>
         </div>
     </div>
@@ -124,10 +148,21 @@
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Цвета для предметов
+        const subjectColors = {
+            'Русский язык': '#ef4444', 'Японский язык': '#f1f5f9', 'Английский язык': '#0ea5e9',
+            'Литература': '#d97706', 'Обществознание': '#4f46e5', 'История': '#84cc16',
+            'Физика': '#2dd4bf', 'Подготовка к школе': '#ec4899', 'Вся школьная программа': '#64748b'
+        };
+
         let students = [];
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const form = document.getElementById('form');
+        const calGrid = document.getElementById('calendar-admin');
+        const calMonth = document.getElementById('cal-month');
+        const calYear = document.getElementById('cal-year');
+        let selectedDays = [];
 
         async function loadStudents() {
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -140,20 +175,90 @@
         function render() {
             grid.innerHTML = '';
             if (students.length === 0) { grid.innerHTML = '<p style="opacity:0.5;">Пусто</p>'; return; }
+            
             students.forEach((s) => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                // Устанавливаем атрибут с названием предмета для CSS-стилей
-                card.setAttribute('data-subject', s.subject || '');
                 
-                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Логин: ${s.login || 'не задан'}</p>`;
+                // Создаем градиент из цветов предметов
+                let subs = (s.subjects || '').split(',').map(x => x.trim()).filter(x => x);
+                let colors = subs.map(sub => subjectColors[sub] || '#313452');
+                
+                if (colors.length === 0) colors = ['#313452'];
+                
+                // Формируем градиент
+                if (colors.length === 1) {
+                    card.style.background = colors[0];
+                } else {
+                    card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`;
+                }
+                
+                // Если цвет светлый (японский), делаем текст темным
+                if (colors.includes('#f1f5f9') && colors.length === 1) {
+                    card.style.color = '#1e293b';
+                    card.style.textShadow = 'none';
+                }
+
+                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
                 card.onclick = () => openModal(s);
                 grid.appendChild(card);
             });
         }
 
+        // --- ЛОГИКА КАЛЕНДАРЯ ---
+        function renderCalendar() {
+            const month = parseInt(calMonth.value);
+            const year = parseInt(calYear.value);
+            const firstDay = new Date(year, month, 1).getDay(); // 0 - Вс, 1 - Пн
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Сдвиг для Пн-первого дня (в РФ неделя с Пн)
+            let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+            
+            calGrid.innerHTML = '';
+            
+            // Заголовки дней
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'cal-header';
+                el.innerText = d;
+                calGrid.appendChild(el);
+            });
+
+            // Пустые ячейки
+            for (let i = 0; i < startOffset; i++) {
+                calGrid.appendChild(document.createElement('div'));
+            }
+
+            // Дни
+            for (let day = 1; day <= daysInMonth; day++) {
+                const el = document.createElement('div');
+                el.className = 'cal-day';
+                el.innerText = day;
+                if (selectedDays.includes(day)) {
+                    el.classList.add('selected');
+                }
+                el.onclick = () => {
+                    if (selectedDays.includes(day)) {
+                        selectedDays = selectedDays.filter(d => d !== day);
+                        el.classList.remove('selected');
+                    } else {
+                        selectedDays.push(day);
+                        el.classList.add('selected');
+                    }
+                    document.getElementById('schedule-days').value = selectedDays.join(',');
+                };
+                calGrid.appendChild(el);
+            }
+        }
+
+        calMonth.onchange = renderCalendar;
+        calYear.onchange = renderCalendar;
+
         function openModal(s = null) {
             form.reset();
+            selectedDays = [];
+            
             if (s) {
                 document.getElementById('id').value = s.id;
                 document.getElementById('login').value = s.login || '';
@@ -163,12 +268,25 @@
                 document.getElementById('patronymic').value = s.patronymic || '';
                 document.getElementById('age').value = s.age || '';
                 document.getElementById('grade').value = s.grade || '';
-                document.getElementById('subject').value = s.subject || 'Русский язык';
                 document.getElementById('level').value = s.level || 3;
                 document.getElementById('levelVal').innerText = s.level || 3;
+                
+                // Выбор предметов
+                const subs = (s.subjects || '').split(',').map(x=>x.trim());
+                const select = document.getElementById('subjects');
+                for (let i = 0; i < select.options.length; i++) {
+                    select.options[i].selected = subs.includes(select.options[i].value);
+                }
+
+                // Календарь
+                if (s.schedule_month) calMonth.value = s.schedule_month;
+                if (s.schedule_year) calYear.value = s.schedule_year;
+                document.getElementById('schedule-time').value = s.schedule_time || '';
+                if (s.schedule_days) selectedDays = s.schedule_days.split(',').map(Number);
+                document.getElementById('schedule-days').value = selectedDays.join(',');
+
                 document.getElementById('homework').value = s.homework || '';
                 document.getElementById('tests').value = s.tests || '';
-                document.getElementById('schedule').value = s.schedule || '';
                 document.getElementById('topics').value = s.topics || '';
                 document.getElementById('iom').value = s.iom || '';
                 document.getElementById('deleteBtn').style.display = 'block';
@@ -178,6 +296,8 @@
                 document.getElementById('levelVal').innerText = '3';
                 document.getElementById('deleteBtn').style.display = 'none';
             }
+            
+            renderCalendar(); // Отрисовываем календарь
             modal.classList.add('active');
         }
 
@@ -187,6 +307,11 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('id').value;
+            
+            // Собираем выбранные предметы
+            const select = document.getElementById('subjects');
+            const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+
             const data = {
                 login: document.getElementById('login').value.trim(),
                 password: document.getElementById('password').value.trim(),
@@ -195,11 +320,14 @@
                 patronymic: document.getElementById('patronymic').value,
                 age: parseInt(document.getElementById('age').value) || null,
                 grade: document.getElementById('grade').value,
-                subject: document.getElementById('subject').value,
+                subjects: selectedSubjects,
                 level: parseInt(document.getElementById('level').value),
+                schedule_month: calMonth.value,
+                schedule_year: calYear.value,
+                schedule_days: document.getElementById('schedule-days').value,
+                schedule_time: document.getElementById('schedule-time').value,
                 homework: document.getElementById('homework').value,
                 tests: document.getElementById('tests').value,
-                schedule: document.getElementById('schedule').value,
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
