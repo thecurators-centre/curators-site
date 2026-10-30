@@ -13,11 +13,35 @@
         .container { max-width: 1000px; margin: 0 auto; }
         h1 { color: var(--accent-lime); margin-bottom: 20px; }
         .btn { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+        
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; }
-        .card:hover { transform: translateY(-3px); background: #3a3d5c; }
-        .card h3 { margin-bottom: 5px; }
-        .card p { opacity: 0.7; font-size: 0.9rem; }
+        
+        /* Базовый стиль карточки */
+        .card { 
+            padding: 20px; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); filter: brightness(1.1); }
+        .card h3 { margin-bottom: 5px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        .card p { color: rgba(255,255,255,0.8); font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+        /* Цвета для предметов */
+        .card[data-subject="Русский язык"] { background: linear-gradient(135deg, #7f1d1d, #ef4444); } /* Алый */
+        .card[data-subject="Японский язык"] { background: linear-gradient(135deg, #94a3b8, #f1f5f9); color: #25283d; } /* Белый (сделаем чуть темнее для читаемости) */
+        .card[data-subject="Японский язык"] h3, .card[data-subject="Японский язык"] p { color: #1e293b; text-shadow: none; }
+        .card[data-subject="Литература"] { background: linear-gradient(135deg, #78350f, #d97706); } /* Бежевый/Золотистый */
+        .card[data-subject="Физика"] { background: linear-gradient(135deg, #0f766e, #2dd4bf); } /* Бирюзовый */
+        .card[data-subject="Обществознание"] { background: linear-gradient(135deg, #312e81, #4f46e5); } /* Индиго */
+        .card[data-subject="История"] { background: linear-gradient(135deg, #3f6212, #84cc16); } /* Хаки */
+        .card[data-subject="Английский язык"] { background: linear-gradient(135deg, #0369a1, #0ea5e9); } /* Небесно-голубой */
+        .card[data-subject="Подготовка к школе"] { background: linear-gradient(135deg, #9d174d, #ec4899); } /* Розовый */
+        .card[data-subject="Вся школьная программа"] { background: linear-gradient(135deg, #334155, #64748b); } /* Серый */
+        .card[data-subject=""] { background: var(--card-bg); } /* По умолчанию */
+
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; }
         .modal.active { display: flex; }
@@ -73,6 +97,8 @@
                         <option value="Обществознание">Обществознание</option>
                         <option value="История">История</option>
                         <option value="Физика">Физика</option>
+                        <option value="Подготовка к школе">Подготовка к школе</option>
+                        <option value="Вся школьная программа">Вся школьная программа</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -81,7 +107,6 @@
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
                 
-                <!-- НОВЫЕ ПОЛЯ -->
                 <div class="form-group"><label>Домашняя работа</label><textarea id="homework" placeholder="Что задано..."></textarea></div>
                 <div class="form-group"><label>Результаты тестирований</label><textarea id="tests" placeholder="Баллы, оценки..."></textarea></div>
                 <div class="form-group"><label>Расписание</label><textarea id="schedule" placeholder="Пн 15:00, Ср 16:00..."></textarea></div>
@@ -118,6 +143,9 @@
             students.forEach((s) => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                // Устанавливаем атрибут с названием предмета для CSS-стилей
+                card.setAttribute('data-subject', s.subject || '');
+                
                 card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Логин: ${s.login || 'не задан'}</p>`;
                 card.onclick = () => openModal(s);
                 grid.appendChild(card);
