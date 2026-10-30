@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | The Curator’s</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #25283d;
+            --text-main: #f4f3ee;
+            --accent-lime: #c5f05a;
+            --card-bg: #313452;
+            --danger: #ff6b6b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: var(--accent-lime); margin-bottom: 20px; }
+        .btn { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; }
+        .card:hover { transform: translateY(-3px); background: #3a3d5c; }
+        .card h3 { margin-bottom: 5px; }
+        .card p { opacity: 0.7; font-size: 0.9rem; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #555; background: var(--card-bg); color: white; font-family: inherit; }
+        .form-group textarea { min-height: 80px; }
+        .form-row { display: flex; gap: 10px; }
+        .form-row .form-group { flex: 1; }
+        .btn-save { width: 100%; padding: 12px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-delete { background: var(--danger); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
+        .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Ученики</h1>
+            <a href="login.html" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
+        </div>
+        <button class="btn" id="addBtn">+ Добавить ученика</button>
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeModal">&times;</button>
+            <h2 style="margin-bottom: 20px;">Редактирование</h2>
+            <form id="form">
+                <input type="hidden" id="id">
+                <div class="form-row">
+                    <div class="form-group"><label>Фамилия</label><input type="text" id="surname" required></div>
+                    <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
+                </div>
+                <div class="form-group"><label>Отчество</label><input type="text" id="patronymic"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Возраст</label><input type="number" id="age"></div>
+                    <div class="form-group"><label>Класс</label><input type="text" id="grade"></div>
+                </div>
+                <div class="form-group">
+                    <label>Предмет</label>
+                    <select id="subject">
+                        <option value="Русский язык">Русский язык</option>
+                        <option value="Японский язык">Японский язык</option>
+                        <option value="Английский язык">Английский язык</option>
+                        <option value="Литература">Литература</option>
+                        <option value="Обществознание">Обществознание</option>
+                        <option value="История">История</option>
+                        <option value="Физика">Физика</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Уровень знаний (1-5)</label>
+                    <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
+                    <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
+                </div>
+                <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
+                <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
+                <button type="submit" class="btn-save">Сохранить</button>
+                <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">Удалить</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Данные
+        let students = JSON.parse(localStorage.getItem('curators_students')) || [];
+        const grid = document.getElementById('grid');
+        const modal = document.getElementById('modal');
+        const form = document.getElementById('form');
+        const addBtn = document.getElementById('addBtn');
+        const closeModal = document.getElementById('closeModal');
+        const deleteBtn = document.getElementById('deleteBtn');
+
+        // Отрисовка
+        function render() {
+            grid.innerHTML = '';
+            if (students.length === 0) {
+                grid.innerHTML = '<p style="opacity:0.5;">Список пуст. Добавьте ученика.</p>';
+                return;
+            }
+            students.forEach((s, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>${s.grade || ''} класс • ${s.subject}</p>`;
+                card.onclick = () => openModal(index);
+                grid.appendChild(card);
+            });
+        }
+
+        // Открытие модалки
+        function openModal(index = null) {
+            form.reset();
+            if (index !== null) {
+                const s = students[index];
+                document.getElementById('id').value = index;
+                document.getElementById('surname').value = s.surname;
+                document.getElementById('name').value = s.name;
+                document.getElementById('patronymic').value = s.patronymic || '';
+                document.getElementById('age').value = s.age || '';
+                document.getElementById('grade').value = s.grade || '';
+                document.getElementById('subject').value = s.subject;
+                document.getElementById('level').value = s.level || 3;
+                document.getElementById('levelVal').innerText = s.level || 3;
+                document.getElementById('topics').value = s.topics || '';
+                document.getElementById('iom').value = s.iom || '';
+                deleteBtn.style.display = 'block';
+            } else {
+                document.getElementById('id').value = '';
+                document.getElementById('level').value = 3;
+                document.getElementById('levelVal').innerText = '3';
+                deleteBtn.style.display = 'none';
+            }
+            modal.classList.add('active');
+        }
+
+        // Закрытие
+        closeModal.onclick = () => modal.classList.remove('active');
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+
+        // Сохранение
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const index = document.getElementById('id').value;
+            const data = {
+                surname: document.getElementById('surname').value,
+                name: document.getElementById('name').value,
+                patronymic: document.getElementById('patronymic').value,
+                age: document.getElementById('age').value,
+                grade: document.getElementById('grade').value,
+                subject: document.getElementById('subject').value,
+                level: document.getElementById('level').value,
+                topics: document.getElementById('topics').value,
+                iom: document.getElementById('iom').value
+            };
+            
+            if (index !== '') {
+                students[index] = data;
+            } else {
+                students.push(data);
+            }
+            localStorage.setItem('curators_students', JSON.stringify(students));
+            render();
+            modal.classList.remove('active');
+        };
+
+        // Удаление
+        deleteBtn.onclick = () => {
+            const index = document.getElementById('id').value;
+            if (confirm('Удалить?')) {
+                students.splice(index, 1);
+                localStorage.setItem('curators_students', JSON.stringify(students));
+                render();
+                modal.classList.remove('active');
+            }
+        };
+
+        // Старт
+        addBtn.onclick = () => openModal();
+        render();
+    </script>
+</body>
+</html>
