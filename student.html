@@ -6,17 +6,230 @@
     <title>Кабинет ученика | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #25283d; color: #f4f3ee; display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center; margin: 0; }
-        h1 { color: #c5f05a; margin-bottom: 20px; }
-        a { color: #f4f3ee; text-decoration: none; border: 1px solid #c5f05a; padding: 10px 20px; border-radius: 10px; display: inline-block; transition: 0.3s; }
-        a:hover { background: #c5f05a; color: #25283d; }
+        :root {
+            --bg-color: #25283d;
+            --text-main: #f4f3ee;
+            --accent-purple: #7455d9;
+            --accent-lime: #c5f05a;
+            --card-bg: #313452;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo-container img { width: 150px; height: auto; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .header-right span { font-size: 0.9rem; opacity: 0.7; }
+        .btn-logout {
+            color: var(--accent-lime);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid var(--accent-lime);
+            padding: 8px 15px;
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+        .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
+
+        /* Main Container */
+        .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
+
+        /* Profile Header */
+        .profile-header {
+            background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
+            padding: 40px;
+            border-radius: 30px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: var(--accent-lime);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--bg-color);
+            flex-shrink: 0;
+        }
+        .profile-info h1 { font-size: 2rem; margin-bottom: 5px; }
+        .profile-info p { opacity: 0.9; font-size: 1.1rem; }
+        .profile-info .subject-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .info-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid rgba(244, 243, 238, 0.05);
+        }
+        .info-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            color: var(--accent-lime);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Level Bar */
+        .level-bar-container {
+            background: var(--bg-color);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            position: relative;
+        }
+        .level-bar-fill {
+            background: var(--accent-lime);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--bg-color);
+        }
+
+        /* Lists */
+        .topics-list, .iom-list {
+            list-style: none;
+        }
+        .topics-list li, .iom-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .topics-list li:last-child, .iom-list li:last-child { border-bottom: none; }
+        .topics-list li::before {
+            content: '✓';
+            color: var(--accent-lime);
+            font-weight: 800;
+            margin-top: 2px;
+        }
+        .iom-list li::before {
+            content: '→';
+            color: var(--accent-purple);
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .highlight-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 24px;
+            border-left: 4px solid var(--accent-purple);
+        }
+        .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
+            .info-grid { grid-template-columns: 1fr; }
+            .header-right span { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div>
-        <h1>Кабинет ученика</h1>
-        <p style="opacity: 0.7; margin-bottom: 30px;">Здесь скоро появится ваш прогресс и ИОМ.</p>
-        <a href="login.html">Выйти</a>
+
+    <header>
+        <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
+        <div class="header-right">
+            <span>Ученик: Каин Адамсон</span>
+            <a href="login.html" class="btn-logout">Выйти</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Профиль -->
+        <div class="profile-header">
+            <div class="avatar">К</div>
+            <div class="profile-info">
+                <h1>Каин Адамсон</h1>
+                <p>Возраст: 14 лет • 8 класс</p>
+                <div class="subject-tag">Предмет: Английский язык</div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <!-- Уровень знаний -->
+            <div class="info-card">
+                <h3>Уровень знаний</h3>
+                <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">4 / 5</p>
+                <div class="level-bar-container">
+                    <div class="level-bar-fill" style="width: 80%;">80%</div>
+                </div>
+                <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Отличный прогресс! Осталось совсем немного до идеала.</p>
+            </div>
+
+            <!-- Пройденные темы -->
+            <div class="info-card">
+                <h3>Пройденные темы</h3>
+                <ul class="topics-list">
+                    <li>Present Simple & Continuous</li>
+                    <li>Past Simple & Present Perfect</li>
+                    <li>Модальные глаголы (Can, Could, May)</li>
+                    <li>Фразовые глаголы (базовый уровень)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ИОМ -->
+        <div class="highlight-card">
+            <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
+            <ul class="iom-list">
+                <li><strong>Цель:</strong> Подготовка к международному экзамену Cambridge PET.</li>
+                <li><strong>Ближайшая задача:</strong> Освоить тему "Условные предложения" (Conditionals 1, 2, 3).</li>
+                <li><strong>Рекомендация:</strong> Начать читать адаптированную книгу "The Little Prince" на английском языке.</li>
+                <li><strong>Следующее занятие:</strong> Разбор устной части экзамена, практика диалогов.</li>
+            </ul>
+        </div>
     </div>
+
 </body>
 </html>

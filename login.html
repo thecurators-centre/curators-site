@@ -68,6 +68,7 @@
             opacity: 0.6;
         }
         .back-link:hover { opacity: 1; }
+        #error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
@@ -78,6 +79,7 @@
             <input type="text" id="username" placeholder="Логин" required>
             <input type="password" id="password" placeholder="Пароль" required>
             <button type="submit">Войти</button>
+            <div id="error-msg">Неверный логин или пароль</div>
         </form>
         <a href="index.html" class="back-link">← На главную</a>
     </div>
@@ -87,11 +89,19 @@
             e.preventDefault();
             const user = document.getElementById('username').value.trim().toLowerCase();
             const pass = document.getElementById('password').value.trim();
-            
+            const errorMsg = document.getElementById('error-msg');
+
+            // Проверка для Админа
             if (user === 'админ' && pass === '1369631') {
                 window.location.href = 'admin.html';
-            } else {
+            } 
+            // Проверка для Каина
+            else if (user === 'каин' && pass === '0000000') {
                 window.location.href = 'student.html';
+            } 
+            // Для всех остальных - ошибка
+            else {
+                errorMsg.style.display = 'block';
             }
         });
     </script>
