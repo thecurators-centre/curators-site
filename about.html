@@ -102,10 +102,27 @@
 
         /* Page Hero */
         .page-hero {
-            padding: 140px 10% 50px;
+            padding: 140px 10% 40px;
             text-align: center;
             background: radial-gradient(circle at center, #313452 0%, #25283d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        /* Стили для маскота и анимации */
+        .about-mascot {
+            width: 180px;
+            max-width: 100%;
+            margin-bottom: 20px;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
         .page-hero h1 {
             font-size: clamp(2rem, 6vw, 3.6rem);
             font-weight: 800;
@@ -260,6 +277,7 @@
             nav a { font-size: 1.2rem; }
 
             .btn-main { width: 100%; text-align: center; padding: 15px 20px; }
+            .about-mascot { width: 150px; }
         }
     </style>
 </head>
@@ -274,6 +292,7 @@
             <a href="reviews.html">Отзывы</a>
             <a href="payment.html">Оплата</a>
             <a href="contacts.html">Контакты</a>
+            <a href="login.html">Вход</a>
             <a href="enroll.html" class="btn-header">Записаться</a>
         </nav>
         <div class="burger" id="burger">
@@ -284,6 +303,9 @@
     </header>
 
     <section class="page-hero">
+        <!-- НОВЫЙ МАСКОТ -->
+        <img src="mascot2.png" alt="Mascot 2" class="about-mascot">
+        
         <h1>О <span>нас</span></h1>
         <p>Мы верим, что обучение может быть увлекательным — и делаем его таким для детей по всему миру.</p>
     </section>
