@@ -31,13 +31,18 @@
         .level-bar-container { background: var(--bg-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
         .level-bar-fill { background: var(--accent-lime); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.8rem; font-weight: 800; color: var(--bg-color); transition: width 1s ease-in-out; }
         
-        .topics-list, .iom-list { list-style: none; }
-        .topics-list li, .iom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
-        .topics-list li:last-child, .iom-list li:last-child { border-bottom: none; }
+        /* Общие стили для списков */
+        .custom-list { list-style: none; }
+        .custom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
+        .custom-list li:last-child { border-bottom: none; }
+        
         .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
         .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
-        
-        .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); }
+        .homework-list li::before { content: '📝'; }
+        .tests-list li::before { content: '📊'; }
+        .schedule-list li::before { content: '📅'; }
+
+        .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); margin-bottom: 30px; }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
@@ -68,25 +73,24 @@
 
         async function loadProfile() {
             const studentId = localStorage.getItem('current_student_id');
-
             if (!studentId) {
-                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Вы не вошли в систему. <a href="login.html" style="color:white;">Войти</a></div>';
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Вы не вошли. <a href="login.html" style="color:white;">Войти</a></div>';
                 return;
             }
 
-            // Ищем строго по ID
-            const { data, error } = await supabaseClient
-                .from('students')
-                .select('*')
-                .eq('id', studentId)
-                .single();
+            const { data, error } = await supabaseClient.from('students').select('*').eq('id', studentId).single();
 
             if (error || !data) {
-                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ученик не найден в базе.</div>';
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ученик не найден.</div>';
                 return;
             }
-
             renderProfile(data);
+        }
+
+        // Вспомогательная функция для создания списков
+        function createList(text, className) {
+            if (!text || text.trim() === '') return '<li>Пока нет данных</li>';
+            return text.split('\n').filter(t => t.trim() !== '').map(t => `<li>${t}</li>`).join('');
         }
 
         function renderProfile(cain) {
@@ -103,6 +107,20 @@
                         <div class="subject-tag">Предмет: ${cain.subject || 'Не указан'}</div>
                     </div>
                 </div>
+
+                <!-- Расписание и Домашка -->
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Расписание</h3>
+                        <ul class="custom-list schedule-list">${createList(cain.schedule)}</ul>
+                    </div>
+                    <div class="info-card">
+                        <h3>Домашняя работа</h3>
+                        <ul class="custom-list homework-list">${createList(cain.homework)}</ul>
+                    </div>
+                </div>
+
+                <!-- Уровень и Тесты -->
                 <div class="info-grid">
                     <div class="info-card">
                         <h3>Уровень знаний</h3>
@@ -110,20 +128,23 @@
                         <div class="level-bar-container">
                             <div class="level-bar-fill" style="width: ${(level / 5) * 100}%;">${level > 0 ? level * 20 + '%' : ''}</div>
                         </div>
-                        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
                     </div>
                     <div class="info-card">
-                        <h3>Пройденные темы</h3>
-                        <ul class="topics-list">
-                            ${cain.topics ? cain.topics.split('\n').map(t => `<li>${t}</li>`).join('') : '<li>Пока нет данных</li>'}
-                        </ul>
+                        <h3>Результаты тестирований</h3>
+                        <ul class="custom-list tests-list">${createList(cain.tests)}</ul>
                     </div>
                 </div>
+
+                <!-- Пройденные темы -->
                 <div class="highlight-card">
-                    <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
-                    <ul class="iom-list">
-                        ${cain.iom ? cain.iom.split('\n').map(i => `<li>${i}</li>`).join('') : '<li>ИОМ пока не составлен</li>'}
-                    </ul>
+                    <h3>Пройденные темы</h3>
+                    <ul class="custom-list topics-list">${createList(cain.topics)}</ul>
+                </div>
+
+                <!-- ИОМ -->
+                <div class="highlight-card">
+                    <h3>ИОМ</h3>
+                    <ul class="custom-list iom-list">${createList(cain.iom)}</ul>
                 </div>
             `;
         }

@@ -26,7 +26,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #555; background: var(--card-bg); color: white; font-family: inherit; }
-        .form-group textarea { min-height: 80px; }
+        .form-group textarea { min-height: 70px; }
         .form-row { display: flex; gap: 10px; }
         .form-row .form-group { flex: 1; }
         .btn-save { width: 100%; padding: 12px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
@@ -49,13 +49,11 @@
             <h2 style="margin-bottom: 20px;">Карточка ученика</h2>
             <form id="form">
                 <input type="hidden" id="id">
-                <!-- ЛОГИН И ПАРОЛЬ -->
                 <div class="form-row">
-                    <div class="form-group"><label>Логин (для входа)</label><input type="text" id="login" placeholder="Например: kain"></div>
-                    <div class="form-group"><label>Пароль</label><input type="text" id="password" placeholder="Например: 123456"></div>
+                    <div class="form-group"><label>Логин</label><input type="text" id="login" required></div>
+                    <div class="form-group"><label>Пароль</label><input type="text" id="password" required></div>
                 </div>
                 <hr style="border-color: #444; margin: 15px 0;">
-                <!-- ОСТАЛЬНЫЕ ДАННЫЕ -->
                 <div class="form-row">
                     <div class="form-group"><label>Фамилия</label><input type="text" id="surname" required></div>
                     <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
@@ -82,8 +80,14 @@
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
+                
+                <!-- НОВЫЕ ПОЛЯ -->
+                <div class="form-group"><label>Домашняя работа</label><textarea id="homework" placeholder="Что задано..."></textarea></div>
+                <div class="form-group"><label>Результаты тестирований</label><textarea id="tests" placeholder="Баллы, оценки..."></textarea></div>
+                <div class="form-group"><label>Расписание</label><textarea id="schedule" placeholder="Пн 15:00, Ср 16:00..."></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
+                
                 <button type="submit" class="btn-save">Сохранить</button>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">Удалить</button>
             </form>
@@ -99,9 +103,6 @@
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const form = document.getElementById('form');
-        const addBtn = document.getElementById('addBtn');
-        const closeModal = document.getElementById('closeModal');
-        const deleteBtn = document.getElementById('deleteBtn');
 
         async function loadStudents() {
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -137,19 +138,22 @@
                 document.getElementById('subject').value = s.subject || 'Русский язык';
                 document.getElementById('level').value = s.level || 3;
                 document.getElementById('levelVal').innerText = s.level || 3;
+                document.getElementById('homework').value = s.homework || '';
+                document.getElementById('tests').value = s.tests || '';
+                document.getElementById('schedule').value = s.schedule || '';
                 document.getElementById('topics').value = s.topics || '';
                 document.getElementById('iom').value = s.iom || '';
-                deleteBtn.style.display = 'block';
+                document.getElementById('deleteBtn').style.display = 'block';
             } else {
                 document.getElementById('id').value = '';
                 document.getElementById('level').value = 3;
                 document.getElementById('levelVal').innerText = '3';
-                deleteBtn.style.display = 'none';
+                document.getElementById('deleteBtn').style.display = 'none';
             }
             modal.classList.add('active');
         }
 
-        closeModal.onclick = () => modal.classList.remove('active');
+        document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
         modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
 
         form.onsubmit = async (e) => {
@@ -165,6 +169,9 @@
                 grade: document.getElementById('grade').value,
                 subject: document.getElementById('subject').value,
                 level: parseInt(document.getElementById('level').value),
+                homework: document.getElementById('homework').value,
+                tests: document.getElementById('tests').value,
+                schedule: document.getElementById('schedule').value,
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
@@ -182,7 +189,7 @@
             else { modal.classList.remove('active'); loadStudents(); }
         };
 
-        deleteBtn.onclick = async () => {
+        document.getElementById('deleteBtn').onclick = async () => {
             const id = document.getElementById('id').value;
             if (confirm('Удалить?')) {
                 const { error } = await supabaseClient.from('students').delete().eq('id', id);
@@ -191,7 +198,7 @@
             }
         };
 
-        addBtn.onclick = () => openModal();
+        document.getElementById('addBtn').onclick = () => openModal();
         loadStudents();
     </script>
 </body>
