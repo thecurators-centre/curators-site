@@ -17,17 +17,7 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
         
         /* Карточки с мульти-градиентом */
-        .card { 
-            padding: 20px; 
-            border-radius: 15px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-            position: relative;
-            overflow: hidden;
-        }
+        .card { padding: 20px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
         .card h3 { margin-bottom: 5px; color: white; }
         .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; }
@@ -35,7 +25,7 @@
         /* Модалка */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
-        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 800px; max-height: 95vh; overflow-y: auto; position: relative; }
+        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 850px; max-height: 95vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
@@ -45,12 +35,16 @@
         .btn-save { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
         
         /* Стили для календаря в админке */
-        .calendar-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+        .calendar-controls { display: flex; gap: 10px; margin-bottom: 15px; }
         .calendar-controls select { flex: 1; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
-        .cal-day { padding: 10px 5px; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; border: 1px solid transparent; font-size: 0.9rem; }
+        
+        .cal-day-wrapper { display: flex; flex-direction: column; gap: 3px; }
+        .cal-day { padding: 8px 5px; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; border: 1px solid transparent; font-size: 0.9rem; transition: 0.2s; }
         .cal-day:hover { background: rgba(255,255,255,0.1); }
         .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
+        
+        .time-input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; background: var(--bg-color); color: white; text-align: center; }
         .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
     </style>
 </head>
@@ -108,6 +102,7 @@
                 
                 <hr style="border-color: #444; margin: 20px 0;">
                 <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
+                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 10px;">Кликни на день, чтобы отметить его и ввести время урока.</p>
                 
                 <div class="calendar-controls">
                     <select id="cal-month">
@@ -121,19 +116,15 @@
                         <option value="2026" selected>2026</option>
                         <option value="2027">2027</option>
                     </select>
-                    <input type="text" id="schedule-time" placeholder="Время (напр. 16:00)" style="width: 150px;">
                 </div>
                 
-                <!-- Интерактивный календарь -->
-                <div class="calendar-grid" id="calendar-admin">
-                    <!-- Генерируется через JS -->
-                </div>
+                <div class="calendar-grid" id="calendar-admin"></div>
                 <input type="hidden" id="schedule-days" value="">
 
                 <hr style="border-color: #444; margin: 20px 0;">
 
-                <div class="form-group"><label>Домашняя работа</label><textarea id="homework" placeholder="Что задано..."></textarea></div>
-                <div class="form-group"><label>Результаты тестирований</label><textarea id="tests" placeholder="Баллы, оценки..."></textarea></div>
+                <div class="form-group"><label>Домашняя работа</label><textarea id="homework"></textarea></div>
+                <div class="form-group"><label>Результаты тестирований</label><textarea id="tests"></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
                 
@@ -148,11 +139,10 @@
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Цвета для предметов
         const subjectColors = {
             'Русский язык': '#ef4444', 'Японский язык': '#f1f5f9', 'Английский язык': '#0ea5e9',
             'Литература': '#d97706', 'Обществознание': '#4f46e5', 'История': '#84cc16',
-            'Физика': '#2dd4bf', 'Подготовка к школе': '#ec4899', 'Вся школьная программа': '#64748b'
+            'Физика': '#2dd4bf', 'Подготовка к школе': '#ec4899'
         };
 
         let students = [];
@@ -162,7 +152,9 @@
         const calGrid = document.getElementById('calendar-admin');
         const calMonth = document.getElementById('cal-month');
         const calYear = document.getElementById('cal-year');
-        let selectedDays = [];
+        
+        // Теперь храним объект: { 5: '16:00', 12: '18:30' }
+        let scheduleData = {};
 
         async function loadStudents() {
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -180,24 +172,14 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                // Создаем градиент из цветов предметов
                 let subs = (s.subjects || '').split(',').map(x => x.trim()).filter(x => x);
                 let colors = subs.map(sub => subjectColors[sub] || '#313452');
-                
                 if (colors.length === 0) colors = ['#313452'];
                 
-                // Формируем градиент
-                if (colors.length === 1) {
-                    card.style.background = colors[0];
-                } else {
-                    card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`;
-                }
+                if (colors.length === 1) { card.style.background = colors[0]; } 
+                else { card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`; }
                 
-                // Если цвет светлый (японский), делаем текст темным
-                if (colors.includes('#f1f5f9') && colors.length === 1) {
-                    card.style.color = '#1e293b';
-                    card.style.textShadow = 'none';
-                }
+                if (colors.includes('#f1f5f9') && colors.length === 1) { card.style.color = '#1e293b'; card.style.textShadow = 'none'; }
 
                 card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
                 card.onclick = () => openModal(s);
@@ -209,15 +191,12 @@
         function renderCalendar() {
             const month = parseInt(calMonth.value);
             const year = parseInt(calYear.value);
-            const firstDay = new Date(year, month, 1).getDay(); // 0 - Вс, 1 - Пн
+            const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            // Сдвиг для Пн-первого дня (в РФ неделя с Пн)
             let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
             
             calGrid.innerHTML = '';
             
-            // Заголовки дней
             ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
                 const el = document.createElement('div');
                 el.className = 'cal-header';
@@ -225,31 +204,75 @@
                 calGrid.appendChild(el);
             });
 
-            // Пустые ячейки
             for (let i = 0; i < startOffset; i++) {
                 calGrid.appendChild(document.createElement('div'));
             }
 
-            // Дни
             for (let day = 1; day <= daysInMonth; day++) {
-                const el = document.createElement('div');
-                el.className = 'cal-day';
-                el.innerText = day;
-                if (selectedDays.includes(day)) {
-                    el.classList.add('selected');
+                const wrapper = document.createElement('div');
+                wrapper.className = 'cal-day-wrapper';
+                
+                const dayBtn = document.createElement('div');
+                dayBtn.className = 'cal-day';
+                dayBtn.innerText = day;
+                
+                const timeInput = document.createElement('input');
+                timeInput.type = 'text';
+                timeInput.className = 'time-input';
+                timeInput.placeholder = '--:--';
+                timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
+                if (scheduleData[day]) timeInput.value = scheduleData[day];
+
+                // Если день уже выбран
+                if (scheduleData[day] !== undefined) {
+                    dayBtn.classList.add('selected');
                 }
-                el.onclick = () => {
-                    if (selectedDays.includes(day)) {
-                        selectedDays = selectedDays.filter(d => d !== day);
-                        el.classList.remove('selected');
+
+                dayBtn.onclick = () => {
+                    if (scheduleData[day] !== undefined) {
+                        // Удаляем день
+                        delete scheduleData[day];
+                        dayBtn.classList.remove('selected');
+                        timeInput.style.display = 'none';
+                        timeInput.value = '';
                     } else {
-                        selectedDays.push(day);
-                        el.classList.add('selected');
+                        // Добавляем день
+                        scheduleData[day] = '';
+                        dayBtn.classList.add('selected');
+                        timeInput.style.display = 'block';
+                        timeInput.focus(); // Сразу ставим курсор для ввода времени
                     }
-                    document.getElementById('schedule-days').value = selectedDays.join(',');
+                    updateScheduleHiddenInput();
                 };
-                calGrid.appendChild(el);
+
+                timeInput.oninput = (e) => {
+                    scheduleData[day] = e.target.value;
+                    updateScheduleHiddenInput();
+                };
+
+                wrapper.appendChild(dayBtn);
+                wrapper.appendChild(timeInput);
+                calGrid.appendChild(wrapper);
             }
+        }
+
+        function updateScheduleHiddenInput() {
+            // Преобразуем объект { 5: '16:00' } в строку "5=16:00, 12=18:30"
+            const str = Object.keys(scheduleData)
+                .map(day => `${day}=${scheduleData[day] || ''}`)
+                .join(',');
+            document.getElementById('schedule-days').value = str;
+        }
+
+        function parseSchedule(str) {
+            // Преобразуем строку "5=16:00, 12=18:30" обратно в объект
+            const obj = {};
+            if (!str) return obj;
+            str.split(',').forEach(item => {
+                const [day, time] = item.split('=');
+                if (day) obj[day] = time || '';
+            });
+            return obj;
         }
 
         calMonth.onchange = renderCalendar;
@@ -257,7 +280,7 @@
 
         function openModal(s = null) {
             form.reset();
-            selectedDays = [];
+            scheduleData = {};
             
             if (s) {
                 document.getElementById('id').value = s.id;
@@ -271,19 +294,18 @@
                 document.getElementById('level').value = s.level || 3;
                 document.getElementById('levelVal').innerText = s.level || 3;
                 
-                // Выбор предметов
                 const subs = (s.subjects || '').split(',').map(x=>x.trim());
                 const select = document.getElementById('subjects');
                 for (let i = 0; i < select.options.length; i++) {
                     select.options[i].selected = subs.includes(select.options[i].value);
                 }
 
-                // Календарь
                 if (s.schedule_month) calMonth.value = s.schedule_month;
                 if (s.schedule_year) calYear.value = s.schedule_year;
-                document.getElementById('schedule-time').value = s.schedule_time || '';
-                if (s.schedule_days) selectedDays = s.schedule_days.split(',').map(Number);
-                document.getElementById('schedule-days').value = selectedDays.join(',');
+                
+                // Парсим расписание
+                scheduleData = parseSchedule(s.schedule_days);
+                updateScheduleHiddenInput();
 
                 document.getElementById('homework').value = s.homework || '';
                 document.getElementById('tests').value = s.tests || '';
@@ -297,7 +319,7 @@
                 document.getElementById('deleteBtn').style.display = 'none';
             }
             
-            renderCalendar(); // Отрисовываем календарь
+            renderCalendar();
             modal.classList.add('active');
         }
 
@@ -308,7 +330,6 @@
             e.preventDefault();
             const id = document.getElementById('id').value;
             
-            // Собираем выбранные предметы
             const select = document.getElementById('subjects');
             const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
 
@@ -325,7 +346,6 @@
                 schedule_month: calMonth.value,
                 schedule_year: calYear.value,
                 schedule_days: document.getElementById('schedule-days').value,
-                schedule_time: document.getElementById('schedule-time').value,
                 homework: document.getElementById('homework').value,
                 tests: document.getElementById('tests').value,
                 topics: document.getElementById('topics').value,

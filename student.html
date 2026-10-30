@@ -35,9 +35,9 @@
         /* Стили для календаря ученика */
         .calendar-student { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-top: 15px; }
         .cal-header-st { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
-        .cal-day-st { padding: 8px 5px; text-align: center; border-radius: 8px; font-size: 0.9rem; border: 1px solid transparent; }
-        .cal-day-st.lesson-day { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; position: relative; }
-        .cal-day-st.lesson-day::after { content: '●'; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; }
+        .cal-day-st { padding: 8px 5px; text-align: center; border-radius: 8px; font-size: 0.9rem; border: 1px solid transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .cal-day-st.lesson-day { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
+        .cal-time-st { font-size: 0.65rem; font-weight: normal; margin-top: 2px; opacity: 0.8; }
         .cal-month-title { font-size: 1.2rem; font-weight: 800; color: white; margin-bottom: 10px; }
 
         /* Списки */
@@ -94,34 +94,45 @@
             renderProfile(data);
         }
 
-        function createList(text, className) {
+        function createList(text) {
             if (!text || text.trim() === '') return '<li>Пока нет данных</li>';
             return text.split('\n').filter(t => t.trim() !== '').map(t => `<li>${t}</li>`).join('');
         }
 
         // Генерация календаря для ученика
-        function renderStudentCalendar(month, year, daysArr, timeStr) {
+        function renderStudentCalendar(month, year, scheduleStr) {
             if (!month || !year) return '<p style="opacity:0.5;">Расписание еще не составлено.</p>';
             
             const m = parseInt(month);
             const y = parseInt(year);
             const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
             
+            // Парсим "5=16:00, 12=18:30" в объект
+            const daysObj = {};
+            if (scheduleStr) {
+                scheduleStr.split(',').forEach(item => {
+                    const [day, time] = item.split('=');
+                    if (day) daysObj[day] = time || '';
+                });
+            }
+            
             const firstDay = new Date(y, m, 1).getDay();
             const daysInMonth = new Date(y, m + 1, 0).getDate();
             let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
             
-            let html = `<div class="cal-month-title">${months[m]} ${y} ${timeStr ? '• ' + timeStr : ''}</div>`;
+            let html = `<div class="cal-month-title">${months[m]} ${y}</div>`;
             html += `<div class="calendar-student">`;
             
             ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => html += `<div class="cal-header-st">${d}</div>`);
             for (let i = 0; i < startOffset; i++) html += `<div></div>`;
 
-            const days = daysArr ? daysArr.split(',').map(Number) : [];
-            
             for (let day = 1; day <= daysInMonth; day++) {
-                const isLesson = days.includes(day);
-                html += `<div class="cal-day-st ${isLesson ? 'lesson-day' : ''}">${day}</div>`;
+                const time = daysObj[day];
+                const isLesson = time !== undefined;
+                html += `<div class="cal-day-st ${isLesson ? 'lesson-day' : ''}">
+                    ${day}
+                    ${isLesson && time ? `<span class="cal-time-st">${time}</span>` : ''}
+                </div>`;
             }
             
             html += `</div>`;
@@ -133,7 +144,6 @@
             const main = document.getElementById('main-content');
             const level = parseInt(s.level) || 0;
             
-            // Формируем теги предметов
             let subs = (s.subjects || '').split(',').map(x=>x.trim()).filter(x=>x);
             let subsHtml = subs.length > 0 ? subs.map(sub => `<span class="subject-tag">${sub}</span>`).join('') : '<span class="subject-tag">Предмет не указан</span>';
 
@@ -151,15 +161,25 @@
                     <!-- КАЛЕНДАРЬ -->
                     <div class="info-card" style="grid-column: 1 / -1;">
                         <h3>Расписание занятий</h3>
-                        ${renderStudentCalendar(s.schedule_month, s.schedule_year, s.schedule_days, s.schedule_time)}
+                        ${renderStudentCalendar(s.schedule_month, s.schedule_year, s.schedule_days)}
                     </div>
                 </div>
 
                 <div class="info-grid">
                     <div class="info-card">
+                        <h3>Уровень знаний</h3>
+                        <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">${level} / 5</p>
+                        <div class="level-bar-container">
+                            <div class="level-bar-fill" style="width: ${(level / 5) * 100}%;">${level > 0 ? level * 20 + '%' : ''}</div>
+                        </div>
+                    </div>
+                    <div class="info-card">
                         <h3>Домашняя работа</h3>
                         <ul class="custom-list homework-list">${createList(s.homework)}</ul>
                     </div>
+                </div>
+
+                <div class="info-grid">
                     <div class="info-card">
                         <h3>Результаты тестирований</h3>
                         <ul class="custom-list tests-list">${createList(s.tests)}</ul>
