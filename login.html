@@ -3,117 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
-    <title>Вход в личный кабинет | The Curator’s</title>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Вход | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #25283d;
-            --text-main: #f4f3ee;
-            --accent-purple: #7455d9;
-            --accent-lime: #c5f05a;
-            --card-bg: #313452;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .login-card {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 30px;
-            border: 1px solid rgba(244, 243, 238, 0.05);
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-        .login-card img { width: 120px; margin-bottom: 20px; }
-        .login-card h1 { font-size: 1.8rem; margin-bottom: 10px; }
-        .login-card h1 span { color: var(--accent-lime); }
-        .login-card p { opacity: 0.7; margin-bottom: 30px; font-size: 0.95rem; }
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group label { display: block; font-size: 0.9rem; margin-bottom: 8px; opacity: 0.8; }
-        .form-group input {
-            width: 100%;
-            padding: 15px;
-            border-radius: 14px;
-            border: 1px solid rgba(244, 243, 238, 0.15);
-            background: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--accent-lime);
-            box-shadow: 0 0 0 3px rgba(197, 240, 90, 0.15);
-        }
-        .btn-login {
-            width: 100%;
-            background: var(--accent-lime);
-            color: var(--bg-color);
-            padding: 16px;
-            border: none;
-            border-radius: 14px;
-            font-weight: 800;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: var(--transition);
-            margin-top: 10px;
-        }
-        .btn-login:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(197, 240, 90, 0.3); }
-        .back-link {
-            display: inline-block;
-            margin-top: 25px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            opacity: 0.6;
-            transition: var(--transition);
-        }
-        .back-link:hover { opacity: 1; color: var(--accent-lime); }
+        body { font-family: 'Inter', sans-serif; background: #25283d; color: #f4f3ee; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #313452; padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; }
+        h1 { color: #c5f05a; font-size: 1.8rem; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #555; background: #25283d; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #c5f05a; color: #25283d; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
+        button:hover { opacity: 0.9; }
+        a { color: #888; text-decoration: none; display: block; margin-top: 20px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
-
-    <div class="login-card">
-        <img src="logo.png" alt="Logo">
-        <h1>Личный <span>кабинет</span></h1>
-        <p>Войдите, чтобы отслеживать прогресс</p>
-
+    <div class="card">
+        <h1>Вход</h1>
         <form id="login-form">
-            <div class="form-group">
-                <label>Логин</label>
-                <input type="text" id="username" placeholder="Введите логин" required>
-            </div>
-            <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" id="password" placeholder="Введите пароль" required>
-            </div>
-            <button type="submit" class="btn-login">Войти</button>
+            <input type="text" id="username" placeholder="Логин" required>
+            <input type="password" id="password" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
         </form>
-
-        <a href="index.html" class="back-link">← Вернуться на главный сайт</a>
+        <a href="index.html">На главную</a>
     </div>
-
     <script>
-        const form = document.getElementById('login-form');
-        form.addEventListener('submit', (e) => {
+        document.getElementById('login-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const user = document.getElementById('username').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value.trim();
+            var user = document.getElementById('username').value.trim().toLowerCase();
+            var pass = document.getElementById('password').value.trim();
             if (user === 'админ' && pass === '1369631') {
                 window.location.href = 'admin.html';
             } else {
