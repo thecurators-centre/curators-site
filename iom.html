@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.web3forms.com; form-action 'self' https://api.web3forms.com;">
+    <title>ИОМ | The Curator’s</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #25283d;
+            --text-main: #f4f3ee;
+            --accent-purple: #7455d9;
+            --accent-lime: #c5f05a;
+            --card-bg: #313452;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-color);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: var(--transition);
+            z-index: 1001;
+        }
+
+        .logo-img {
+            width: 200px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        nav {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 400;
+            transition: var(--transition);
+            opacity: 0.8;
+        }
+
+        nav a:hover {
+            color: var(--accent-lime);
+            opacity: 1;
+        }
+
+        .btn-header {
+            background: var(--accent-purple);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .btn-header:hover {
+            background: var(--accent-lime);
+            color: var(--bg-color);
+            transform: scale(1.05);
+        }
+
+        /* Burger */
+        .burger { display: none; cursor: pointer; flex-direction: column; gap: 5px; z-index: 1001; }
+        .burger span { display: block; width: 25px; height: 3px; background-color: var(--text-main); transition: var(--transition); }
+        .burger.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .burger.active span:nth-child(2) { opacity: 0; }
+        .burger.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        /* Under Construction Section */
+        .construction-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 140px 10% 60px;
+            background: radial-gradient(circle at center, #313452 0%, #25283d 100%);
+        }
+
+        .construction-wrapper h1 {
+            font-size: clamp(2rem, 6vw, 3.6rem);
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            color: var(--accent-lime);
+            max-width: 900px;
+        }
+
+        .construction-wrapper p {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            opacity: 0.7;
+            max-width: 760px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        .fun-text {
+            font-size: 1.2rem;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-weight: 400;
+        }
+
+        .small-text {
+            font-size: 0.9rem;
+            opacity: 0.5;
+            font-style: italic;
+        }
+
+        footer {
+            padding: 40px 10%;
+            text-align: center;
+            border-top: 1px solid rgba(244, 243, 238, 0.1);
+            color: var(--text-main);
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+
+        /* --- MOBILE ADAPTATION --- */
+        @media (max-width: 768px) {
+            .burger { display: flex; }
+            .logo-img { width: 150px; }
+            
+            nav {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 70%;
+                height: 100vh;
+                background: var(--card-bg);
+                flex-direction: column;
+                justify-content: center;
+                transition: 0.3s ease-in-out;
+                box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            }
+            nav.active { right: 0; }
+            nav a { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="logo-container">
+            <img src="logo.png" alt="Logo" class="logo-img">
+        </a>
+        <nav id="nav-menu">
+            <a href="about.html">О нас</a>
+            <a href="reviews.html">Отзывы</a>
+            <a href="payment.html">Оплата</a>
+            <a href="contacts.html">Контакты</a>
+            <a href="login.html">Вход</a>
+            <a href="enroll.html" class="btn-header">Записаться</a>
+        </nav>
+        <div class="burger" id="burger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </header>
+
+    <section class="construction-wrapper">
+        <div class="fun-text">Ой, кажется кто-то из кураторов напортачил!</div>
+        <h1>Страница в разработке</h1>
+        <p class="small-text">Ведутся технические работы, приносим свои извинения.</p>
+    </section>
+
+    <footer>
+        &copy; 2026 The Curator’s. Все права защищены. <br>
+        Прогресс, у которого есть маршрут.
+    </footer>
+
+    <script>
+        const burger = document.getElementById('burger');
+        const nav = document.getElementById('nav-menu');
+
+        burger.addEventListener('click', () => {
+            burger.classList.toggle('active');
+            nav.classList.toggle('active');
+        });
+
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                burger.classList.remove('active');
+                nav.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>
