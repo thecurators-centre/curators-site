@@ -5,16 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <!-- Подключаем Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #25283d;
-            --text-main: #f4f3ee;
-            --accent-lime: #c5f05a;
-            --card-bg: #313452;
-            --danger: #ff6b6b;
-        }
+        :root { --bg-color: #25283d; --text-main: #f4f3ee; --accent-lime: #c5f05a; --card-bg: #313452; --danger: #ff6b6b; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -26,8 +19,6 @@
         .card h3 { margin-bottom: 5px; }
         .card p { opacity: 0.7; font-size: 0.9rem; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
-        
-        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; }
@@ -40,27 +31,31 @@
         .form-row .form-group { flex: 1; }
         .btn-save { width: 100%; padding: 12px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-delete { background: var(--danger); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
-        .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>Ученики (Облако)</h1>
+            <h1>Ученики</h1>
             <a href="login.html" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
         </div>
         <button class="btn" id="addBtn">+ Добавить ученика</button>
-        <div class="grid" id="grid">
-            <div class="loading">Загрузка данных...</div>
-        </div>
+        <div class="grid" id="grid"><div class="loading">Загрузка...</div></div>
     </div>
 
     <div class="modal" id="modal">
         <div class="modal-content">
             <button class="close-btn" id="closeModal">&times;</button>
-            <h2 style="margin-bottom: 20px;">Редактирование</h2>
+            <h2 style="margin-bottom: 20px;">Карточка ученика</h2>
             <form id="form">
                 <input type="hidden" id="id">
+                <!-- ЛОГИН И ПАРОЛЬ -->
+                <div class="form-row">
+                    <div class="form-group"><label>Логин (для входа)</label><input type="text" id="login" placeholder="Например: kain"></div>
+                    <div class="form-group"><label>Пароль</label><input type="text" id="password" placeholder="Например: 123456"></div>
+                </div>
+                <hr style="border-color: #444; margin: 15px 0;">
+                <!-- ОСТАЛЬНЫЕ ДАННЫЕ -->
                 <div class="form-row">
                     <div class="form-group"><label>Фамилия</label><input type="text" id="surname" required></div>
                     <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
@@ -89,14 +84,13 @@
                 </div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
-                <button type="submit" class="btn-save">Сохранить в облако</button>
+                <button type="submit" class="btn-save">Сохранить</button>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">Удалить</button>
             </form>
         </div>
     </div>
 
     <script>
-        // --- НАСТРОЙКИ БАЗЫ ДАННЫХ ---
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -109,45 +103,32 @@
         const closeModal = document.getElementById('closeModal');
         const deleteBtn = document.getElementById('deleteBtn');
 
-        // Загрузка данных из облака
         async function loadStudents() {
-            grid.innerHTML = '<div class="loading">Загрузка данных...</div>';
-            const { data, error } = await supabaseClient
-                .from('students')
-                .select('*')
-                .order('id', { ascending: true });
-            
-            if (error) {
-                console.error('Ошибка загрузки:', error);
-                grid.innerHTML = '<div class="loading" style="color: red;">Ошибка подключения к базе. Проверьте таблицу.</div>';
-                return;
-            }
-            
+            grid.innerHTML = '<div class="loading">Загрузка...</div>';
+            const { data, error } = await supabaseClient.from('students').select('*').order('id', { ascending: true });
+            if (error) { grid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
             students = data || [];
             render();
         }
 
-        // Отрисовка карточек
         function render() {
             grid.innerHTML = '';
-            if (students.length === 0) {
-                grid.innerHTML = '<p style="opacity:0.5;">Список пуст. Добавьте ученика.</p>';
-                return;
-            }
+            if (students.length === 0) { grid.innerHTML = '<p style="opacity:0.5;">Пусто</p>'; return; }
             students.forEach((s) => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>${s.grade || ''} класс • ${s.subject}</p>`;
+                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Логин: ${s.login || 'не задан'}</p>`;
                 card.onclick = () => openModal(s);
                 grid.appendChild(card);
             });
         }
 
-        // Открытие модалки
         function openModal(s = null) {
             form.reset();
             if (s) {
                 document.getElementById('id').value = s.id;
+                document.getElementById('login').value = s.login || '';
+                document.getElementById('password').value = s.password || '';
                 document.getElementById('surname').value = s.surname || '';
                 document.getElementById('name').value = s.name || '';
                 document.getElementById('patronymic').value = s.patronymic || '';
@@ -171,12 +152,12 @@
         closeModal.onclick = () => modal.classList.remove('active');
         modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
 
-        // Сохранение (Создание или Обновление)
         form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('id').value;
-            
             const data = {
+                login: document.getElementById('login').value.trim(),
+                password: document.getElementById('password').value.trim(),
                 surname: document.getElementById('surname').value,
                 name: document.getElementById('name').value,
                 patronymic: document.getElementById('patronymic').value,
@@ -190,39 +171,27 @@
 
             let error;
             if (id) {
-                // Обновляем
                 const res = await supabaseClient.from('students').update(data).eq('id', id);
                 error = res.error;
             } else {
-                // Создаем
                 const res = await supabaseClient.from('students').insert([data]);
                 error = res.error;
             }
 
-            if (error) {
-                alert('Ошибка сохранения: ' + error.message);
-            } else {
-                modal.classList.remove('active');
-                loadStudents(); // Перезагружаем список
-            }
+            if (error) alert('Ошибка: ' + error.message);
+            else { modal.classList.remove('active'); loadStudents(); }
         };
 
-        // Удаление
         deleteBtn.onclick = async () => {
             const id = document.getElementById('id').value;
-            if (confirm('Удалить ученика?')) {
+            if (confirm('Удалить?')) {
                 const { error } = await supabaseClient.from('students').delete().eq('id', id);
-                if (error) alert('Ошибка удаления: ' + error.message);
-                else {
-                    modal.classList.remove('active');
-                    loadStudents();
-                }
+                if (error) alert('Ошибка: ' + error.message);
+                else { modal.classList.remove('active'); loadStudents(); }
             }
         };
 
         addBtn.onclick = () => openModal();
-        
-        // Старт
         loadStudents();
     </script>
 </body>

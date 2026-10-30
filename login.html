@@ -5,103 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #25283d;
-            --text-main: #f4f3ee;
-            --accent-lime: #c5f05a;
-            --card-bg: #313452;
-        }
+        :root { --bg-color: #25283d; --text-main: #f4f3ee; --accent-lime: #c5f05a; --card-bg: #313452; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .login-card {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 30px;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .login-card { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .login-card img { width: 120px; margin-bottom: 20px; }
         h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--accent-lime); }
-        input {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(244, 243, 238, 0.15);
-            background: var(--bg-color);
-            color: white;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-        }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-size: 1rem; font-family: 'Inter', sans-serif; }
         input:focus { outline: none; border-color: var(--accent-lime); }
-        button {
-            width: 100%;
-            padding: 15px;
-            background: var(--accent-lime);
-            color: var(--bg-color);
-            border: none;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        button { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
         button:hover { opacity: 0.9; transform: translateY(-2px); }
-        .back-link {
-            display: block;
-            margin-top: 20px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            opacity: 0.6;
-        }
-        .back-link:hover { opacity: 1; }
+        .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; opacity: 0.6; }
         #error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
     <div class="login-card">
         <img src="logo.png" alt="Logo">
-        <h1>Вход в кабинет</h1>
+        <h1>Вход</h1>
         <form id="login-form">
             <input type="text" id="username" placeholder="Логин" required>
             <input type="password" id="password" placeholder="Пароль" required>
-            <button type="submit">Войти</button>
+            <button type="submit" id="submit-btn">Войти</button>
             <div id="error-msg">Неверный логин или пароль</div>
         </form>
         <a href="index.html" class="back-link">← На главную</a>
     </div>
 
     <script>
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const user = document.getElementById('username').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value.trim();
-            const errorMsg = document.getElementById('error-msg');
+        const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // Проверка для Админа
-            if (user === 'админ' && pass === '1369631') {
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('error-msg');
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+
+            btn.innerText = 'Проверка...';
+            btn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            // 1. Проверка на Админа (зашита в код)
+            if (user.toLowerCase() === 'админ' && pass === '1369631') {
                 window.location.href = 'admin.html';
-            } 
-            // Проверка для Каина
-            else if (user === 'каин' && pass === '0000000') {
-                window.location.href = 'student.html';
-            } 
-            // Для всех остальных - ошибка
-            else {
+                return;
+            }
+
+            // 2. Проверка через базу данных
+            const { data, error } = await supabaseClient
+                .from('students')
+                .select('id, name')
+                .eq('login', user)
+                .eq('password', pass)
+                .single(); // Берем только одного
+
+            if (error || !data) {
                 errorMsg.style.display = 'block';
+                btn.innerText = 'Войти';
+                btn.disabled = false;
+            } else {
+                // Сохраняем ID ученика в память браузера, чтобы student.html знал, кого грузить
+                localStorage.setItem('current_student_id', data.id);
+                window.location.href = 'student.html';
             }
         });
     </script>

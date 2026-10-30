@@ -7,21 +7,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #25283d;
-            --text-main: #f4f3ee;
-            --accent-purple: #7455d9;
-            --accent-lime: #c5f05a;
-            --card-bg: #313452;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        :root { --bg-color: #25283d; --text-main: #f4f3ee; --accent-purple: #7455d9; --accent-lime: #c5f05a; --card-bg: #313452; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; min-height: 100vh; }
         header { padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); position: sticky; top: 0; z-index: 100; }
         .logo-container img { width: 150px; height: auto; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .header-right span { font-size: 0.9rem; opacity: 0.7; }
-        .btn-logout { color: var(--accent-lime); text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--accent-lime); padding: 8px 15px; border-radius: 10px; transition: var(--transition); }
+        .btn-logout { color: var(--accent-lime); text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--accent-lime); padding: 8px 15px; border-radius: 10px; transition: 0.3s; }
         .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
         .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
         
@@ -46,7 +39,6 @@
         
         .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
-
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
         @media (max-width: 768px) {
@@ -57,69 +49,51 @@
     </style>
 </head>
 <body>
-
     <header>
         <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
             <span id="header-name">Загрузка...</span>
-            <a href="login.html" class="btn-logout">Выйти</a>
+            <a href="login.html" onclick="localStorage.removeItem('current_student_id')" class="btn-logout">Выйти</a>
         </div>
     </header>
 
     <div class="container" id="main-content">
-        <div class="loading">Поиск вашего профиля в базе данных...</div>
+        <div class="loading">Загрузка профиля...</div>
     </div>
 
     <script>
-        // --- НАСТРОЙКИ БАЗЫ ДАННЫХ ---
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function loadProfile() {
-            // Ищем Каина в базе
-            const { data, error } = await supabaseClient
-                .from('students')
-                .select('*')
-                .ilike('name', '%Каин%')
-                .limit(1);
+            const studentId = localStorage.getItem('current_student_id');
 
-            if (error) {
-                console.error(error);
-                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ошибка подключения к базе.</div>';
+            if (!studentId) {
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Вы не вошли в систему. <a href="login.html" style="color:white;">Войти</a></div>';
                 return;
             }
 
-            let cain = data && data.length > 0 ? data[0] : null;
+            // Ищем строго по ID
+            const { data, error } = await supabaseClient
+                .from('students')
+                .select('*')
+                .eq('id', studentId)
+                .single();
 
-            // Если Каина нет в базе, создаем его (демо-режим)
-            if (!cain) {
-                const demoData = {
-                    surname: 'Адамсон',
-                    name: 'Каин',
-                    patronymic: '',
-                    age: 14,
-                    grade: '8',
-                    subject: 'Английский язык',
-                    level: 4,
-                    topics: 'Present Simple & Continuous\nPast Simple & Present Perfect\nМодальные глаголы (Can, Could, May)',
-                    iom: 'Цель: Подготовка к экзамену Cambridge PET.\nЗадача: Освоить Conditionals 1, 2, 3.'
-                };
-                
-                const { data: newCain } = await supabaseClient.from('students').insert([demoData]).select();
-                cain = newCain ? newCain[0] : demoData; // Если не удалось сохранить, показываем локально
+            if (error || !data) {
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ученик не найден в базе.</div>';
+                return;
             }
 
-            renderProfile(cain);
+            renderProfile(data);
         }
 
         function renderProfile(cain) {
             document.getElementById('header-name').innerText = `Ученик: ${cain.name}`;
-            
             const main = document.getElementById('main-content');
             const level = parseInt(cain.level) || 0;
             
-            // Формируем HTML
             main.innerHTML = `
                 <div class="profile-header">
                     <div class="avatar">${cain.name.charAt(0).toUpperCase()}</div>
@@ -129,7 +103,6 @@
                         <div class="subject-tag">Предмет: ${cain.subject || 'Не указан'}</div>
                     </div>
                 </div>
-
                 <div class="info-grid">
                     <div class="info-card">
                         <h3>Уровень знаний</h3>
@@ -139,7 +112,6 @@
                         </div>
                         <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
                     </div>
-
                     <div class="info-card">
                         <h3>Пройденные темы</h3>
                         <ul class="topics-list">
@@ -147,7 +119,6 @@
                         </ul>
                     </div>
                 </div>
-
                 <div class="highlight-card">
                     <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
                     <ul class="iom-list">
@@ -156,7 +127,6 @@
                 </div>
             `;
         }
-
         loadProfile();
     </script>
 </body>
