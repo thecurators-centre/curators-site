@@ -22,8 +22,6 @@
             line-height: 1.6;
             min-height: 100vh;
         }
-
-        /* Header */
         header {
             padding: 15px 5%;
             display: flex;
@@ -49,11 +47,7 @@
             transition: var(--transition);
         }
         .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
-
-        /* Main Container */
         .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
-
-        /* Profile Header */
         .profile-header {
             background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
             padding: 40px;
@@ -88,8 +82,6 @@
             margin-top: 10px;
             backdrop-filter: blur(5px);
         }
-
-        /* Info Grid */
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -106,25 +98,18 @@
             font-size: 1.1rem;
             margin-bottom: 20px;
             color: var(--accent-lime);
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
-
-        /* Level Bar */
         .level-bar-container {
             background: var(--bg-color);
             height: 20px;
             border-radius: 10px;
             overflow: hidden;
             margin-top: 10px;
-            position: relative;
         }
         .level-bar-fill {
             background: var(--accent-lime);
             height: 100%;
             border-radius: 10px;
-            transition: width 1s ease-in-out;
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -133,11 +118,7 @@
             font-weight: 800;
             color: var(--bg-color);
         }
-
-        /* Lists */
-        .topics-list, .iom-list {
-            list-style: none;
-        }
+        .topics-list, .iom-list { list-style: none; }
         .topics-list li, .iom-list li {
             padding: 12px 0;
             border-bottom: 1px solid rgba(244, 243, 238, 0.1);
@@ -146,19 +127,8 @@
             gap: 10px;
         }
         .topics-list li:last-child, .iom-list li:last-child { border-bottom: none; }
-        .topics-list li::before {
-            content: '✓';
-            color: var(--accent-lime);
-            font-weight: 800;
-            margin-top: 2px;
-        }
-        .iom-list li::before {
-            content: '→';
-            color: var(--accent-purple);
-            font-weight: 800;
-            margin-top: 2px;
-        }
-
+        .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
+        .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
         .highlight-card {
             background: var(--card-bg);
             padding: 30px;
@@ -166,8 +136,6 @@
             border-left: 4px solid var(--accent-purple);
         }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
-
-        /* Mobile */
         @media (max-width: 768px) {
             .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
             .info-grid { grid-template-columns: 1fr; }
@@ -176,7 +144,6 @@
     </style>
 </head>
 <body>
-
     <header>
         <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
@@ -184,9 +151,7 @@
             <a href="login.html" class="btn-logout">Выйти</a>
         </div>
     </header>
-
     <div class="container">
-        <!-- Профиль -->
         <div class="profile-header">
             <div class="avatar">К</div>
             <div class="profile-info">
@@ -195,9 +160,7 @@
                 <div class="subject-tag">Предмет: Английский язык</div>
             </div>
         </div>
-
         <div class="info-grid">
-            <!-- Уровень знаний -->
             <div class="info-card">
                 <h3>Уровень знаний</h3>
                 <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">4 / 5</p>
@@ -206,8 +169,6 @@
                 </div>
                 <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Отличный прогресс! Осталось совсем немного до идеала.</p>
             </div>
-
-            <!-- Пройденные темы -->
             <div class="info-card">
                 <h3>Пройденные темы</h3>
                 <ul class="topics-list">
@@ -218,8 +179,6 @@
                 </ul>
             </div>
         </div>
-
-        <!-- ИОМ -->
         <div class="highlight-card">
             <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
             <ul class="iom-list">
@@ -230,6 +189,5 @@
             </ul>
         </div>
     </div>
-
 </body>
 </html>
