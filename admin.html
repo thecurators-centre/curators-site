@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Подключаем Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #25283d;
@@ -23,9 +25,10 @@
         .card:hover { transform: translateY(-3px); background: #3a3d5c; }
         .card h3 { margin-bottom: 5px; }
         .card p { opacity: 0.7; font-size: 0.9rem; }
+        .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
         
         /* Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
@@ -43,11 +46,13 @@
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>Ученики</h1>
+            <h1>Ученики (Облако)</h1>
             <a href="login.html" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
         </div>
         <button class="btn" id="addBtn">+ Добавить ученика</button>
-        <div class="grid" id="grid"></div>
+        <div class="grid" id="grid">
+            <div class="loading">Загрузка данных...</div>
+        </div>
     </div>
 
     <div class="modal" id="modal">
@@ -84,15 +89,19 @@
                 </div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
-                <button type="submit" class="btn-save">Сохранить</button>
+                <button type="submit" class="btn-save">Сохранить в облако</button>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">Удалить</button>
             </form>
         </div>
     </div>
 
     <script>
-        // Данные
-        let students = JSON.parse(localStorage.getItem('curators_students')) || [];
+        // --- НАСТРОЙКИ БАЗЫ ДАННЫХ ---
+        const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let students = [];
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const form = document.getElementById('form');
@@ -100,34 +109,51 @@
         const closeModal = document.getElementById('closeModal');
         const deleteBtn = document.getElementById('deleteBtn');
 
-        // Отрисовка
+        // Загрузка данных из облака
+        async function loadStudents() {
+            grid.innerHTML = '<div class="loading">Загрузка данных...</div>';
+            const { data, error } = await supabaseClient
+                .from('students')
+                .select('*')
+                .order('id', { ascending: true });
+            
+            if (error) {
+                console.error('Ошибка загрузки:', error);
+                grid.innerHTML = '<div class="loading" style="color: red;">Ошибка подключения к базе. Проверьте таблицу.</div>';
+                return;
+            }
+            
+            students = data || [];
+            render();
+        }
+
+        // Отрисовка карточек
         function render() {
             grid.innerHTML = '';
             if (students.length === 0) {
                 grid.innerHTML = '<p style="opacity:0.5;">Список пуст. Добавьте ученика.</p>';
                 return;
             }
-            students.forEach((s, index) => {
+            students.forEach((s) => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>${s.grade || ''} класс • ${s.subject}</p>`;
-                card.onclick = () => openModal(index);
+                card.onclick = () => openModal(s);
                 grid.appendChild(card);
             });
         }
 
         // Открытие модалки
-        function openModal(index = null) {
+        function openModal(s = null) {
             form.reset();
-            if (index !== null) {
-                const s = students[index];
-                document.getElementById('id').value = index;
-                document.getElementById('surname').value = s.surname;
-                document.getElementById('name').value = s.name;
+            if (s) {
+                document.getElementById('id').value = s.id;
+                document.getElementById('surname').value = s.surname || '';
+                document.getElementById('name').value = s.name || '';
                 document.getElementById('patronymic').value = s.patronymic || '';
                 document.getElementById('age').value = s.age || '';
                 document.getElementById('grade').value = s.grade || '';
-                document.getElementById('subject').value = s.subject;
+                document.getElementById('subject').value = s.subject || 'Русский язык';
                 document.getElementById('level').value = s.level || 3;
                 document.getElementById('levelVal').innerText = s.level || 3;
                 document.getElementById('topics').value = s.topics || '';
@@ -142,50 +168,62 @@
             modal.classList.add('active');
         }
 
-        // Закрытие
         closeModal.onclick = () => modal.classList.remove('active');
         modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
 
-        // Сохранение
-        form.onsubmit = (e) => {
+        // Сохранение (Создание или Обновление)
+        form.onsubmit = async (e) => {
             e.preventDefault();
-            const index = document.getElementById('id').value;
+            const id = document.getElementById('id').value;
+            
             const data = {
                 surname: document.getElementById('surname').value,
                 name: document.getElementById('name').value,
                 patronymic: document.getElementById('patronymic').value,
-                age: document.getElementById('age').value,
+                age: parseInt(document.getElementById('age').value) || null,
                 grade: document.getElementById('grade').value,
                 subject: document.getElementById('subject').value,
-                level: document.getElementById('level').value,
+                level: parseInt(document.getElementById('level').value),
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
-            
-            if (index !== '') {
-                students[index] = data;
+
+            let error;
+            if (id) {
+                // Обновляем
+                const res = await supabaseClient.from('students').update(data).eq('id', id);
+                error = res.error;
             } else {
-                students.push(data);
+                // Создаем
+                const res = await supabaseClient.from('students').insert([data]);
+                error = res.error;
             }
-            localStorage.setItem('curators_students', JSON.stringify(students));
-            render();
-            modal.classList.remove('active');
+
+            if (error) {
+                alert('Ошибка сохранения: ' + error.message);
+            } else {
+                modal.classList.remove('active');
+                loadStudents(); // Перезагружаем список
+            }
         };
 
         // Удаление
-        deleteBtn.onclick = () => {
-            const index = document.getElementById('id').value;
-            if (confirm('Удалить?')) {
-                students.splice(index, 1);
-                localStorage.setItem('curators_students', JSON.stringify(students));
-                render();
-                modal.classList.remove('active');
+        deleteBtn.onclick = async () => {
+            const id = document.getElementById('id').value;
+            if (confirm('Удалить ученика?')) {
+                const { error } = await supabaseClient.from('students').delete().eq('id', id);
+                if (error) alert('Ошибка удаления: ' + error.message);
+                else {
+                    modal.classList.remove('active');
+                    loadStudents();
+                }
             }
         };
 
-        // Старт
         addBtn.onclick = () => openModal();
-        render();
+        
+        // Старт
+        loadStudents();
     </script>
 </body>
 </html>

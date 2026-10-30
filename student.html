@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кабинет ученика | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #25283d;
@@ -15,129 +16,38 @@
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-        header {
-            padding: 15px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; min-height: 100vh; }
+        header { padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); position: sticky; top: 0; z-index: 100; }
         .logo-container img { width: 150px; height: auto; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .header-right span { font-size: 0.9rem; opacity: 0.7; }
-        .btn-logout {
-            color: var(--accent-lime);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border: 1px solid var(--accent-lime);
-            padding: 8px 15px;
-            border-radius: 10px;
-            transition: var(--transition);
-        }
+        .btn-logout { color: var(--accent-lime); text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--accent-lime); padding: 8px 15px; border-radius: 10px; transition: var(--transition); }
         .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
         .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
         
-        .profile-header {
-            background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
-            padding: 40px;
-            border-radius: 30px;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-        .avatar {
-            width: 100px;
-            height: 100px;
-            background: var(--accent-lime);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--bg-color);
-            flex-shrink: 0;
-        }
+        .profile-header { background: linear-gradient(135deg, #313452 0%, #7455d9 100%); padding: 40px; border-radius: 30px; margin-bottom: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+        .avatar { width: 100px; height: 100px; background: var(--accent-lime); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: 800; color: var(--bg-color); flex-shrink: 0; }
         .profile-info h1 { font-size: 2rem; margin-bottom: 5px; }
         .profile-info p { opacity: 0.9; font-size: 1.1rem; }
-        .profile-info .subject-tag {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            margin-top: 10px;
-            backdrop-filter: blur(5px);
-        }
+        .profile-info .subject-tag { display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; margin-top: 10px; backdrop-filter: blur(5px); }
         
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        .info-card {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 24px;
-            border: 1px solid rgba(244, 243, 238, 0.05);
-        }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 30px; }
+        .info-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border: 1px solid rgba(244, 243, 238, 0.05); }
         .info-card h3 { font-size: 1.1rem; margin-bottom: 20px; color: var(--accent-lime); }
         
-        .level-bar-container {
-            background: var(--bg-color);
-            height: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .level-bar-fill {
-            background: var(--accent-lime);
-            height: 100%;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 10px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: var(--bg-color);
-            transition: width 1s ease-in-out;
-        }
+        .level-bar-container { background: var(--bg-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        .level-bar-fill { background: var(--accent-lime); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.8rem; font-weight: 800; color: var(--bg-color); transition: width 1s ease-in-out; }
         
         .topics-list, .iom-list { list-style: none; }
-        .topics-list li, .iom-list li {
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
+        .topics-list li, .iom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
         .topics-list li:last-child, .iom-list li:last-child { border-bottom: none; }
         .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
         .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
         
-        .highlight-card {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 24px;
-            border-left: 4px solid var(--accent-purple);
-        }
+        .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
+
+        .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
         @media (max-width: 768px) {
             .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
@@ -151,119 +61,103 @@
     <header>
         <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
-            <span id="header-name">Ученик</span>
+            <span id="header-name">Загрузка...</span>
             <a href="login.html" class="btn-logout">Выйти</a>
         </div>
     </header>
 
-    <div class="container">
-        <!-- Профиль -->
-        <div class="profile-header">
-            <div class="avatar" id="avatar-letter">К</div>
-            <div class="profile-info">
-                <h1 id="full-name">Загрузка...</h1>
-                <p id="age-class">...</p>
-                <div class="subject-tag" id="subject-tag">...</div>
-            </div>
-        </div>
-
-        <div class="info-grid">
-            <!-- Уровень знаний -->
-            <div class="info-card">
-                <h3>Уровень знаний</h3>
-                <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;" id="level-text">- / 5</p>
-                <div class="level-bar-container">
-                    <div class="level-bar-fill" id="level-bar" style="width: 0%;"></div>
-                </div>
-                <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
-            </div>
-
-            <!-- Пройденные темы -->
-            <div class="info-card">
-                <h3>Пройденные темы</h3>
-                <ul class="topics-list" id="topics-list">
-                    <li>Пока нет данных</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ИОМ -->
-        <div class="highlight-card">
-            <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
-            <ul class="iom-list" id="iom-list">
-                <li>Пока нет данных</li>
-            </ul>
-        </div>
+    <div class="container" id="main-content">
+        <div class="loading">Поиск вашего профиля в базе данных...</div>
     </div>
 
     <script>
-        // 1. Пытаемся найти Каина в базе данных (localStorage)
-        let students = JSON.parse(localStorage.getItem('curators_students')) || [];
-        
-        // Ищем ученика, в имени или фамилии которого есть "Каин"
-        let cain = students.find(s => 
-            (s.name && s.name.toLowerCase().includes('каин')) || 
-            (s.surname && s.surname.toLowerCase().includes('каин'))
-        );
+        // --- НАСТРОЙКИ БАЗЫ ДАННЫХ ---
+        const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Если админ не создал Каина, используем тестовые данные
-        if (!cain) {
-            cain = {
-                surname: 'Адамсон',
-                name: 'Каин',
-                patronymic: '',
-                age: '14',
-                grade: '8',
-                subject: 'Английский язык',
-                level: '4',
-                topics: 'Present Simple & Continuous\nPast Simple & Present Perfect\nМодальные глаголы (Can, Could, May)\nФразовые глаголы (базовый уровень)',
-                iom: 'Цель: Подготовка к международному экзамену Cambridge PET.\nБлижайшая задача: Освоить тему "Условные предложения" (Conditionals 1, 2, 3).\nРекомендация: Начать читать адаптированную книгу "The Little Prince".'
-            };
+        async function loadProfile() {
+            // Ищем Каина в базе
+            const { data, error } = await supabaseClient
+                .from('students')
+                .select('*')
+                .ilike('name', '%Каин%')
+                .limit(1);
+
+            if (error) {
+                console.error(error);
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ошибка подключения к базе.</div>';
+                return;
+            }
+
+            let cain = data && data.length > 0 ? data[0] : null;
+
+            // Если Каина нет в базе, создаем его (демо-режим)
+            if (!cain) {
+                const demoData = {
+                    surname: 'Адамсон',
+                    name: 'Каин',
+                    patronymic: '',
+                    age: 14,
+                    grade: '8',
+                    subject: 'Английский язык',
+                    level: 4,
+                    topics: 'Present Simple & Continuous\nPast Simple & Present Perfect\nМодальные глаголы (Can, Could, May)',
+                    iom: 'Цель: Подготовка к экзамену Cambridge PET.\nЗадача: Освоить Conditionals 1, 2, 3.'
+                };
+                
+                const { data: newCain } = await supabaseClient.from('students').insert([demoData]).select();
+                cain = newCain ? newCain[0] : demoData; // Если не удалось сохранить, показываем локально
+            }
+
+            renderProfile(cain);
         }
 
-        // 2. Заполняем страницу данными
-        document.getElementById('header-name').innerText = `Ученик: ${cain.name}`;
-        document.getElementById('full-name').innerText = `${cain.surname} ${cain.name}`;
-        document.getElementById('age-class').innerText = `Возраст: ${cain.age || '?'} лет • ${cain.grade || '?'} класс`;
-        document.getElementById('subject-tag').innerText = `Предмет: ${cain.subject || 'Не указан'}`;
-        document.getElementById('avatar-letter').innerText = cain.name.charAt(0).toUpperCase();
+        function renderProfile(cain) {
+            document.getElementById('header-name').innerText = `Ученик: ${cain.name}`;
+            
+            const main = document.getElementById('main-content');
+            const level = parseInt(cain.level) || 0;
+            
+            // Формируем HTML
+            main.innerHTML = `
+                <div class="profile-header">
+                    <div class="avatar">${cain.name.charAt(0).toUpperCase()}</div>
+                    <div class="profile-info">
+                        <h1>${cain.surname} ${cain.name}</h1>
+                        <p>Возраст: ${cain.age || '?'} лет • ${cain.grade || '?'} класс</p>
+                        <div class="subject-tag">Предмет: ${cain.subject || 'Не указан'}</div>
+                    </div>
+                </div>
 
-        // Уровень
-        const level = parseInt(cain.level) || 0;
-        document.getElementById('level-text').innerText = `${level} / 5`;
-        const bar = document.getElementById('level-bar');
-        bar.style.width = `${(level / 5) * 100}%`;
-        bar.innerText = level > 0 ? `${level * 20}%` : '';
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Уровень знаний</h3>
+                        <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">${level} / 5</p>
+                        <div class="level-bar-container">
+                            <div class="level-bar-fill" style="width: ${(level / 5) * 100}%;">${level > 0 ? level * 20 + '%' : ''}</div>
+                        </div>
+                        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
+                    </div>
 
-        // Пройденные темы (разбиваем по переносу строки)
-        const topicsList = document.getElementById('topics-list');
-        topicsList.innerHTML = '';
-        if (cain.topics) {
-            cain.topics.split('\n').forEach(topic => {
-                if (topic.trim()) {
-                    const li = document.createElement('li');
-                    li.innerText = topic.trim();
-                    topicsList.appendChild(li);
-                }
-            });
-        } else {
-            topicsList.innerHTML = '<li>Пока нет пройденных тем</li>';
+                    <div class="info-card">
+                        <h3>Пройденные темы</h3>
+                        <ul class="topics-list">
+                            ${cain.topics ? cain.topics.split('\n').map(t => `<li>${t}</li>`).join('') : '<li>Пока нет данных</li>'}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="highlight-card">
+                    <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
+                    <ul class="iom-list">
+                        ${cain.iom ? cain.iom.split('\n').map(i => `<li>${i}</li>`).join('') : '<li>ИОМ пока не составлен</li>'}
+                    </ul>
+                </div>
+            `;
         }
 
-        // ИОМ (разбиваем по переносу строки)
-        const iomList = document.getElementById('iom-list');
-        iomList.innerHTML = '';
-        if (cain.iom) {
-            cain.iom.split('\n').forEach(item => {
-                if (item.trim()) {
-                    const li = document.createElement('li');
-                    li.innerHTML = item.trim();
-                    iomList.appendChild(li);
-                }
-            });
-        } else {
-            iomList.innerHTML = '<li>ИОМ пока не составлен</li>';
-        }
+        loadProfile();
     </script>
 </body>
 </html>
