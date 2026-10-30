@@ -130,13 +130,37 @@
         }
         .section-title span { color: var(--accent-lime); }
 
-        .intro p {
+        /* --- СЕКЦИЯ "КАК ЭТО УСТРОЕНО" С МАСКОТОМ --- */
+        .intro-flex {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 40px;
+        }
+        
+        .intro-text {
+            flex: 1;
+        }
+
+        .intro-text p {
             font-size: 1.1rem;
             opacity: 0.85;
             margin-bottom: 18px;
             max-width: 900px;
         }
-        .intro p:last-child { margin-bottom: 0; }
+        .intro-text p:last-child { margin-bottom: 0; }
+
+        .payment-mascot {
+            width: 220px;
+            max-width: 100%;
+            flex-shrink: 0;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
 
         /* Price cards */
         .price-grid {
@@ -244,6 +268,15 @@
             
             .btn-main { width: 100%; text-align: center; padding: 15px 20px; }
             .price-card .price { font-size: 1.3rem; }
+
+            /* На мобильных маскот станет под текстом */
+            .intro-flex {
+                flex-direction: column-reverse; /* Маскот сверху, текст снизу */
+                text-align: center;
+            }
+            .payment-mascot {
+                width: 150px;
+            }
         }
     </style>
 </head>
@@ -258,6 +291,7 @@
             <a href="reviews.html">Отзывы</a>
             <a href="payment.html">Оплата</a>
             <a href="contacts.html">Контакты</a>
+            <a href="login.html">Вход</a>
             <a href="enroll.html" class="btn-header">Записаться</a>
         </nav>
         <div class="burger" id="burger">
@@ -272,10 +306,14 @@
         <p>Гибкие форматы — от разового занятия до полного курса под конкретную задачу.</p>
     </section>
 
-    <section class="section intro">
-        <h2 class="section-title">Как это <span>устроено</span></h2>
-        <p>У нас вы можете купить как разовые занятия, если еще не определились с графиком, так и абонементы.</p>
-        <p>В зависимости от регулярности, предмета и уровня сложности цена может меняться.</p>
+    <!-- ОБНОВЛЕННАЯ СЕКЦИЯ -->
+    <section class="section intro-flex">
+        <div class="intro-text">
+            <h2 class="section-title">Как это <span>устроено</span></h2>
+            <p>У нас вы можете купить как разовые занятия, если еще не определились с графиком, так и абонементы.</p>
+            <p>В зависимости от регулярности, предмета и уровня сложности цена может меняться.</p>
+        </div>
+        <img src="mascot3.png" alt="Mascot 3" class="payment-mascot">
     </section>
 
     <section class="section">
