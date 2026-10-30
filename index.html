@@ -28,7 +28,7 @@
 
         /* Header */
         header {
-            padding: 20px 5%;
+            padding: 15px 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -47,10 +47,11 @@
             text-decoration: none;
             color: var(--text-main);
             transition: var(--transition);
+            z-index: 1001;
         }
 
         .logo-img {
-            width: 250px; /* Увеличенный размер */
+            width: 200px;
             height: auto;
             object-fit: contain;
         }
@@ -91,38 +92,59 @@
             transform: scale(1.05);
         }
 
+        /* Burger Menu */
+        .burger {
+            display: none;
+            cursor: pointer;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 1001;
+        }
+        .burger span {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background-color: var(--text-main);
+            transition: var(--transition);
+        }
+        
+        .burger.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .burger.active span:nth-child(2) { opacity: 0; }
+        .burger.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
         /* Hero Section */
         .hero {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding: 0 10%;
+            padding: 120px 10% 60px; /* Отступ сверху для шапки */
             background: radial-gradient(circle at center, #313452 0%, #25283d 100%);
         }
 
         .hero-mascot {
-            width: 220px;
-            margin-bottom: 30px;
+            width: 200px;
+            max-width: 100%;
+            margin-bottom: 20px;
             animation: float 4s ease-in-out infinite;
         }
 
         @keyframes float {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+            50% { transform: translateY(-15px); }
         }
 
         .hero h1 {
-            font-size: clamp(2.5rem, 8vw, 4.2rem);
+            font-size: clamp(2rem, 8vw, 4.2rem);
             font-weight: 800;
-            line-height: 1.1;
+            line-height: 1.2;
             margin-bottom: 20px;
         }
         .hero h1 span { color: var(--accent-lime); }
         .hero p {
-            font-size: clamp(1.1rem, 3vw, 1.4rem);
+            font-size: clamp(1rem, 3vw, 1.4rem);
             color: var(--text-main);
             opacity: 0.7;
             max-width: 700px;
@@ -133,13 +155,15 @@
         .btn-main {
             background: var(--accent-lime);
             color: var(--bg-color);
-            padding: 20px 40px;
+            padding: 18px 35px;
             border-radius: 15px;
             text-decoration: none;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             transition: var(--transition);
             box-shadow: 0 10px 30px rgba(197, 240, 90, 0.3);
+            display: inline-block;
+            text-align: center;
         }
         .btn-main:hover {
             transform: translateY(-5px);
@@ -147,10 +171,10 @@
         }
 
         /* Sections */
-        .section { padding: 100px 10%; }
+        .section { padding: 60px 10%; }
         .section-title {
-            font-size: 2.5rem;
-            margin-bottom: 40px;
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            margin-bottom: 30px;
             text-align: center;
             font-weight: 800;
         }
@@ -158,11 +182,11 @@
         .about-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 50px;
+            gap: 40px;
             align-items: center;
         }
 
-        .about-text p { color: var(--text-main); opacity: 0.8; font-size: 1.2rem; margin-bottom: 20px; }
+        .about-text p { color: var(--text-main); opacity: 0.8; font-size: 1.1rem; margin-bottom: 20px; }
 
         .highlight-box {
             background: var(--card-bg);
@@ -174,38 +198,38 @@
         /* Services */
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
         }
 
         .service-card {
             background: var(--card-bg);
-            padding: 40px;
+            padding: 30px;
             border-radius: 24px;
             transition: var(--transition);
             border: 1px solid rgba(244, 243, 238, 0.05);
         }
         .service-card:hover {
             border-color: var(--accent-purple);
-            transform: translateY(-10px);
+            transform: translateY(-5px);
             background: #3a3d5c;
         }
-        .service-card h3 { font-size: 1.5rem; margin-bottom: 15px; color: var(--accent-lime); }
-        .service-card p { color: var(--text-main); opacity: 0.7; font-size: 1.1rem; }
+        .service-card h3 { font-size: 1.4rem; margin-bottom: 15px; color: var(--accent-lime); }
+        .service-card p { color: var(--text-main); opacity: 0.7; font-size: 1rem; }
 
         .iom-card {
             grid-column: 1 / -1;
             background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
-            padding: 60px;
+            padding: 40px 25px;
             border-radius: 30px;
             text-align: center;
             color: white;
         }
-        .iom-card h3 { font-size: 2.2rem; margin-bottom: 20px; color: var(--accent-lime); }
-        .iom-card p { max-width: 800px; margin: 0 auto 30px; font-size: 1.3rem; opacity: 0.9; }
+        .iom-card h3 { font-size: clamp(1.5rem, 4vw, 2.2rem); margin-bottom: 20px; color: var(--accent-lime); }
+        .iom-card p { max-width: 800px; margin: 0 auto 30px; font-size: 1.1rem; opacity: 0.9; }
 
         footer {
-            padding: 50px 10%;
+            padding: 40px 10%;
             text-align: center;
             border-top: 1px solid rgba(244, 243, 238, 0.1);
             color: var(--text-main);
@@ -213,11 +237,31 @@
             font-size: 0.9rem;
         }
 
+        /* --- MOBILE ADAPTATION --- */
         @media (max-width: 768px) {
-            nav { display: none; }
+            .burger { display: flex; }
+            .logo-img { width: 150px; }
+            
+            nav {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 70%;
+                height: 100vh;
+                background: var(--card-bg);
+                flex-direction: column;
+                justify-content: center;
+                transition: 0.3s ease-in-out;
+                box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            }
+            nav.active { right: 0; }
+            nav a { font-size: 1.2rem; }
+            
             .about-grid { grid-template-columns: 1fr; }
-            .hero h1 { font-size: 2.5rem; }
-            .logo-img { width: 150px; } /* Пропорционально меньше для мобилок */
+            
+            .iom-card { padding: 30px 20px; }
+            .btn-main { width: 100%; padding: 15px 20px; font-size: 1rem; }
+            .hero { padding-top: 140px; }
         }
     </style>
 </head>
@@ -227,13 +271,18 @@
         <a href="#top" class="logo-container">
             <img src="logo.png" alt="Logo" class="logo-img">
         </a>
-        <nav>
+        <nav id="nav-menu">
             <a href="about.html">О нас</a>
             <a href="#reviews">Отзывы</a>
             <a href="payment.html">Оплата</a>
             <a href="contacts.html">Контакты</a>
             <a href="enroll.html" class="btn-header">Записаться</a>
         </nav>
+        <div class="burger" id="burger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
     </header>
 
     <section class="hero">
@@ -288,5 +337,21 @@
         Прогресс, у которого есть маршрут.
     </footer>
 
+    <script>
+        const burger = document.getElementById('burger');
+        const nav = document.getElementById('nav-menu');
+
+        burger.addEventListener('click', () => {
+            burger.classList.toggle('active');
+            nav.classList.toggle('active');
+        });
+
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                burger.classList.remove('active');
+                nav.classList.remove('active');
+            });
+        });
+    </script>
 </body>
 </html>
