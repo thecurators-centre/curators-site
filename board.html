@@ -31,7 +31,6 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        /* Меню фигур (исправлено) */
         .shape-menu {
             display: none; position: absolute; top: 100%; left: 0;
             background: var(--card-bg); border-radius: 10px; padding: 10px;
@@ -124,12 +123,22 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
+        // --- ОГРОМНАЯ СЕТКА ---
         const bgGrid = new Konva.Shape({
             sceneFunc: function(context) {
-                const spacing = 20; const width = window.innerWidth * 3; const height = window.innerHeight * 3;
+                const spacing = 20; 
+                // Рисуем сетку на огромной области (20 000 на 20 000)
+                const width = 20000; 
+                const height = 20000;
                 context.beginPath();
-                for (let x = 0; x < width; x += spacing) { for (let y = 0; y < height; y += spacing) { context.moveTo(x, y); context.arc(x, y, 1, 0, Math.PI * 2); } }
-                context.fillStyle = 'rgba(255,255,255,0.05)'; context.fill();
+                for (let x = -10000; x < width; x += spacing) { 
+                    for (let y = -10000; y < height; y += spacing) { 
+                        context.moveTo(x, y); 
+                        context.arc(x, y, 1, 0, Math.PI * 2); 
+                    } 
+                }
+                context.fillStyle = 'rgba(255,255,255,0.05)'; 
+                context.fill();
             }, listening: false
         });
         layer.add(bgGrid);
@@ -161,7 +170,6 @@
             });
         });
 
-        // ИСПРАВЛЕННАЯ ЛОГИКА МЕНЮ ФИГУР
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeMenu = document.getElementById('shapeMenu');
         
@@ -170,7 +178,6 @@
             shapeMenu.classList.toggle('active');
         });
 
-        // Закрываем меню при клике вне его
         document.addEventListener('click', (e) => {
             if (!shapeMenu.contains(e.target) && e.target !== shapeBtn) {
                 shapeMenu.classList.remove('active');
@@ -187,7 +194,7 @@
             });
         });
 
-        // --- ЛОГИКА ТЕКСТА ---
+        // --- ТЕКСТ ---
         stage.on('click tap', (e) => {
             if (currentTool !== 'text' || isStudent) return;
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
