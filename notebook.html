@@ -140,7 +140,7 @@
         async function loadNotebook() {
             const { data, error } = await supabaseClient.from('homework').select('*').eq('student_id', studentId).single();
             
-            if (error && error.code !== 'PGRST116') console.error('Ошибка загрузки:', error);
+            if (error && error.code !== 'PGRST116') console.error('Ошибка загрузки тетради:', error);
             
             if (data && data.pages) notebookData = data.pages;
             else notebookData = {};
@@ -148,7 +148,6 @@
             renderPage();
             setupAdminUI();
         }
-
         function renderPage() {
             const pageKey = String(currentPage);
             const page = notebookData[pageKey] || { text: '', images: [] };

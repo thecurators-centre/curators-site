@@ -3,25 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.web3forms.com; form-action 'self' https://api.web3forms.com;">
     <title>Вход | The Curator’s</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg-color: #25283d; --text-main: #f4f3ee; --accent-lime: #c5f05a; --card-bg: #313452; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .login-card { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
-        .login-card img { width: 120px; margin-bottom: 20px; }
-        h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--accent-lime); }
-        input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-size: 1rem; font-family: 'Inter', sans-serif; }
-        input:focus { outline: none; border-color: var(--accent-lime); }
-        button { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
-        .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; opacity: 0.6; }
-        #error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; display: none; }
+        /* Уникальные стили для страницы входа */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 30px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .login-card img {
+            width: 120px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--accent-lime);
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(244, 243, 238, 0.15);
+            background: var(--bg-color);
+            color: white;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-lime);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-lime);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            opacity: 0.6;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+        }
+
+        #error-msg {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            display: none;
+        }
     </style>
 </head>
 <body>
+
     <div class="login-card">
         <img src="logo.png" alt="Logo">
         <h1>Вход</h1>
@@ -50,26 +126,20 @@
             btn.disabled = true;
             errorMsg.style.display = 'none';
 
-            // 1. Проверка на Админа (зашита в код)
-            if (user.toLowerCase() === 'админ' && pass === '1369631') {
-                window.location.href = 'admin.html';
-                return;
-            }
-
-            // 2. Проверка через базу данных
+            // Проверка через базу данных (все пользователи, включая админа)
             const { data, error } = await supabaseClient
                 .from('students')
                 .select('id, name')
                 .eq('login', user)
                 .eq('password', pass)
-                .single(); // Берем только одного
+                .single();
 
             if (error || !data) {
                 errorMsg.style.display = 'block';
                 btn.innerText = 'Войти';
                 btn.disabled = false;
             } else {
-                // Сохраняем ID ученика в память браузера, чтобы student.html знал, кого грузить
+                // Сохраняем ID ученика в память браузера
                 localStorage.setItem('current_student_id', data.id);
                 window.location.href = 'student.html';
             }

@@ -225,12 +225,8 @@
             const endY = arrowGroup.y() + arrowGroup.getChildren()[0].points()[2] * Math.sin(arrowGroup.rotation() * Math.PI / 180);
 
             rotateAnchor = new Konva.Circle({
-                x: endX,
-                y: endY,
-                radius: 8,
-                fill: 'rgba(197, 240, 90, 0.5)',
-                stroke: '#c5f05a',
-                strokeWidth: 2,
+                x: endX, y: endY, radius: 8,
+                fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2,
                 draggable: !isStudent
             });
 
@@ -249,9 +245,7 @@
                 drawLayer.batchDraw();
             });
 
-            rotateAnchor.on('dragend', () => {
-                broadcastArrowUpdate(arrowGroup, true);
-            });
+            rotateAnchor.on('dragend', () => { broadcastArrowUpdate(arrowGroup, true); });
 
             uiLayer.add(rotateAnchor);
             uiLayer.batchDraw();

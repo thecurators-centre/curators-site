@@ -8,114 +8,9 @@
     <title>The Curator’s | Прогресс, у которого есть маршрут</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
-        :root {
-            --bg-color: #25283d;
-            --text-main: #f4f3ee;
-            --accent-purple: #7455d9;
-            --accent-lime: #c5f05a;
-            --card-bg: #313452;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Header */
-        header {
-            padding: 15px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            background: var(--bg-color);
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            color: var(--text-main);
-            transition: var(--transition);
-            z-index: 1001; /* Логотип поверх */
-        }
-
-        .logo-img {
-            width: 200px;
-            height: auto;
-            object-fit: contain;
-        }
-
-        nav {
-            display: flex;
-            gap: 25px;
-            align-items: center;
-            z-index: 1002; /* Меню поверх логотипа */
-        }
-
-        nav a {
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 400;
-            transition: var(--transition);
-            opacity: 0.8;
-        }
-
-        nav a:hover {
-            color: var(--accent-lime);
-            opacity: 1;
-        }
-
-        .btn-header {
-            background: var(--accent-purple);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: var(--transition);
-        }
-        .btn-header:hover {
-            background: var(--accent-lime);
-            color: var(--bg-color);
-            transform: scale(1.05);
-        }
-
-        /* Burger Menu */
-        .burger {
-            display: none;
-            cursor: pointer;
-            flex-direction: column;
-            gap: 5px;
-            z-index: 1003; /* Бургер тоже поверх */
-        }
-        .burger span {
-            display: block;
-            width: 25px;
-            height: 3px;
-            background-color: var(--text-main);
-            transition: var(--transition);
-        }
-        
-        .burger.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-        .burger.active span:nth-child(2) { opacity: 0; }
-        .burger.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-
-        /* Hero Section */
+        /* Стили, уникальные для главной страницы */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -155,25 +50,6 @@
             font-weight: 300;
         }
 
-        .btn-main {
-            background: var(--accent-lime);
-            color: var(--bg-color);
-            padding: 18px 35px;
-            border-radius: 15px;
-            text-decoration: none;
-            font-weight: 800;
-            font-size: 1.1rem;
-            transition: var(--transition);
-            box-shadow: 0 10px 30px rgba(197, 240, 90, 0.3);
-            display: inline-block;
-            text-align: center;
-        }
-        .btn-main:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(197, 240, 90, 0.5);
-        }
-
-        /* Sections */
         .section { padding: 60px 10%; }
         .section-title {
             font-size: clamp(1.8rem, 5vw, 2.5rem);
@@ -198,7 +74,6 @@
             border-left: 4px solid var(--accent-purple);
         }
 
-        /* Services */
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -231,40 +106,9 @@
         .iom-card h3 { font-size: clamp(1.5rem, 4vw, 2.2rem); margin-bottom: 20px; color: var(--accent-lime); }
         .iom-card p { max-width: 800px; margin: 0 auto 30px; font-size: 1.1rem; opacity: 0.9; }
 
-        footer {
-            padding: 40px 10%;
-            text-align: center;
-            border-top: 1px solid rgba(244, 243, 238, 0.1);
-            color: var(--text-main);
-            opacity: 0.5;
-            font-size: 0.9rem;
-        }
-
-        /* --- MOBILE ADAPTATION --- */
         @media (max-width: 768px) {
-            .burger { display: flex; }
-            .logo-img { width: 150px; }
-            
-            nav {
-                position: fixed;
-                top: 0;
-                right: -100%;
-                width: 70%;
-                height: 100vh;
-                background: var(--card-bg);
-                flex-direction: column;
-                justify-content: center;
-                transition: 0.3s ease-in-out;
-                box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-                z-index: 1002; /* Меню поверх логотипа */
-            }
-            nav.active { right: 0; }
-            nav a { font-size: 1.2rem; }
-            
             .about-grid { grid-template-columns: 1fr; }
-            
             .iom-card { padding: 30px 20px; }
-            .btn-main { width: 100%; padding: 15px 20px; font-size: 1rem; }
             .hero { padding-top: 140px; }
         }
     </style>
