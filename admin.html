@@ -182,6 +182,7 @@
 
             const { data: profile } = await supabaseClient.from('profiles').select('role, full_name').eq('id', user.id).single();
             if (!profile) { window.location.href = 'login.html'; return; }
+            if (profile.role !== 'admin' && profile.role !== 'teacher') { window.location.href = 'student.html'; return; }
 
             currentUser = user;
             currentRole = profile.role;
