@@ -175,13 +175,11 @@
         let lastBroadcastTime = 0; 
         const BROADCAST_THROTTLE = 100; 
 
-        // Для ученика
         let studentObjects = {}; 
         let currentStrokeId = null;
 
-        // Для вращения стрелки
-        let activeArrow = null; // Ссылка на стрелку, которую сейчас вращаем
-        let rotateAnchor = null; // Кружок для вращения
+        let activeArrow = null;
+        let rotateAnchor = null;
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -195,7 +193,6 @@
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
-                // Убираем якорь вращения при смене инструмента
                 removeRotateAnchor();
             });
         });
@@ -227,9 +224,8 @@
             removeRotateAnchor();
             activeArrow = arrowGroup;
             
-            // Получаем координаты конца стрелки
-            const endX = arrowGroup.x() + arrowGroup.width() * arrowGroup.scaleX();
-            const endY = arrowGroup.y();
+            const endX = arrowGroup.x() + arrowGroup.getChildren()[0].points()[2] * Math.cos(arrowGroup.rotation() * Math.PI / 180);
+            const endY = arrowGroup.y() + arrowGroup.getChildren()[0].points()[2] * Math.sin(arrowGroup.rotation() * Math.PI / 180);
 
             rotateAnchor = new Konva.Circle({
                 x: endX,
@@ -243,16 +239,16 @@
 
             rotateAnchor.on('dragmove', (e) => {
                 const pos = e.target.position();
-                // Вычисляем угол между началом стрелки и якорем
                 const dx = pos.x - arrowGroup.x();
                 const dy = pos.y - arrowGroup.y();
                 const angle = Math.atan2(dy, dx);
                 
-                // Обновляем стрелку
                 arrowGroup.rotation(angle * 180 / Math.PI);
-                arrowGroup.width(Math.sqrt(dx*dx + dy*dy) / arrowGroup.scaleX());
+                arrowGroup.getChildren()[0].points([0, 0, Math.sqrt(dx*dx + dy*dy), 0]);
+                // Обновляем наконечник
+                const length = Math.sqrt(dx*dx + dy*dy);
+                arrowGroup.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
                 
-                // Отправляем обновление
                 broadcastArrowUpdate(arrowGroup);
                 drawLayer.batchDraw();
             });
@@ -272,10 +268,8 @@
                 id: arrowGroup.id(),
                 x: arrowGroup.x(),
                 y: arrowGroup.y(),
-                width: arrowGroup.width(),
+                width: arrowGroup.getChildren()[0].points()[2],
                 rotation: arrowGroup.rotation(),
-                scaleX: arrowGroup.scaleX(),
-                scaleY: arrowGroup.scaleY(),
                 stroke: arrowGroup.getChildren()[0].stroke(),
                 strokeWidth: arrowGroup.getChildren()[0].strokeWidth(),
                 isFinal
@@ -325,7 +319,6 @@
             if (e.evt.touches && e.evt.touches.length > 1) return;
             if (e.evt.button === 2) return;
 
-            // Если мы кликнули не на якорь и не на стрелку, убираем якорь
             if (currentTool !== 'shape' || currentShapeType !== 'arrow') {
                 removeRotateAnchor();
             }
@@ -355,13 +348,12 @@
                 else if (currentShapeType === 'diamond') currentShape = new Konva.RegularPolygon({ x: startX, y: startY, sides: 4, radius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 else if (currentShapeType === 'star') currentShape = new Konva.Star({ x: startX, y: startY, numPoints: 5, innerRadius: 0, outerRadius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 else if (currentShapeType === 'arrow') {
-                    // Стрелка - это группа: линия + наконечник
                     currentShape = new Konva.Group({ x: startX, y: startY });
                     currentShape.id(currentStrokeId);
+                    // Линия
                     currentShape.add(new Konva.Line({ points: [0, 0, 1, 0], stroke: color, strokeWidth: width, lineCap: 'round' }));
-                    // Наконечник стрелки
-                    currentShape.add(new Konva.Line({ points: [0, 0, -15, -8, -15, 8, 0, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
-                    // Важно: линия должна быть первой для удобного обновления ширины
+                    // Наконечник (правильно направленный)
+                    currentShape.add(new Konva.Line({ points: [1, 0, 1 - 15, -8, 1 - 15, 8, 1, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
                     currentShape.getChildren()[0].name('arrow-line');
                 }
                 drawLayer.add(currentShape);
@@ -401,11 +393,12 @@
                     if (currentShapeType === 'star') { currentShape.outerRadius(dist); currentShape.innerRadius(dist * 0.4); }
                     else { currentShape.radius(dist); }
                 } else if (currentShapeType === 'arrow') {
-                    // Растягиваем стрелку
                     const angle = Math.atan2(h, w);
                     const length = Math.sqrt(w*w + h*h);
                     currentShape.rotation(angle * 180 / Math.PI);
                     currentShape.getChildren()[0].points([0, 0, length, 0]);
+                    // Правильный наконечник
+                    currentShape.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
                 }
             }
             drawLayer.batchDraw();
@@ -434,7 +427,6 @@
             } else if (currentShape) {
                 if (currentShapeType === 'arrow') {
                     finalObj = { type: 'shape', shapeType: 'arrow', id: currentStrokeId, x: currentShape.x(), y: currentShape.y(), width: currentShape.getChildren()[0].points()[2], rotation: currentShape.rotation(), stroke: currentShape.getChildren()[0].stroke(), strokeWidth: currentShape.getChildren()[0].strokeWidth() };
-                    // После создания стрелки показываем якорь для вращения
                     createRotateAnchor(currentShape);
                 } else {
                     finalObj = { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
@@ -515,7 +507,8 @@
                     node = new Konva.Group({ x: obj.x, y: obj.y, rotation: obj.rotation || 0 });
                     node.id(obj.id);
                     node.add(new Konva.Line({ points: [0, 0, obj.width, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round' }));
-                    node.add(new Konva.Line({ points: [0, 0, -15, -8, -15, 8, 0, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
+                    // Правильный наконечник
+                    node.add(new Konva.Line({ points: [obj.width, 0, obj.width - 15, -8, obj.width - 15, 8, obj.width, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
                     node.getChildren()[0].name('arrow-line');
                 }
             } else if (obj.type === 'text') {
@@ -554,10 +547,11 @@
                                     node.points(data.points);
                                 } else if (data.type === 'shape') {
                                     if (data.shapeType === 'arrow') {
-                                        // Обновляем стрелку (только позицию, поворот и длину линии)
                                         node.x(data.x); node.y(data.y); node.rotation(data.rotation || 0);
                                         const line = node.getChildren()[0];
+                                        const head = node.getChildren()[1];
                                         if (line) line.points([0, 0, data.width, 0]);
+                                        if (head) head.points([data.width, 0, data.width - 15, -8, data.width - 15, 8, data.width, 0]);
                                     } else {
                                         node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
                                     }
@@ -584,7 +578,7 @@
                 .subscribe();
         }
 
-        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); });
+        window.addEventListener('resize', () => {        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); });
 
         loadBoard();
         setupRealtime();
