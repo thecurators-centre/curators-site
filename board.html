@@ -31,20 +31,28 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        /* Выпадающее меню фигур */
-        .shape-menu {
-            display: none; position: absolute; top: 100%; left: 0;
-            background: var(--card-bg); border-radius: 10px; padding: 10px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 1002; border: 1px solid rgba(255,255,255,0.1);
-            grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; width: max-content;
+        /* Модальное окно для выбора фигур */
+        .shape-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
         }
-        .shape-menu.active { display: grid; }
-        .shape-menu button {
-            background: none; border: none; color: white; padding: 10px 15px;
-            text-align: left; cursor: pointer; font-size: 1rem; border-radius: 5px;
-            white-space: nowrap;
+        .shape-modal.active { display: flex; }
+        .shape-modal-content {
+            background: var(--card-bg); padding: 30px; border-radius: 20px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 400px; width: 90%;
         }
-        .shape-menu button:hover { background: rgba(255,255,255,0.1); }
+        .shape-option {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;
+            padding: 15px; border-radius: 10px; cursor: pointer; font-size: 1.1rem;
+            text-align: center; transition: 0.2s;
+        }
+        .shape-option:hover { background: var(--accent-lime); color: var(--bg-color); }
+        .shape-modal-close {
+            grid-column: 1 / -1; background: transparent; color: #ff6b6b; border: none;
+            font-size: 1rem; cursor: pointer; margin-top: 10px; padding: 10px;
+        }
 
         .board-title {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
@@ -75,18 +83,7 @@
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         
-        <!-- Кнопка фигур и меню -->
-        <div style="position: relative;">
-            <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
-            <div class="shape-menu" id="shapeMenu">
-                <button type="button" data-shape="rect">⬛ Прямоугольник</button>
-                <button type="button" data-shape="circle">⭕ Круг</button>
-                <button type="button" data-shape="triangle">🔺 Треугольник</button>
-                <button type="button" data-shape="diamond">🔷 Ромб</button>
-                <button type="button" data-shape="star">⭐ Звезда</button>
-                <button type="button" data-shape="xy">📈 График XY</button>
-            </div>
-        </div>
+        <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
 
         <button class="tool-btn" data-tool="text" title="Текст">📝</button>
         <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
@@ -98,6 +95,19 @@
         </div>
 
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
+    </div>
+
+    <!-- Модальное окно фигур -->
+    <div class="shape-modal" id="shapeModal">
+        <div class="shape-modal-content">
+            <div class="shape-option" data-shape="rect">⬛ Прямоугольник</div>
+            <div class="shape-option" data-shape="circle">⭕ Круг</div>
+            <div class="shape-option" data-shape="triangle">🔺 Треугольник</div>
+            <div class="shape-option" data-shape="diamond">🔷 Ромб</div>
+            <div class="shape-option" data-shape="star">⭐ Звезда</div>
+            <div class="shape-option" data-shape="xy">📈 График XY</div>
+            <button class="shape-modal-close" id="closeShapeModal">Отмена</button>
+        </div>
     </div>
 
     <div id="container"></div>
@@ -125,7 +135,7 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // --- СЕТКА (В ТОМ ЖЕ СЛОЕ) ---
+        // --- СЕТКА ---
         const spacing = 20;
         const gridWidth = 5000; 
         const gridHeight = 5000;
@@ -169,40 +179,31 @@
             btn.addEventListener('click', (e) => {
                 if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                document.getElementById('shapeMenu').classList.remove('active');
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
             });
         });
 
-        // --- ЛОГИКА МЕНЮ ФИГУР (ПЕРЕПИСАНО) ---
+        // --- МОДАЛЬНОЕ ОКНО ФИГУР ---
         const shapeBtn = document.getElementById('shapeBtn');
-        const shapeMenu = document.getElementById('shapeMenu');
-        
-        shapeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            shapeMenu.classList.toggle('active');
-        });
+        const shapeModal = document.getElementById('shapeModal');
 
-        // Выбор фигуры
-        shapeMenu.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+        shapeBtn.onclick = () => {
+            shapeModal.classList.add('active');
+        };
+
+        document.getElementById('closeShapeModal').onclick = () => {
+            shapeModal.classList.remove('active');
+        };
+
+        document.querySelectorAll('.shape-option').forEach(opt => {
+            opt.onclick = function() {
                 currentShapeType = this.dataset.shape;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 shapeBtn.classList.add('active');
                 currentTool = 'shape';
-                shapeMenu.classList.remove('active');
-            });
-        });
-
-        // Закрываем меню при клике в любом другом месте
-        document.addEventListener('click', function(e) {
-            if (!shapeMenu.contains(e.target) && e.target !== shapeBtn) {
-                shapeMenu.classList.remove('active');
-            }
+                shapeModal.classList.remove('active');
+            };
         });
 
         // --- ТЕКСТ ---
