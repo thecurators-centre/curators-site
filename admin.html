@@ -16,8 +16,15 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
         .card { padding: 20px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
-        .card h3 { margin-bottom: 5px; color: white; }
+        
+        /* Стили для заголовков (предметов) - делаем их зелеными */
+        .card h3 { 
+            margin-bottom: 5px; 
+            color: var(--accent-lime); 
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9); /* Тень, чтобы читалось на светлом фоне */
+        }
         .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 850px; max-height: 95vh; overflow-y: auto; position: relative; }
@@ -58,6 +65,7 @@
             <div class="grid" id="boards-grid"></div>
         </div>
     </div>
+
     <div class="modal" id="modal">
         <div class="modal-content">
             <button class="close-btn" id="closeModal">&times;</button>
@@ -127,6 +135,7 @@
             </form>
         </div>
     </div>
+
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
@@ -183,7 +192,9 @@
                 card.className = 'card';
                 let color = subjectColors[sub] || '#313452';
                 card.style.background = color;
-                if (sub === 'Японский язык') { card.style.color = '#1e293b'; card.style.textShadow = 'none'; }
+                // Убираем принудительный темный текст, оставляем только для параграфа, чтобы заголовок был зеленым
+                if (sub === 'Японский язык') { card.querySelector('p') ? card.querySelector('p').style.color = '#1e293b' : null; }
+                
                 card.innerHTML = `
                     <h3>${sub}</h3>
                     <p>Интерактивная доска</p>
@@ -314,7 +325,6 @@
             }
         };
 
-        // Логика вкладок
         const tabStudents = document.getElementById('tab-students');
         const tabBoards = document.getElementById('tab-boards');
         const sectionStudents = document.getElementById('section-students');
