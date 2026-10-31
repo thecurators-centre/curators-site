@@ -132,8 +132,12 @@
         }
 
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        const layer = new Konva.Layer();
-        stage.add(layer);
+        
+        // ДВА СЛОЯ: фон (сетка) и рисунки
+        const bgLayer = new Konva.Layer({ listening: false });
+        const drawLayer = new Konva.Layer();
+        stage.add(bgLayer);
+        stage.add(drawLayer);
 
         // --- СЕТКА ---
         const spacing = 20;
@@ -156,7 +160,7 @@
             },
             listening: false
         });
-        layer.add(bgGrid);
+        bgLayer.add(bgGrid);
 
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
@@ -188,13 +192,9 @@
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeModal = document.getElementById('shapeModal');
 
-        shapeBtn.onclick = () => {
-            shapeModal.classList.add('active');
-        };
+        shapeBtn.onclick = () => { shapeModal.classList.add('active'); };
 
-        document.getElementById('closeShapeModal').onclick = () => {
-            shapeModal.classList.remove('active');
-        };
+        document.getElementById('closeShapeModal').onclick = () => { shapeModal.classList.remove('active'); };
 
         document.querySelectorAll('.shape-option').forEach(opt => {
             opt.onclick = function() {
@@ -233,8 +233,8 @@
                 if (text) {
                     const fontSize = parseInt(strokeWidthSlider.value) * 4;
                     const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
-                    layer.add(textNode);
-                    layer.batchDraw();
+                    drawLayer.add(textNode);
+                    drawLayer.batchDraw();
                     saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value });
                 }
                 textarea.remove();
@@ -257,11 +257,12 @@
 
             if (currentTool === 'pen') {
                 currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'source-over' });
-                layer.add(currentLine);
+                drawLayer.add(currentLine);
             } 
             else if (currentTool === 'eraser') {
+                // Ластик работает в drawLayer, не трогая bgLayer
                 currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
-                layer.add(currentLine);
+                drawLayer.add(currentLine);
             } 
             else if (currentTool === 'shape') {
                 if (currentShapeType === 'rect') currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
@@ -276,9 +277,9 @@
                     currentShape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: color, strokeWidth: width, fill: color }));
                     currentShape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: color, strokeWidth: width, fill: color }));
                 }
-                layer.add(currentShape);
+                drawLayer.add(currentShape);
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
         });
 
         stage.on('mousemove touchmove', (e) => {
@@ -308,7 +309,7 @@
                     currentShape.scale({ x: scale, y: scale });
                 }
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
         });
 
         stage.on('mouseup touchend', () => {
@@ -329,7 +330,7 @@
                 });
             }
             currentLine = null; currentShape = null;
-            layer.batchDraw();
+            drawLayer.batchDraw();
         });
 
         // --- УПРАВЛЕНИЕ ---
@@ -367,7 +368,7 @@
 
         function drawObject(obj) {
             if (obj.type === 'line') {
-                layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
+                drawLayer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
             } else if (obj.type === 'shape') {
                 let shape;
                 if (obj.shapeType === 'rect') shape = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
@@ -382,11 +383,11 @@
                     shape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                     shape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                 }
-                layer.add(shape);
+                drawLayer.add(shape);
             } else if (obj.type === 'text') {
-                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
+                drawLayer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
         }
 
         async function loadBoard() {
@@ -412,13 +413,12 @@
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
-                layer.destroyChildren(); layer.draw();
-                layer.add(bgGrid);
+                drawLayer.destroyChildren(); drawLayer.draw();
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
             }
         });
 
-        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw(); });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); drawLayer.batchDraw(); bgLayer.batchDraw(); });
 
         loadBoard();
     </script>
