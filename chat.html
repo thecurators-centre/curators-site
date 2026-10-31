@@ -36,25 +36,38 @@
         .sidebar-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .sidebar-top h2 { font-size: 1.2rem; color: var(--accent-lime); margin: 0; }
         
-        /* ИСПРАВЛЕННАЯ КНОПКА */
+        /* --- ИДЕАЛЬНАЯ КНОПКА С ПЛЮСОМ --- */
         .btn-new-chat { 
             background: var(--accent-lime); 
-            color: var(--bg-color); 
             border: none; 
-            width: 32px; 
-            height: 32px; 
+            width: 30px; 
+            height: 30px; 
             border-radius: 50%; 
-            font-size: 1.4rem; 
-            font-weight: bold;
             cursor: pointer; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
+            position: relative;
             transition: 0.2s;
             z-index: 20;
-            position: relative;
-            line-height: 1; /* Убираем лишний отступ по высоте */
-            padding: 0; /* Убираем внутренние отступы */
+            display: flex; /* Оставляем flex для центрирования */
+            justify-content: center;
+            align-items: center;
+        }
+        /* Рисуем горизонтальную линию */
+        .btn-new-chat::before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 2px;
+            background-color: var(--bg-color);
+            border-radius: 1px;
+        }
+        /* Рисуем вертикальную линию */
+        .btn-new-chat::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 14px;
+            background-color: var(--bg-color);
+            border-radius: 1px;
         }
         .btn-new-chat:hover { transform: scale(1.1); }
 
@@ -116,7 +129,8 @@
             <div class="sidebar-header">
                 <div class="sidebar-top">
                     <h2>Чаты</h2>
-                    <button class="btn-new-chat" id="btn-new-chat" style="display: none;">+</button>
+                    <!-- Плюс убран, рисуется через CSS -->
+                    <button class="btn-new-chat" id="btn-new-chat" style="display: none;"></button>
                 </div>
                 <input type="text" class="search-input" id="search-input" placeholder="Поиск...">
             </div>
@@ -338,26 +352,21 @@
         }
 
         async function createDirectChat(targetUserId) {
-            const { data: existing } = await supabaseClient.rpc('get_direct_chat', { user1: currentUser.id, user2: targetUserId });
-            
-            if (existing) {
-                modal.classList.remove('active');
-                openChat(existing);
-                return;
-            }
-
+            // Убираем проверку get_direct_chat, чтобы не было ошибок RPC
             const { data: newChat, error: chatError } = await supabaseClient
                 .from('chats')
                 .insert([{ type: 'direct' }])
                 .select()
                 .single();
 
-            if (chatError) { alert('Ошибка: ' + chatError.message); return; }
+            if (chatError) { alert('Ошибка создания чата: ' + chatError.message); return; }
 
-            await supabaseClient.from('chat_participants').insert([
+            const { error: partError } = await supabaseClient.from('chat_participants').insert([
                 { chat_id: newChat.id, user_id: currentUser.id },
                 { chat_id: newChat.id, user_id: targetUserId }
             ]);
+
+            if (partError) { alert('Ошибка добавления участников: ' + partError.message); return; }
 
             modal.classList.remove('active');
             loadChats();
