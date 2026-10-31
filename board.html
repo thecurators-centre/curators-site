@@ -10,12 +10,12 @@
         * { margin: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); height: 100vh; }
         
-        /* Панель инструментов (сверху) */
         .toolbar {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             background: var(--card-bg); padding: 10px 20px; border-radius: 20px;
             display: flex; gap: 15px; align-items: center; z-index: 1000;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap; justify-content: center; width: max-content; max-width: 95vw;
         }
         .tool-btn {
             background: none; border: none; color: var(--text-main); cursor: pointer;
@@ -24,11 +24,19 @@
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-lime); color: var(--bg-color); }
         .color-picker { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; padding: 0; }
+        
+        .slider-container { display: flex; align-items: center; gap: 8px; }
+        .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
+        .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        /* Контейнер для холста */
+        .board-title {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: var(--card-bg); padding: 10px 20px; border-radius: 10px;
+            font-size: 1.2rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
+        }
+
         #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; }
         
-        /* Кнопка выхода (снизу) */
         .exit-btn {
             position: absolute; bottom: 20px; right: 20px; background: var(--card-bg);
             color: var(--text-main); padding: 10px 20px; border-radius: 10px; text-decoration: none;
@@ -36,32 +44,45 @@
         }
         .exit-btn:hover { background: #ff6b6b; color: white; }
 
-        /* Сетка на фоне (чтобы понимать, что доска бесконечная) */
         .background-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.05; z-index: 0; background-image: radial-gradient(var(--text-main) 1px, transparent 1px); background-size: 20px 20px; }
     </style>
 </head>
 <body>
 
-    <!-- Панель инструментов -->
+    <div class="board-title" id="boardTitle">Загрузка...</div>
+
     <div class="toolbar" id="toolbar">
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         <button class="tool-btn" data-tool="rect" title="Прямоугольник">⬛</button>
         <button class="tool-btn" data-tool="circle" title="Окружность">⭕</button>
         <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
+        <div class="slider-container">
+            <span style="font-size: 1rem;">🔹</span>
+            <input type="range" id="strokeWidth" min="1" max="50" value="4">
+            <span class="slider-label" id="strokeVal">4</span>
+        </div>
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
-    <!-- Сетка на фоне -->
     <div class="background-grid" id="grid"></div>
-
-    <!-- Сама доска -->
     <div id="container"></div>
 
-    <a href="index.html" class="exit-btn">Выйти</a>
+    <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
 
     <script>
-        // Инициализация сцены Konva
+        const urlParams = new URLSearchParams(window.location.search);
+        const subject = urlParams.get('subject') || 'Общая доска';
+        const isStudent = urlParams.get('role') === 'student';
+        
+        document.getElementById('boardTitle').innerText = `Доска: ${subject}`;
+        
+        if (isStudent) {
+            document.getElementById('toolbar').style.display = 'none';
+            document.getElementById('backBtn').href = 'student.html';
+            document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
+        }
+
         const container = document.getElementById('container');
         const stage = new Konva.Stage({
             container: 'container',
@@ -69,21 +90,23 @@
             height: window.innerHeight,
         });
 
-        // Слой для рисования
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // Переменные состояния
         let currentTool = 'pen';
         let isDrawing = false;
         let currentLine = null;
         let currentShape = null;
         let startX, startY;
+        
         const colorPicker = document.getElementById('colorPicker');
+        const strokeWidthSlider = document.getElementById('strokeWidth');
+        const strokeVal = document.getElementById('strokeVal');
 
-        // --- ИНСТРУМЕНТЫ ---
+        strokeWidthSlider.addEventListener('input', (e) => {
+            strokeVal.innerText = e.target.value;
+        });
 
-        // Переключение инструментов
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -92,36 +115,41 @@
             });
         });
 
-        // Логика рисования
         stage.on('mousedown touchstart', (e) => {
-            // Если зажата кнопка мыши или палец
+            if (isStudent) return;
             isDrawing = true;
             const pos = stage.getPointerPosition();
             startX = pos.x;
             startY = pos.y;
 
-            if (currentTool === 'pen' || currentTool === 'eraser') {
+            const width = parseInt(strokeWidthSlider.value);
+            const color = colorPicker.value;
+
+            if (currentTool === 'pen') {
                 currentLine = new Konva.Line({
-                    stroke: currentTool === 'eraser' ? '#1a1c29' : colorPicker.value,
-                    strokeWidth: currentTool === 'eraser' ? 20 : 4,
-                    lineCap: 'round',
-                    lineJoin: 'round',
-                    points: [pos.x, pos.y],
-                    globalCompositeOperation: currentTool === 'eraser' ? 'destination-out' : 'source-over'
+                    stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round',
+                    points: [pos.x, pos.y], globalCompositeOperation: 'source-over'
+                });
+                layer.add(currentLine);
+            } 
+            else if (currentTool === 'eraser') {
+                currentLine = new Konva.Line({
+                    stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round',
+                    points: [pos.x, pos.y], globalCompositeOperation: 'destination-out'
                 });
                 layer.add(currentLine);
             } 
             else if (currentTool === 'rect') {
                 currentShape = new Konva.Rect({
                     x: pos.x, y: pos.y, width: 0, height: 0,
-                    stroke: colorPicker.value, strokeWidth: 2, fill: 'transparent'
+                    stroke: color, strokeWidth: width, fill: 'transparent'
                 });
                 layer.add(currentShape);
             }
             else if (currentTool === 'circle') {
                 currentShape = new Konva.Ellipse({
                     x: pos.x, y: pos.y, radiusX: 0, radiusY: 0,
-                    stroke: colorPicker.value, strokeWidth: 2, fill: 'transparent'
+                    stroke: color, strokeWidth: width, fill: 'transparent'
                 });
                 layer.add(currentShape);
             }
@@ -129,7 +157,7 @@
         });
 
         stage.on('mousemove touchmove', (e) => {
-            if (!isDrawing) return;
+            if (!isDrawing || isStudent) return;
             const pos = stage.getPointerPosition();
 
             if (currentTool === 'pen' || currentTool === 'eraser') {
@@ -139,10 +167,8 @@
                 }
             } 
             else if (currentTool === 'rect' && currentShape) {
-                // Высчитываем правильные координаты при рисовании в любую сторону
                 const width = pos.x - startX;
                 const height = pos.y - startY;
-                
                 if (width < 0) {
                     currentShape.x(pos.x);
                     currentShape.width(Math.abs(width));
@@ -150,7 +176,6 @@
                     currentShape.x(startX);
                     currentShape.width(width);
                 }
-                
                 if (height < 0) {
                     currentShape.y(pos.y);
                     currentShape.height(Math.abs(height));
@@ -164,7 +189,6 @@
                 const radiusY = Math.abs(pos.y - startY);
                 currentShape.radiusX(radiusX);
                 currentShape.radiusY(radiusY);
-                // Центрируем
                 currentShape.x(startX + (pos.x - startX) / 2);
                 currentShape.y(startY + (pos.y - startY) / 2);
             }
@@ -175,30 +199,16 @@
             isDrawing = false;
             currentLine = null;
             currentShape = null;
-            // Здесь позже мы будем отправлять данные в Supabase
             layer.batchDraw();
         });
 
-        // Очистка доски
         document.getElementById('clearBtn').addEventListener('click', () => {
+            if (isStudent) return;
             if (confirm('Очистить всю доску?')) {
                 layer.destroyChildren();
                 layer.draw();
-                // Здесь позже мы будем удалять объекты из Supabase
             }
         });
-
-        // Ресайз окна
-        window.addEventListener('resize', () => {
-            stage.width(window.innerWidth);
-            stage.height(window.innerHeight);
-            layer.batchDraw();
-        });
-
-        // --- ПАНОРАМИРОВАНИЕ И МАСШТАБ ---
-        // Пока реализуем базовый зум через колесико и перемещение средней кнопкой мыши
-        let lastCenter = null;
-        let lastDist = 0;
 
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
@@ -219,19 +229,20 @@
             stage.position(newPos);
         });
 
-        // Перемещение по доске правой кнопкой мыши (или двумя пальцами на тачпаде)
-        let isPanning = false;
         stage.on('mousedown', (e) => {
-            if (e.evt.button === 2) { // Правая кнопка мыши
-                isPanning = true;
-                stage.draggable(true);
-            }
+            if (e.evt.button === 2) stage.draggable(true);
         });
         stage.on('mouseup', () => {
-            isPanning = false;
             stage.draggable(false);
         });
+        
+        stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
+        window.addEventListener('resize', () => {
+            stage.width(window.innerWidth);
+            stage.height(window.innerHeight);
+            layer.batchDraw();
+        });
     </script>
 </body>
 </html>
