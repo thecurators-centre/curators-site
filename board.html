@@ -197,7 +197,6 @@
             });
         });
 
-        // --- ФИГУРЫ ---
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeModal = document.getElementById('shapeModal');
         shapeBtn.onclick = () => { shapeModal.classList.add('active'); };
@@ -213,13 +212,11 @@
             };
         });
 
-        // --- ВРАЩЕНИЕ СТРЕЛКИ ---
         function removeRotateAnchor() {
             if (rotateAnchor) { rotateAnchor.destroy(); rotateAnchor = null; }
             if (activeArrow) { activeArrow = null; }
             uiLayer.batchDraw();
         }
-
         function createRotateAnchor(arrowGroup) {
             removeRotateAnchor();
             activeArrow = arrowGroup;
@@ -242,11 +239,10 @@
                 const dx = pos.x - arrowGroup.x();
                 const dy = pos.y - arrowGroup.y();
                 const angle = Math.atan2(dy, dx);
+                const length = Math.sqrt(dx*dx + dy*dy);
                 
                 arrowGroup.rotation(angle * 180 / Math.PI);
-                arrowGroup.getChildren()[0].points([0, 0, Math.sqrt(dx*dx + dy*dy), 0]);
-                // Обновляем наконечник
-                const length = Math.sqrt(dx*dx + dy*dy);
+                arrowGroup.getChildren()[0].points([0, 0, length, 0]);
                 arrowGroup.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
                 
                 broadcastArrowUpdate(arrowGroup);
@@ -263,24 +259,17 @@
 
         function broadcastArrowUpdate(arrowGroup, isFinal = false) {
             const obj = {
-                type: 'shape',
-                shapeType: 'arrow',
-                id: arrowGroup.id(),
-                x: arrowGroup.x(),
-                y: arrowGroup.y(),
+                type: 'shape', shapeType: 'arrow', id: arrowGroup.id(),
+                x: arrowGroup.x(), y: arrowGroup.y(),
                 width: arrowGroup.getChildren()[0].points()[2],
                 rotation: arrowGroup.rotation(),
                 stroke: arrowGroup.getChildren()[0].stroke(),
-                strokeWidth: arrowGroup.getChildren()[0].strokeWidth(),
-                isFinal
+                strokeWidth: arrowGroup.getChildren()[0].strokeWidth()
             };
-            if (isFinal) {
-                saveObjectToDB(obj);
-            }
+            if (isFinal) saveObjectToDB(obj);
             broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
         }
 
-        // --- ТЕКСТ ---
         stage.on('click tap', (e) => {
             if (currentTool !== 'text' || isStudent) return;
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
@@ -313,15 +302,11 @@
             };
         });
 
-        // --- РИСОВАНИЕ ---
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
             if (e.evt.button === 2) return;
-
-            if (currentTool !== 'shape' || currentShapeType !== 'arrow') {
-                removeRotateAnchor();
-            }
+            if (currentTool !== 'shape' || currentShapeType !== 'arrow') removeRotateAnchor();
 
             isDrawing = true;
             const pos = stage.getPointerPosition();
@@ -330,7 +315,6 @@
 
             const width = parseInt(strokeWidthSlider.value);
             const color = colorPicker.value;
-
             currentStrokeId = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
             if (currentTool === 'pen') {
@@ -350,9 +334,7 @@
                 else if (currentShapeType === 'arrow') {
                     currentShape = new Konva.Group({ x: startX, y: startY });
                     currentShape.id(currentStrokeId);
-                    // Линия
                     currentShape.add(new Konva.Line({ points: [0, 0, 1, 0], stroke: color, strokeWidth: width, lineCap: 'round' }));
-                    // Наконечник (правильно направленный)
                     currentShape.add(new Konva.Line({ points: [1, 0, 1 - 15, -8, 1 - 15, 8, 1, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
                     currentShape.getChildren()[0].name('arrow-line');
                 }
@@ -363,7 +345,6 @@
 
         stage.on('mousemove touchmove', (e) => {
             if (isStudent) return;
-
             const now = Date.now();
             if (now - lastBroadcastTime < BROADCAST_THROTTLE) return; 
             lastBroadcastTime = now;
@@ -397,7 +378,6 @@
                     const length = Math.sqrt(w*w + h*h);
                     currentShape.rotation(angle * 180 / Math.PI);
                     currentShape.getChildren()[0].points([0, 0, length, 0]);
-                    // Правильный наконечник
                     currentShape.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
                 }
             }
@@ -420,7 +400,6 @@
         stage.on('mouseup touchend', () => {
             if (!isDrawing || isStudent) return;
             isDrawing = false;
-            
             let finalObj = null;
             if (currentLine) {
                 finalObj = { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
@@ -432,18 +411,15 @@
                     finalObj = { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
                 }
             }
-            
             if (finalObj) {
                 saveObjectToDB(finalObj);
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: finalObj });
             }
-
             currentLine = null; currentShape = null;
             currentStrokeId = null;
             drawLayer.batchDraw();
         });
 
-        // --- КАМЕРА ---
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             if (e.evt.ctrlKey) {
@@ -474,7 +450,6 @@
         stage.on('mouseup', () => { isPanning = false; });
         stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // --- ОЧИСТКА ---
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
@@ -486,13 +461,11 @@
             }
         });
 
-        // --- БАЗА ---
         async function saveObjectToDB(obj) { 
             const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
-        // --- ОТРИСОВКА ОБЪЕКТОВ ---
         function drawObject(obj) {
             let node = null;
             if (obj.type === 'line') {
@@ -507,14 +480,12 @@
                     node = new Konva.Group({ x: obj.x, y: obj.y, rotation: obj.rotation || 0 });
                     node.id(obj.id);
                     node.add(new Konva.Line({ points: [0, 0, obj.width, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round' }));
-                    // Правильный наконечник
                     node.add(new Konva.Line({ points: [obj.width, 0, obj.width - 15, -8, obj.width - 15, 8, obj.width, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
                     node.getChildren()[0].name('arrow-line');
                 }
             } else if (obj.type === 'text') {
                 node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
             }
-            
             if (node) {
                 drawLayer.add(node);
                 drawLayer.batchDraw();
@@ -529,17 +500,14 @@
             }
         }
 
-        // --- BROADCAST ---
         function setupRealtime() {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
-
             broadcastChannel
                 .on('broadcast', { event: 'draw' }, payload => {
                     if (isStudent) {
                         const data = payload.payload;
                         if (data.type === 'clear') {
-                            drawLayer.destroyChildren(); drawLayer.draw();
-                            studentObjects = {};
+                            drawLayer.destroyChildren(); drawLayer.draw(); studentObjects = {};
                         } else {
                             if (data.id && studentObjects[data.id]) {
                                 const node = studentObjects[data.id];
@@ -578,7 +546,7 @@
                 .subscribe();
         }
 
-        window.addEventListener('resize', () => {        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); });
 
         loadBoard();
         setupRealtime();
