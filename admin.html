@@ -17,7 +17,6 @@
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
         .card h3 { margin-bottom: 5px; color: var(--bg-color); }
         .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 850px; max-height: 95vh; overflow-y: auto; position: relative; }
@@ -360,19 +359,31 @@
                 const password = document.getElementById('password').value.trim();
                 const surname = document.getElementById('surname').value.trim();
                 const name = document.getElementById('name').value.trim();
+                const patronymic = document.getElementById('patronymic').value.trim();
+                const age = document.getElementById('age').value;
+                const grade = document.getElementById('grade').value;
+                const select = document.getElementById('subjects');
+                const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+                const level = document.getElementById('level').value;
+                const hourly_rate = document.getElementById('hourly_rate').value;
+                const about_student = document.getElementById('about_student').value;
+                const tests = document.getElementById('tests').value;
+                const topics = document.getElementById('topics').value;
+                const iom = document.getElementById('iom').value;
+                const schedule_days = document.getElementById('schedule-days').value;
+                const schedule_month = calMonth.value;
+                const schedule_year = calYear.value;
                 
                 const btn = form.querySelector('button[type="submit"]');
                 btn.innerText = 'Создание...';
                 btn.disabled = true;
 
                 try {
-                    // Вызываем Edge Function для создания аккаунта ученика
                     const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
                         body: { 
-                            login: login, 
-                            password: password, 
-                            surname: surname, 
-                            name: name, 
+                            login, password, surname, name, patronymic, age, grade, subjects, 
+                            level, hourly_rate, about_student, tests, topics, iom, 
+                            schedule_days, schedule_month, schedule_year,
                             full_name: `${surname} ${name}`, 
                             role: 'student',
                             teacher_id: currentRole === 'teacher' ? currentUser.id : null
@@ -391,9 +402,7 @@
                         try {
                             const body = await err.context.json();
                             errorMsg = body.error || JSON.stringify(body);
-                        } catch (e) {
-                            errorMsg = 'Не удалось прочитать ответ сервера';
-                        }
+                        } catch (e) { errorMsg = 'Не удалось прочитать ответ сервера'; }
                     }
                     alert('ОШИБКА: ' + errorMsg);
                 } finally {
@@ -475,9 +484,7 @@
                     try {
                         const body = await err.context.json();
                         errorMsg = body.error || JSON.stringify(body);
-                    } catch (e) {
-                        errorMsg = 'Не удалось прочитать ответ сервера';
-                    }
+                    } catch (e) { errorMsg = 'Не удалось прочитать ответ сервера'; }
                 }
                 alert('ОШИБКА: ' + errorMsg);
             } finally {

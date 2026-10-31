@@ -17,18 +17,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Получаем данные из запроса
     const body = await req.json()
-    const { login, password, full_name, role, teacher_id, surname, name } = body
+    const { 
+      login, password, full_name, role, teacher_id, 
+      surname, name, patronymic, age, grade, 
+      subjects, level, hourly_rate, about_student,
+      schedule_month, schedule_year, schedule_days,
+      tests, topics, iom
+    } = body
 
-    if (!login || !password) {
-      throw new Error('Не передан логин или пароль')
-    }
+    if (!login || !password) throw new Error('Не передан логин или пароль')
 
     let email = login;
-    if (role === 'student') {
-      email = `${login}@student.curators.local`;
-    }
+    if (role === 'student') email = `${login}@student.curators.local`;
 
     // 1. Создаем пользователя в Auth
     const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -37,25 +38,19 @@ serve(async (req) => {
       email_confirm: true
     })
 
-    // Если ошибка при создании в Auth — возвращаем её текст
     if (authError) {
-      return new Response(JSON.stringify({ error: `Auth Error: ${authError.message}` }), { 
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      })
+      return new Response(JSON.stringify({ error: `Auth Error: ${authError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // 2. Создаем профиль
     const { error: profileError } = await supabaseAdmin.from('profiles').insert([{
-      id: user.user.id,
-      role: role,
-      full_name: full_name || `${surname} ${name}`,
-      login: login
+      id: user.user.id, role: role, full_name: full_name || `${surname} ${name}`, login: login
     }])
 
     if (profileError) {
-      return new Response(JSON.stringify({ error: `Profile Error: ${profileError.message}` }), { 
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      })
+      // Откат: удаляем пользователя из Auth
+      await supabaseAdmin.auth.admin.deleteUser(user.user.id);
+      return new Response(JSON.stringify({ error: `Profile Error: ${profileError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // 3. Если ученик, создаем запись в students
@@ -66,24 +61,33 @@ serve(async (req) => {
         password: password,
         surname: surname || '',
         name: name || '',
+        patronymic: patronymic || '', // Передаем отчество
+        age: age ? parseInt(age) : null,
+        grade: grade || '',
+        subjects: subjects || '',
+        level: level ? parseInt(level) : 3,
+        hourly_rate: hourly_rate ? parseInt(hourly_rate) : null,
+        about_student: about_student || '',
+        schedule_month: schedule_month || '0',
+        schedule_year: schedule_year || '2026',
+        schedule_days: schedule_days || '',
+        tests: tests || '',
+        topics: topics || '',
+        iom: iom || '',
         teacher_id: teacher_id || null
       }])
 
       if (studentError) {
-        return new Response(JSON.stringify({ error: `Student Error: ${studentError.message}` }), { 
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        })
+        // Откат: удаляем профиль и пользователя из Auth
+        await supabaseAdmin.from('profiles').delete().eq('id', user.user.id);
+        await supabaseAdmin.auth.admin.deleteUser(user.user.id);
+        return new Response(JSON.stringify({ error: `Student Error: ${studentError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    })
+    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: `General Error: ${error.message}` }), { 
-      status: 400, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    })
+    return new Response(JSON.stringify({ error: `General Error: ${error.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
