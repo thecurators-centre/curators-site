@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /login.html
+Disallow: /admin.html
+Disallow: /student.html
+
+Sitemap: https://thecurators-centre.github.io/curators-site/sitemap.xml
