@@ -53,13 +53,28 @@
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
-        .btn-main { display: inline-block; background: var(--accent-lime); color: var(--bg-color); padding: 15px 30px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 1rem; transition: 0.3s; margin-top: 15px; border: none; cursor: pointer; }
-        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(197, 240, 90, 0.3); }
+        /* Кнопки досок */
+        .boards-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+        .board-btn { 
+            display: inline-block; 
+            background: var(--accent-lime); 
+            color: var(--bg-color); 
+            padding: 12px 25px; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            font-weight: 800; 
+            font-size: 1rem; 
+            transition: 0.3s; 
+            border: none; 
+            cursor: pointer;
+        }
+        .board-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(197, 240, 90, 0.3); }
 
         @media (max-width: 768px) {
             .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
             .info-grid { grid-template-columns: 1fr; }
             .header-right span { display: none; }
+            .boards-container { justify-content: center; }
         }
     </style>
 </head>
@@ -145,8 +160,21 @@
             const main = document.getElementById('main-content');
             const level = parseInt(s.level) || 0;
             
+            // Формируем теги предметов
             let subs = (s.subjects || '').split(',').map(x=>x.trim()).filter(x=>x);
             let subsHtml = subs.length > 0 ? subs.map(sub => `<span class="subject-tag">${sub}</span>`).join('') : '<span class="subject-tag">Предмет не указан</span>';
+
+            // Формируем кнопки для досок (по одной на каждый предмет)
+            let boardsButtons = '';
+            if (subs.length > 0) {
+                boardsButtons = subs.map(sub => `
+                    <a href="board.html?subject=${encodeURIComponent(sub)}&role=student" target="_blank" class="board-btn">
+                        Доска: ${sub}
+                    </a>
+                `).join('');
+            } else {
+                boardsButtons = '<p style="opacity:0.5;">Предметы не указаны, доступ к доскам закрыт.</p>';
+            }
 
             main.innerHTML = `
                 <div class="profile-header">
@@ -160,27 +188,34 @@
 
                 <div class="info-grid">
                     <div class="info-card" style="grid-column: 1 / -1;">
-                        <h3>Расписание занятий</h3>
-                        ${renderStudentCalendar(s.schedule_month, s.schedule_year, s.schedule_days)}
-                        <a href="board.html?subject=${subs[0] || 'Общая'}&role=student" target="_blank" class="btn-main" style="display:inline-block; margin-top:15px;">Открыть доску преподавателя</a>
+                        <h3>Мои интерактивные доски</h3>
+                        <p style="opacity:0.7; margin-bottom: 15px; font-size: 0.9rem;">Нажмите на кнопку, чтобы открыть доску по предмету. Вы сможете видеть всё, что пишет преподаватель.</p>
+                        <div class="boards-container">
+                            ${boardsButtons}
+                        </div>
                     </div>
                 </div>
 
                 <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Расписание занятий</h3>
+                        ${renderStudentCalendar(s.schedule_month, s.schedule_year, s.schedule_days)}
+                    </div>
                     <div class="info-card">
                         <h3>Уровень знаний</h3>
                         <p style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 10px;">${level} / 5</p>
                         <div class="level-bar-container">
                             <div class="level-bar-fill" style="width: ${(level / 5) * 100}%;">${level > 0 ? level * 20 + '%' : ''}</div>
                         </div>
-                    </div>
-                    <div class="info-card">
-                        <h3>Домашняя работа</h3>
-                        <ul class="custom-list homework-list">${createList(s.homework)}</ul>
+                        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">Прогресс обновляется куратором.</p>
                     </div>
                 </div>
 
                 <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Домашняя работа</h3>
+                        <ul class="custom-list homework-list">${createList(s.homework)}</ul>
+                    </div>
                     <div class="info-card">
                         <h3>Результаты тестирований</h3>
                         <ul class="custom-list tests-list">${createList(s.tests)}</ul>
