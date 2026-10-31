@@ -21,7 +21,7 @@
         .tool-btn {
             background: none; border: none; color: var(--text-main); cursor: pointer;
             padding: 8px 12px; border-radius: 10px; font-size: 1.2rem; transition: 0.2s;
-            position: relative;
+            position: relative; display: flex; align-items: center; justify-content: center;
         }
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-lime); color: var(--bg-color); }
@@ -31,19 +31,20 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        .dropdown { position: relative; display: inline-block; }
-        .dropdown-content {
-            display: none; position: absolute; top: 100%; left: 0;
-            background: var(--card-bg); min-width: 160px; border-radius: 10px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 1001; border: 1px solid rgba(255,255,255,0.1);
-            margin-top: 5px;
+        /* Меню фигур */
+        .shape-menu {
+            display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            background: var(--card-bg); border-radius: 10px; padding: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 1002; border: 1px solid rgba(255,255,255,0.1);
+            grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; width: max-content;
         }
-        .dropdown-content button {
+        .shape-menu.active { display: grid; }
+        .shape-menu button {
             background: none; border: none; color: white; padding: 10px 15px;
-            text-align: left; width: 100%; cursor: pointer; font-size: 1rem;
+            text-align: left; cursor: pointer; font-size: 1rem; border-radius: 5px;
+            white-space: nowrap;
         }
-        .dropdown-content button:hover { background: rgba(255,255,255,0.1); }
-        .dropdown:hover .dropdown-content { display: block; }
+        .shape-menu button:hover { background: rgba(255,255,255,0.1); }
 
         .board-title {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
@@ -51,8 +52,14 @@
             font-size: 1.2rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; }
+        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; position: relative; }
         
+        /* Стиль для поля ввода текста на доске */
+        .text-input-overlay {
+            position: absolute; z-index: 1000; background: transparent; border: 1px dashed var(--accent-lime);
+            color: white; font-family: 'Inter', sans-serif; outline: none; resize: none; overflow: hidden;
+        }
+
         .exit-btn {
             position: absolute; bottom: 20px; right: 20px; background: var(--card-bg);
             color: var(--text-main); padding: 10px 20px; border-radius: 10px; text-decoration: none;
@@ -69,16 +76,15 @@
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         
-        <div class="dropdown">
-            <button class="tool-btn" data-tool="shape" title="Фигуры" id="shapeBtn">⬛</button>
-            <div class="dropdown-content" id="shapeMenu">
-                <button data-shape="rect">⬛ Прямоугольник</button>
-                <button data-shape="circle">⭕ Круг</button>
-                <button data-shape="triangle">🔺 Треугольник</button>
-                <button data-shape="diamond">🔷 Ромб</button>
-                <button data-shape="star">⭐ Звезда</button>
-                <button data-shape="xy">📈 График XY</button>
-            </div>
+        <!-- Кнопка вызова меню фигур -->
+        <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
+        <div class="shape-menu" id="shapeMenu">
+            <button data-shape="rect">⬛ Прямоугольник</button>
+            <button data-shape="circle">⭕ Круг</button>
+            <button data-shape="triangle">🔺 Треугольник</button>
+            <button data-shape="diamond">🔷 Ромб</button>
+            <button data-shape="star">⭐ Звезда</button>
+            <button data-shape="xy">📈 График XY</button>
         </div>
 
         <button class="tool-btn" data-tool="text" title="Текст">📝</button>
@@ -96,7 +102,6 @@
     <div id="container"></div>
 
     <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
-
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
@@ -114,36 +119,21 @@
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
 
-        const stage = new Konva.Stage({
-            container: 'container',
-            width: window.innerWidth,
-            height: window.innerHeight,
-        });
-
+        const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // --- ТОЧЕЧНАЯ СЕТКА ---
+        // ТОЧЕЧНАЯ СЕТКА
         const bgGrid = new Konva.Shape({
             sceneFunc: function(context) {
-                const spacing = 20;
-                const width = window.innerWidth * 3;
-                const height = window.innerHeight * 3;
+                const spacing = 20; const width = window.innerWidth * 3; const height = window.innerHeight * 3;
                 context.beginPath();
-                for (let x = 0; x < width; x += spacing) {
-                    for (let y = 0; y < height; y += spacing) {
-                        context.moveTo(x, y);
-                        context.arc(x, y, 1, 0, Math.PI * 2);
-                    }
-                }
-                context.fillStyle = 'rgba(255,255,255,0.05)';
-                context.fill();
-            },
-            listening: false
+                for (let x = 0; x < width; x += spacing) { for (let y = 0; y < height; y += spacing) { context.moveTo(x, y); context.arc(x, y, 1, 0, Math.PI * 2); } }
+                context.fillStyle = 'rgba(255,255,255,0.05)'; context.fill();
+            }, listening: false
         });
         layer.add(bgGrid);
 
-        // Центрируем доску
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
 
@@ -153,6 +143,7 @@
         let currentLine = null;
         let currentShape = null;
         let startX, startY;
+        let activeTextInput = null; // Для нового ввода текста
         
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -160,27 +151,79 @@
 
         strokeWidthSlider.addEventListener('input', (e) => { strokeVal.innerText = e.target.value; });
 
+        // Выбор инструмента
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentTool = e.target.dataset.tool;
+                document.getElementById('shapeMenu').classList.remove('active');
+                e.currentTarget.classList.add('active');
+                currentTool = e.currentTarget.dataset.tool;
             });
         });
 
+        // Меню фигур
+        document.getElementById('shapeBtn').addEventListener('click', (e) => {
+            if (isStudent) return;
+            e.stopPropagation();
+            document.getElementById('shapeMenu').classList.toggle('active');
+        });
+
+        // Выбор фигуры
         document.querySelectorAll('#shapeMenu button').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                currentShapeType = e.target.dataset.shape;
+                currentShapeType = e.currentTarget.dataset.shape;
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 document.getElementById('shapeBtn').classList.add('active');
                 currentTool = 'shape';
-                document.getElementById('shapeMenu').style.display = 'none';
+                document.getElementById('shapeMenu').classList.remove('active');
             });
         });
 
-        // --- РИСОВАНИЕ ---
+        // --- ЛОГИКА ТЕКСТА ---
+        // При клике на доску с инструментом "Текст" создаем HTML-поле
+        stage.on('click tap', (e) => {
+            if (currentTool !== 'text' || isStudent) return;
+            
+            // Убираем старое поле, если оно было
+            if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
+
+            const pos = stage.getPointerPosition();
+            const localX = (pos.x - stage.x()) / stage.scaleX();
+            const localY = (pos.y - stage.y()) / stage.scaleY();
+
+            // Создаем textarea поверх canvas
+            const textarea = document.createElement('textarea');
+            textarea.className = 'text-input-overlay';
+            textarea.style.left = `${pos.x}px`;
+            textarea.style.top = `${pos.y}px`;
+            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4 * stage.scaleX()}px`;
+            textarea.style.color = colorPicker.value;
+            textarea.style.width = '200px';
+            textarea.style.height = '50px';
+            
+            document.getElementById('container').appendChild(textarea);
+            textarea.focus();
+            activeTextInput = textarea;
+
+            // При потере фокуса сохраняем текст
+            textarea.onblur = () => {
+                const text = textarea.value.trim();
+                if (text) {
+                    const fontSize = parseInt(strokeWidthSlider.value) * 4;
+                    const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
+                    layer.add(textNode);
+                    layer.batchDraw();
+                    saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value });
+                }
+                textarea.remove();
+                activeTextInput = null;
+            };
+        });
+
+        // --- РИСОВАНИЕ (Линии и фигуры) ---
         stage.on('mousedown touchstart', (e) => {
-            if (isStudent) return;
+            if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
 
             isDrawing = true;
@@ -214,16 +257,6 @@
                 }
                 layer.add(currentShape);
             }
-            else if (currentTool === 'text') {
-                const textNode = new Konva.Text({ x: startX, y: startY, text: 'Введите текст...', fontSize: width * 4, fill: color, fontFamily: 'Inter', draggable: !isStudent });
-                layer.add(textNode);
-                const newText = prompt('Введите текст:', '');
-                if (newText) {
-                    textNode.text(newText);
-                    saveObjectToDB({ type: 'text', x: startX, y: startY, text: newText, fontSize: width * 4, fill: color });
-                } else { textNode.destroy(); }
-                isDrawing = false;
-            }
             layer.batchDraw();
         });
 
@@ -243,8 +276,7 @@
                     currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
                     currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
                 } else if (currentShapeType === 'circle') {
-                    const rX = Math.abs(w); const rY = Math.abs(h);
-                    currentShape.radiusX(rX); currentShape.radiusY(rY);
+                    currentShape.radiusX(Math.abs(w)); currentShape.radiusY(Math.abs(h));
                     currentShape.x(startX + w / 2); currentShape.y(startY + h / 2);
                 } else if (['triangle', 'diamond', 'star'].includes(currentShapeType)) {
                     const dist = Math.sqrt(w*w + h*h);
@@ -266,13 +298,10 @@
                 saveObjectToDB({ type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() });
             } else if (currentShape) {
                 saveObjectToDB({
-                    type: 'shape', shapeType: currentShapeType,
-                    x: currentShape.x(), y: currentShape.y(),
+                    type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(),
                     width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0),
                     height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0),
-                    radius: currentShape.radius ? currentShape.radius() : null,
-                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null,
-                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null,
+                    radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null,
                     scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(),
                     stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null),
                     strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null)
@@ -282,12 +311,11 @@
             layer.batchDraw();
         });
 
-        // --- УПРАВЛЕНИЕ ---
+        // --- УПРАВЛЕНИЕ (Pan & Zoom) ---
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             if (e.evt.ctrlKey) {
-                const oldScale = stage.scaleX();
-                const pointer = stage.getPointerPosition();
+                const oldScale = stage.scaleX(); const pointer = stage.getPointerPosition();
                 const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
                 let direction = e.evt.deltaY > 0 ? -1 : 1;
                 let newScale = direction > 0 ? oldScale * 1.05 : oldScale / 1.05;
@@ -297,21 +325,16 @@
             } else {
                 stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
             }
-            // Отправляем изменение камеры
             saveCameraState();
         });
 
-        let isPanning = false;
-        let lastPointerPos = null;
-        stage.on('mousedown', (e) => {
-            if (e.evt.button === 2) { isPanning = true; lastPointerPos = stage.getPointerPosition(); }
-        });
+        let isPanning = false; let lastPointerPos = null;
+        stage.on('mousedown', (e) => { if (e.evt.button === 2) { isPanning = true; lastPointerPos = stage.getPointerPosition(); } });
         stage.on('mousemove', (e) => {
             if (isPanning) {
                 const pos = stage.getPointerPosition();
                 if (lastPointerPos) stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
-                lastPointerPos = pos;
-                saveCameraState();
+                lastPointerPos = pos; saveCameraState();
             }
         });
         stage.on('mouseup', () => { isPanning = false; });
@@ -322,12 +345,10 @@
             await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]);
         }
 
-        // Сохранение камеры (позиции и зума) в базу
         async function saveCameraState() {
             if (isStudent) return;
             const camState = { type: 'camera', x: stage.x(), y: stage.y(), scale: stage.scaleX() };
-            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: camState }]);
-            if (error) console.error(error);
+            await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: camState }]);
         }
 
         function drawObject(obj) {
@@ -359,13 +380,9 @@
             if (data) {
                 let lastCamera = null;
                 data.forEach(item => {
-                    if (item.object_data.type === 'camera') {
-                        lastCamera = item.object_data;
-                    } else {
-                        drawObject(item.object_data);
-                    }
+                    if (item.object_data.type === 'camera') lastCamera = item.object_data;
+                    else drawObject(item.object_data);
                 });
-                // Если есть сохраненная камера - применяем
                 if (lastCamera) {
                     stage.position({ x: lastCamera.x, y: lastCamera.y });
                     stage.scale({ x: lastCamera.scale, y: lastCamera.scale });
@@ -373,16 +390,11 @@
             }
         }
 
-        // Подписка на Realtime (и рисунки, и камера)
         supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
             if (payload.new.board_id === subject) {
                 const data = payload.new.object_data;
                 if (data.type === 'camera') {
-                    // Если ученик, и он сам не двигал доску, принимаем позицию учителя
-                    if (isStudent) {
-                        stage.position({ x: data.x, y: data.y });
-                        stage.scale({ x: data.scale, y: data.scale });
-                    }
+                    if (isStudent) { stage.position({ x: data.x, y: data.y }); stage.scale({ x: data.scale, y: data.scale }); }
                 } else {
                     drawObject(data);
                 }
@@ -392,16 +404,12 @@
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
-                layer.destroyChildren(); 
-                layer.add(bgGrid);
-                layer.draw();
+                layer.destroyChildren(); layer.add(bgGrid); layer.draw();
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
             }
         });
 
-        window.addEventListener('resize', () => {
-            stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw();
-        });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw(); });
 
         loadBoard();
     </script>
