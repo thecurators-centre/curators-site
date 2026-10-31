@@ -29,13 +29,25 @@
 
         .search-input { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-family: inherit; box-sizing: border-box; }
         .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .chat-item { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
+        .chat-item { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; margin-bottom: 5px; position: relative; }
         .chat-item:hover { background: rgba(255,255,255,0.05); }
         .chat-item.active { background: rgba(197, 240, 90, 0.1); border: 1px solid rgba(197, 240, 90, 0.3); }
         .chat-avatar { width: 45px; height: 45px; background: var(--accent-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; }
         .chat-info { flex: 1; overflow: hidden; }
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-info p { font-size: 0.85rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Бейдж непрочитанных */
+        .unread-badge {
+            background: var(--danger);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
 
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #1a1c29; position: relative; }
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
@@ -147,7 +159,6 @@
             currentUserRole = profile.role;
             document.getElementById('header-name').innerText = profile.full_name;
 
-            // Меняем ссылку и текст кнопки возврата в зависимости от роли
             const backBtn = document.getElementById('back-btn');
             if (currentUserRole === 'student') {
                 backBtn.href = 'student.html';
@@ -157,7 +168,6 @@
                 backBtn.innerText = 'Вернуться в админку';
             }
 
-            // Показываем кнопку создания чата только сотрудникам
             if (currentUserRole === 'admin' || currentUserRole === 'teacher') {
                 const btn = document.getElementById('btn-new-chat');
                 if (btn) btn.style.display = 'flex';
@@ -169,6 +179,7 @@
         async function loadChats() {
             const chatList = document.getElementById('chat-list');
             
+            // 1. Получаем список чатов
             const { data: myChats, error } = await supabaseClient
                 .from('chat_participants')
                 .select(`chat_id, chats (id, type, name)`)
@@ -177,6 +188,19 @@
             if (error || !myChats) { chatList.innerHTML = '<p style="padding:20px;color:red;">Ошибка загрузки</p>'; return; }
 
             allChats = myChats.map(item => item.chats);
+
+            // 2. Для каждого чата считаем непрочитанные
+            for (let i = 0; i < allChats.length; i++) {
+                const { count } = await supabaseClient
+                    .from('messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('chat_id', allChats[i].id)
+                    .eq('is_read', false)
+                    .neq('sender_id', currentUser.id); // Не считаем свои сообщения
+                
+                allChats[i].unreadCount = count || 0;
+            }
+
             renderChatList();
         }
 
@@ -196,6 +220,11 @@
                 
                 const avatarLetter = chat.type === 'group' ? 'Г' : 'Ч';
                 const chatName = chat.name || 'Личный чат';
+                
+                // Если есть непрочитанные, показываем бейдж
+                const badge = chat.unreadCount > 0 
+                    ? `<div class="unread-badge">${chat.unreadCount}</div>` 
+                    : '';
 
                 div.innerHTML = `
                     <div class="chat-avatar">${avatarLetter}</div>
@@ -203,6 +232,7 @@
                         <h4>${chatName}</h4>
                         <p>Нажмите, чтобы открыть</p>
                     </div>
+                    ${badge}
                 `;
                 div.onclick = () => openChat(chat);
                 chatList.appendChild(div);
@@ -219,7 +249,18 @@
             avatar.innerText = chat.type === 'group' ? 'Г' : 'Ч';
             document.getElementById('chat-header-name').innerText = chat.name || 'Личный чат';
 
+            // Помечаем сообщения как прочитанные
+            await supabaseClient
+                .from('messages')
+                .update({ is_read: true })
+                .eq('chat_id', chat.id)
+                .eq('is_read', false)
+                .neq('sender_id', currentUser.id);
+
+            // Обнуляем счетчик и перерисовываем список
+            chat.unreadCount = 0;
             renderChatList();
+
             loadMessages(chat.id);
             subscribeToChat(chat.id);
         }
@@ -273,7 +314,7 @@
             scrollToBottom();
 
             const { error } = await supabaseClient.from('messages').insert([{
-                chat_id: currentChatId, sender_id: currentUser.id, content: text
+                chat_id: currentChatId, sender_id: currentUser.id, content: text, is_read: false
             }]);
 
             if (error) alert('Ошибка отправки: ' + error.message);
@@ -285,7 +326,12 @@
                 .channel('chat_' + chatId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, payload => {
                     const newMsg = payload.new;
-                    if (newMsg.sender_id !== currentUser.id) { appendMessage(newMsg); scrollToBottom(); }
+                    if (newMsg.sender_id !== currentUser.id) {
+                        appendMessage(newMsg);
+                        scrollToBottom();
+                        // Помечаем как прочитанное, так как мы в этом чате
+                        supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
+                    }
                 })
                 .subscribe();
         }
@@ -335,15 +381,6 @@
             modal.classList.remove('active');
             loadChats();
         }
-
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            const items = document.querySelectorAll('.chat-item');
-            items.forEach((item, index) => {
-                const name = allChats[index]?.name || 'Личный чат';
-                item.style.display = name.toLowerCase().includes(val) ? 'flex' : 'none';
-            });
-        });
 
         init();
     </script>

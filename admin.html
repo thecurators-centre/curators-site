@@ -37,7 +37,8 @@
         .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
         .time-input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; background: var(--bg-color); color: white; text-align: center; }
         .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
-    </style>
+    .chat-badge { position: absolute; top: -5px; right: -10px; background: var(--danger); color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid var(--card-bg); display: none; }
+</style>
 </head>
 <body>
     <div class="container">
@@ -188,6 +189,7 @@
             currentRole = profile.role;
             document.getElementById('user-info').innerText = `${profile.full_name} (${profile.role})`;
 
+            loadUnreadCount(user.id);
             if (currentRole === 'admin') {
                 document.getElementById('tab-teachers').style.display = 'block';
             }
