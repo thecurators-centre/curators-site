@@ -327,7 +327,18 @@
                 const obj = { type: 'line', id: currentStrokeId, points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             } else if (currentShape) {
-                const obj = { type: 'shape', id: currentStrokeId, shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
+                const obj = { 
+                    type: 'shape', id: currentStrokeId, shapeType: currentShapeType, 
+                    x: currentShape.x(), y: currentShape.y(), 
+                    width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), 
+                    height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), 
+                    radius: currentShape.radius ? currentShape.radius() : null, 
+                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, 
+                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, 
+                    scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), 
+                    stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), 
+                    strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) 
+                };
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             }
         });
@@ -340,7 +351,18 @@
             if (currentLine) {
                 finalObj = { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
             } else if (currentShape) {
-                finalObj = { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
+                finalObj = { 
+                    type: 'shape', shapeType: currentShapeType, 
+                    x: currentShape.x(), y: currentShape.y(), 
+                    width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), 
+                    height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), 
+                    radius: currentShape.radius ? currentShape.radius() : null, 
+                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, 
+                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, 
+                    scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), 
+                    stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), 
+                    strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) 
+                };
             }
             
             if (finalObj) {
@@ -354,12 +376,10 @@
         });
 
         // --- КАМЕРА (ИСПРАВЛЕНО ДЛЯ MAC) ---
-        // На тачпаде Mac: обычная прокрутка = ctrlKey:false (движение), щипок = ctrlKey:true (зум)
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             
             if (e.evt.ctrlKey) {
-                // ЗУМ
                 const oldScale = stage.scaleX();
                 const pointer = stage.getPointerPosition();
                 const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
@@ -371,7 +391,6 @@
                 stage.scale({ x: newScale, y: newScale });
                 stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
             } else {
-                // ПЕРЕМЕЩЕНИЕ (два пальца)
                 stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
             }
         });
@@ -413,7 +432,7 @@
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
-        // --- ОТРИСОВКА ОБЪЕКТОВ ---
+        // --- ОТРИСОВКА ОБЪЕКТОВ (ИСПРАВЛЕНО ДЛЯ XY) ---
         function drawObject(obj) {
             let node = null;
             if (obj.type === 'line') {
@@ -426,6 +445,8 @@
                 else if (obj.shapeType === 'star') node = new Konva.Star({ x: obj.x, y: obj.y, numPoints: 5, innerRadius: obj.innerRadius, outerRadius: obj.outerRadius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
                 else if (obj.shapeType === 'xy') {
                     node = new Konva.Group({ x: obj.x, y: obj.y, scaleX: obj.scaleX, scaleY: obj.scaleY });
+                    // Важно: добавляем имя, чтобы потом можно было найти
+                    node.name('xy-group');
                     node.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                     node.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                     node.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
@@ -438,7 +459,6 @@
             if (node) {
                 drawLayer.add(node);
                 drawLayer.batchDraw();
-                // Если у объекта есть ID, сохраняем ссылку для обновлений
                 if (obj.id) studentObjects[obj.id] = node;
             }
         }
@@ -450,7 +470,7 @@
             }
         }
 
-        // --- BROADCAST ---
+        // --- BROADCAST (ИСПРАВЛЕНО ДЛЯ XY) ---
         function setupRealtime() {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
 
@@ -462,18 +482,20 @@
                             drawLayer.destroyChildren(); drawLayer.draw();
                             studentObjects = {};
                         } else {
-                            // Если объект с таким ID уже есть, обновляем его. Иначе создаем новый.
                             if (data.id && studentObjects[data.id]) {
                                 const node = studentObjects[data.id];
-                                // Обновляем в зависимости от типа
                                 if (data.type === 'line') {
                                     node.points(data.points);
                                 } else if (data.type === 'shape') {
-                                    if (node.setAttrs) node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
+                                    if (data.shapeType === 'xy') {
+                                        // Для XY группы обновляем только позицию и масштаб
+                                        node.setAttrs({ x: data.x, y: data.y, scaleX: data.scaleX, scaleY: data.scaleY });
+                                    } else {
+                                        node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
+                                    }
                                 }
                                 drawLayer.batchDraw();
                             } else {
-                                // Создаем новый объект
                                 drawObject(data);
                             }
                         }
