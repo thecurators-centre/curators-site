@@ -130,3 +130,75 @@ header {
         border-bottom: none;
     }
 }
+
+/* --- ПРИНУДИТЕЛЬНАЯ МОБИЛЬНАЯ ШАПКА (3 РЯДА) --- */
+@media (max-width: 768px) {
+    header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+        padding-top: calc(15px + env(safe-area-inset-top)) !important;
+        padding-bottom: 15px !important;
+        height: auto !important;
+    }
+
+    /* Ряд 1: Имя пользователя */
+    .header-right {
+        display: contents !important; /* Разрываем контейнер, чтобы дети встали в общий поток */
+    }
+    #user-info {
+        order: 1 !important;
+        width: 100% !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        color: var(--accent-lime) !important;
+        margin-bottom: 5px;
+    }
+
+    /* Ряд 2: Мессенджер и Выйти */
+    .header-right a[href="chat.html"] {
+        order: 2 !important;
+        display: inline-block !important;
+        border: 1px solid var(--accent-lime) !important;
+        padding: 8px 15px !important;
+        border-radius: 10px !important;
+        font-size: 0.9rem !important;
+        margin-right: 10px;
+    }
+    .header-right a[onclick*="signOut"] {
+        order: 3 !important;
+        display: inline-block !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        padding: 8px 15px !important;
+        border-radius: 10px !important;
+        font-size: 0.9rem !important;
+        color: var(--text-main) !important;
+    }
+
+    /* Ряд 3: Вкладки */
+    .header-tabs {
+        order: 4 !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        background: var(--card-bg) !important;
+        padding: 8px !important;
+        border-radius: 12px !important;
+        gap: 5px !important;
+        margin-top: 10px !important;
+    }
+    .header-tabs h1 {
+        font-size: 0.9rem !important;
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 8px 5px !important;
+        border-radius: 8px !important;
+        margin: 0 !important;
+    }
+    .header-tabs h1.active {
+        background: var(--accent-lime) !important;
+        color: var(--bg-color) !important;
+        border-bottom: none !important;
+    }
+}
