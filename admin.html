@@ -17,6 +17,7 @@
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
         .card h3 { margin-bottom: 5px; color: var(--bg-color); }
         .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 850px; max-height: 95vh; overflow-y: auto; position: relative; }
@@ -37,8 +38,7 @@
         .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
         .time-input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; background: var(--bg-color); color: white; text-align: center; }
         .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
-    .chat-badge { position: absolute; top: -5px; right: -10px; background: var(--danger); color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid var(--card-bg); display: none; }
-</style>
+    </style>
 </head>
 <body>
     <div class="container">
@@ -50,7 +50,7 @@
             </div>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <span id="user-info" style="font-size: 0.9rem; opacity: 0.7;"></span>
-                <a href="chat.html" style="color: var(--accent-lime); text-decoration: none; font-weight: 600; margin-right: 15px;">💬 Мессенджер</a> <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
+                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
             </div>
         </div>
         
@@ -69,6 +69,7 @@
         </div>
     </div>
 
+    <!-- Модалка ученика -->
     <div class="modal" id="modal">
         <div class="modal-content">
             <button class="close-btn" id="closeModal">&times;</button>
@@ -140,15 +141,39 @@
         </div>
     </div>
 
+    <!-- Модалка учителя -->
     <div class="modal" id="teacherModal">
-        <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-content" style="max-width: 600px;">
             <button class="close-btn" id="closeTeacherModal">&times;</button>
-            <h2 style="margin-bottom: 20px;">Новый учитель</h2>
+            <h2 style="margin-bottom: 20px;">Карточка учителя</h2>
             <form id="teacherForm">
-                <div class="form-group"><label>ФИО учителя</label><input type="text" id="teacher_fullname" required></div>
-                <div class="form-group"><label>Email (логин)</label><input type="email" id="teacher_email" required></div>
-                <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password" required></div>
-                <button type="submit" class="btn-save">Создать аккаунт</button>
+                <input type="hidden" id="teacher_id">
+                <div class="form-row">
+                    <div class="form-group"><label>Фамилия</label><input type="text" id="teacher_surname" required></div>
+                    <div class="form-group"><label>Имя</label><input type="text" id="teacher_name" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Email (логин)</label><input type="email" id="teacher_email" required></div>
+                    <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Ставка (%)</label><input type="number" id="teacher_rate" placeholder="Например: 40"></div>
+                    <div class="form-group"><label>Телефон</label><input type="tel" id="teacher_phone" placeholder="+7 900 000 00 00"></div>
+                </div>
+                <div class="form-group">
+                    <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
+                    <select id="teacher_subjects" multiple size="5">
+                        <option value="Русский язык">Русский язык</option>
+                        <option value="Японский язык">Японский язык</option>
+                        <option value="Английский язык">Английский язык</option>
+                        <option value="Литература">Литература</option>
+                        <option value="Обществознание">Обществознание</option>
+                        <option value="История">История</option>
+                        <option value="Физика">Физика</option>
+                        <option value="Подготовка к школе">Подготовка к школе</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-save" id="teacherSaveBtn">Сохранить</button>
             </form>
         </div>
     </div>
@@ -165,6 +190,7 @@
         const subjectsList = ['Русский язык', 'Японский язык', 'Английский язык', 'Литература', 'Обществознание', 'История', 'Физика', 'Подготовка к школе'];
 
         let students = [];
+        let teachers = [];
         let currentUser = null;
         let currentRole = null;
         
@@ -180,59 +206,56 @@
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) { window.location.href = 'login.html'; return; }
+            currentUser = user;
 
             const { data: profile } = await supabaseClient.from('profiles').select('role, full_name').eq('id', user.id).single();
             if (!profile) { window.location.href = 'login.html'; return; }
             if (profile.role !== 'admin' && profile.role !== 'teacher') { window.location.href = 'student.html'; return; }
 
-            currentUser = user;
             currentRole = profile.role;
             document.getElementById('user-info').innerText = `${profile.full_name} (${profile.role})`;
 
-            loadUnreadCount(user.id);
             if (currentRole === 'admin') {
                 document.getElementById('tab-teachers').style.display = 'block';
             }
 
             loadStudents();
+            loadUnreadCount(user.id);
         }
 
+        async function loadUnreadCount(userId) {
+            const { data: myChats } = await supabaseClient.from('chat_participants').select('chat_id').eq('user_id', userId);
+            if (!myChats || myChats.length === 0) return;
+            const chatIds = myChats.map(c => c.chat_id);
+            const { count, error } = await supabaseClient.from('messages').select('*', { count: 'exact', head: true }).in('chat_id', chatIds).eq('is_read', false).neq('sender_id', userId);
+            if (!error && count > 0) {
+                const btn = document.querySelector('a[href="chat.html"]');
+                if (btn) {
+                    let badge = btn.querySelector('.chat-badge');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'chat-badge';
+                        btn.style.position = 'relative';
+                        btn.appendChild(badge);
+                    }
+                    badge.innerText = count;
+                    badge.style.display = 'block';
+                }
+            }
+        }
+
+        // --- УЧЕНИКИ ---
         async function loadStudents() {
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
             let query = supabaseClient.from('students').select('*').order('id', { ascending: true });
-            if (currentRole === 'teacher') {
-                query = query.eq('teacher_id', currentUser.id);
-            }
-
+            if (currentRole === 'teacher') query = query.eq('teacher_id', currentUser.id);
             const { data, error } = await query;
             if (error) { grid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
             students = data || [];
-            render();
+            renderStudents();
         }
 
-        async function loadTeachers() {
-            const teachersGrid = document.getElementById('teachers-grid');
-            teachersGrid.innerHTML = '<div class="loading">Загрузка...</div>';
-            const { data, error } = await supabaseClient.from('profiles').select('*').eq('role', 'teacher');
-            
-            if (error) { teachersGrid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
-            
-            if (data.length === 0) {
-                teachersGrid.innerHTML = '<p style="opacity:0.5;">Учителей пока нет.</p>';
-                return;
-            }
-
-            teachersGrid.innerHTML = '';
-            data.forEach(t => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.style.background = '#313452';
-                card.innerHTML = `<h3 style="color:white;">${t.full_name}</h3><p>Логин: ${t.login}</p>`;
-                teachersGrid.appendChild(card);
-            });
-        }
-
-        function render() {
+        function renderStudents() {
             grid.innerHTML = '';
             if (students.length === 0) { grid.innerHTML = '<p style="opacity:0.5;">Пусто</p>'; return; }
             students.forEach((s) => {
@@ -241,76 +264,108 @@
                 let subs = (s.subjects || '').split(',').map(x => x.trim()).filter(x => x);
                 let colors = subs.map(sub => subjectColors[sub] || '#313452');
                 if (colors.length === 0) colors = ['#313452'];
-                if (colors.length === 1) { card.style.background = colors[0]; } 
-                else { card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`; }
-                
+                if (colors.length === 1) { card.style.background = colors[0]; } else { card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`; }
                 card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
-                card.onclick = () => openModal(s);
+                card.onclick = () => openStudentModal(s);
                 grid.appendChild(card);
             });
         }
 
-        function renderBoards() {
-            const boardsGrid = document.getElementById('boards-grid');
-            boardsGrid.innerHTML = '';
-            subjectsList.forEach(sub => {
+        // --- УЧИТЕЛЯ ---
+        async function loadTeachers() {
+            const teachersGrid = document.getElementById('teachers-grid');
+            teachersGrid.innerHTML = '<div class="loading">Загрузка...</div>';
+            const { data, error } = await supabaseClient.from('profiles').select('*').eq('role', 'teacher');
+            if (error) { teachersGrid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
+            teachers = data || [];
+            renderTeachers();
+        }
+
+        function renderTeachers() {
+            const teachersGrid = document.getElementById('teachers-grid');
+            teachersGrid.innerHTML = '';
+            if (teachers.length === 0) { teachersGrid.innerHTML = '<p style="opacity:0.5;">Учителей пока нет.</p>'; return; }
+            teachers.forEach(t => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                let color = subjectColors[sub] || '#313452';
-                card.style.background = color;
-                card.innerHTML = `
-                    <h3>${sub}</h3>
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <a href="board.html?subject=${sub}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Доска</a>
-                    </div>
-                `;
-                boardsGrid.appendChild(card);
+                let subs = (t.subject || '').split(',').map(x => x.trim()).filter(x => x);
+                let colors = subs.map(sub => subjectColors[sub] || '#313452');
+                if (colors.length === 0) colors = ['#313452'];
+                if (colors.length === 1) { card.style.background = colors[0]; } else { card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`; }
+                card.innerHTML = `<h3>${t.surname || ''} ${t.name || t.full_name}</h3><p>Ставка: ${t.rate || '?'}%</p>`;
+                card.onclick = () => openTeacherModal(t);
+                teachersGrid.appendChild(card);
             });
         }
 
-        function renderCalendar() {
-            const month = parseInt(calMonth.value);
-            const year = parseInt(calYear.value);
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-            calGrid.innerHTML = '';
-            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
-                const el = document.createElement('div'); el.className = 'cal-header'; el.innerText = d; calGrid.appendChild(el);
-            });
-            for (let i = 0; i < startOffset; i++) calGrid.appendChild(document.createElement('div'));
-            for (let day = 1; day <= daysInMonth; day++) {
-                const wrapper = document.createElement('div'); wrapper.className = 'cal-day-wrapper';
-                const dayBtn = document.createElement('div'); dayBtn.className = 'cal-day'; dayBtn.innerText = day;
-                const timeInput = document.createElement('input'); timeInput.type = 'text'; timeInput.className = 'time-input'; timeInput.placeholder = '--:--';
-                timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
-                if (scheduleData[day]) timeInput.value = scheduleData[day];
-                if (scheduleData[day] !== undefined) dayBtn.classList.add('selected');
-                dayBtn.onclick = () => {
-                    if (scheduleData[day] !== undefined) {
-                        delete scheduleData[day]; dayBtn.classList.remove('selected'); timeInput.style.display = 'none'; timeInput.value = '';
-                    } else {
-                        scheduleData[day] = ''; dayBtn.classList.add('selected'); timeInput.style.display = 'block'; timeInput.focus();
-                    }
-                    updateScheduleHiddenInput();
-                };
-                timeInput.oninput = (e) => { scheduleData[day] = e.target.value; updateScheduleHiddenInput(); };
-                wrapper.appendChild(dayBtn); wrapper.appendChild(timeInput); calGrid.appendChild(wrapper);
+        function openTeacherModal(t = null) {
+            document.getElementById('teacherForm').reset();
+            if (t) {
+                document.getElementById('teacher_id').value = t.id;
+                document.getElementById('teacher_surname').value = t.surname || '';
+                document.getElementById('teacher_name').value = t.name || '';
+                document.getElementById('teacher_email').value = t.login || '';
+                document.getElementById('teacher_password').value = '';
+                document.getElementById('teacher_rate').value = t.rate || '';
+                document.getElementById('teacher_phone').value = t.phone || '';
+                const subs = (t.subject || '').split(',').map(x=>x.trim());
+                const select = document.getElementById('teacher_subjects');
+                for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
+                document.getElementById('teacherSaveBtn').innerText = 'Сохранить изменения';
+                document.getElementById('teacher_email').disabled = true;
+                document.getElementById('teacher_password').disabled = true;
+            } else {
+                document.getElementById('teacher_id').value = '';
+                document.getElementById('teacherSaveBtn').innerText = 'Создать аккаунт';
+                document.getElementById('teacher_email').disabled = false;
+                document.getElementById('teacher_password').disabled = false;
             }
+            teacherModal.classList.add('active');
         }
 
-        function updateScheduleHiddenInput() {
-            const str = Object.keys(scheduleData).map(day => `${day}=${scheduleData[day] || ''}`).join(',');
-            document.getElementById('schedule-days').value = str;
-        }
-        function parseSchedule(str) {
-            const obj = {}; if (!str) return obj;
-            str.split(',').forEach(item => { const [day, time] = item.split('='); if (day) obj[day] = time || ''; });
-            return obj;
-        }
-        calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
+        document.getElementById('closeTeacherModal').onclick = () => teacherModal.classList.remove('active');
+        teacherModal.onclick = (e) => { if (e.target === teacherModal) teacherModal.classList.remove('active'); };
 
-        function openModal(s = null) {
+        document.getElementById('teacherForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('teacher_id').value;
+            const surname = document.getElementById('teacher_surname').value.trim();
+            const name = document.getElementById('teacher_name').value.trim();
+            const email = document.getElementById('teacher_email').value.trim();
+            const password = document.getElementById('teacher_password').value.trim();
+            const rate = document.getElementById('teacher_rate').value;
+            const phone = document.getElementById('teacher_phone').value;
+            const select = document.getElementById('teacher_subjects');
+            const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+            const btn = document.getElementById('teacherSaveBtn');
+
+            if (id) {
+                btn.innerText = 'Сохранение...'; btn.disabled = true;
+                const { error } = await supabaseClient.from('profiles').update({
+                    surname: surname, name: name, full_name: `${surname} ${name}`,
+                    rate: rate ? parseInt(rate) : null, phone: phone, subject: subjects
+                }).eq('id', id);
+                if (error) alert('Ошибка: ' + error.message);
+                else { teacherModal.classList.remove('active'); loadTeachers(); }
+                btn.innerText = 'Сохранить изменения'; btn.disabled = false;
+            } else {
+                btn.innerText = 'Создание...'; btn.disabled = true;
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
+                        body: { login: email, password, role: 'teacher', full_name: `${surname} ${name}`, surname, name, rate, phone, subjects }
+                    });
+                    if (error) throw error;
+                    if (data && data.error) throw new Error(data.error);
+                    alert('Учитель успешно создан!');
+                    teacherModal.classList.remove('active');
+                    loadTeachers();
+                } catch (err) { alert('ОШИБКА: ' + err.message); }
+                finally { btn.innerText = 'Создать аккаунт'; btn.disabled = false; }
+            }
+        };
+
+        // --- ОСТАЛЬНОЕ (УЧЕНИКИ) ---
+        function openStudentModal(s = null) {
             form.reset(); scheduleData = {};
             if (s) {
                 document.getElementById('id').value = s.id;
@@ -335,7 +390,6 @@
                 document.getElementById('topics').value = s.topics || '';
                 document.getElementById('iom').value = s.iom || '';
                 document.getElementById('deleteBtn').style.display = 'block';
-                
                 const notebookLink = document.getElementById('notebookLink');
                 notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
                 notebookLink.style.display = 'block';
@@ -355,9 +409,7 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('id').value;
-            
             if (!id) {
-                // --- СОЗДАНИЕ НОВОГО УЧЕНИКА ---
                 const login = document.getElementById('login').value.trim();
                 const password = document.getElementById('password').value.trim();
                 const surname = document.getElementById('surname').value.trim();
@@ -378,47 +430,24 @@
                 const schedule_year = calYear.value;
                 
                 const btn = form.querySelector('button[type="submit"]');
-                btn.innerText = 'Создание...';
-                btn.disabled = true;
+                btn.innerText = 'Создание...'; btn.disabled = true;
 
                 try {
                     const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                        body: { 
-                            login, password, surname, name, patronymic, age, grade, subjects, 
-                            level, hourly_rate, about_student, tests, topics, iom, 
-                            schedule_days, schedule_month, schedule_year,
-                            full_name: `${surname} ${name}`, 
-                            role: 'student',
-                            teacher_id: currentRole === 'teacher' ? currentUser.id : null
-                        }
+                        body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, iom, schedule_days, schedule_month, schedule_year, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
                     });
-
                     if (error) throw error;
                     if (data && data.error) throw new Error(data.error);
-
                     alert('Ученик успешно создан!');
                     modal.classList.remove('active');
                     loadStudents();
-                } catch (err) {
-                    let errorMsg = err.message;
-                    if (err.context) {
-                        try {
-                            const body = await err.context.json();
-                            errorMsg = body.error || JSON.stringify(body);
-                        } catch (e) { errorMsg = 'Не удалось прочитать ответ сервера'; }
-                    }
-                    alert('ОШИБКА: ' + errorMsg);
-                } finally {
-                    btn.innerText = 'Сохранить';
-                    btn.disabled = false;
-                }
+                } catch (err) { alert('ОШИБКА: ' + err.message); }
+                finally { btn.innerText = 'Сохранить'; btn.disabled = false; }
                 return;
             }
 
-            // --- ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕГО УЧЕНИКА ---
             const select = document.getElementById('subjects');
             const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
-            
             const data = {
                 login: document.getElementById('login').value.trim(),
                 password: document.getElementById('password').value.trim(),
@@ -438,7 +467,6 @@
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
-
             const { error } = await supabaseClient.from('students').update(data).eq('id', id);
             if (error) alert('Ошибка: ' + error.message);
             else { modal.classList.remove('active'); loadStudents(); }
@@ -454,47 +482,43 @@
             }
         };
 
-        // --- УЧИТЕЛЯ ---
-        document.getElementById('addTeacherBtn').onclick = () => { teacherModal.classList.add('active'); };
-        document.getElementById('closeTeacherModal').onclick = () => { teacherModal.classList.remove('active'); };
-        teacherModal.onclick = (e) => { if (e.target === teacherModal) teacherModal.classList.remove('active'); };
-
-        document.getElementById('teacherForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const fullname = document.getElementById('teacher_fullname').value.trim();
-            const email = document.getElementById('teacher_email').value.trim();
-            const password = document.getElementById('teacher_password').value.trim();
-            const btn = e.target.querySelector('button[type="submit"]');
-            
-            btn.innerText = 'Создание...';
-            btn.disabled = true;
-
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                    body: { login: email, password: password, full_name: fullname, role: 'teacher' }
-                });
-
-                if (error) throw error;
-                if (data && data.error) throw new Error(data.error);
-
-                alert('Учитель успешно создан!');
-                teacherModal.classList.remove('active');
-                document.getElementById('teacherForm').reset();
-                loadTeachers();
-            } catch (err) {
-                let errorMsg = err.message;
-                if (err.context) {
-                    try {
-                        const body = await err.context.json();
-                        errorMsg = body.error || JSON.stringify(body);
-                    } catch (e) { errorMsg = 'Не удалось прочитать ответ сервера'; }
-                }
-                alert('ОШИБКА: ' + errorMsg);
-            } finally {
-                btn.innerText = 'Создать аккаунт';
-                btn.disabled = false;
+        function renderCalendar() {
+            const month = parseInt(calMonth.value);
+            const year = parseInt(calYear.value);
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+            calGrid.innerHTML = '';
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+                const el = document.createElement('div'); el.className = 'cal-header'; el.innerText = d; calGrid.appendChild(el);
+            });
+            for (let i = 0; i < startOffset; i++) calGrid.appendChild(document.createElement('div'));
+            for (let day = 1; day <= daysInMonth; day++) {
+                const wrapper = document.createElement('div'); wrapper.className = 'cal-day-wrapper';
+                const dayBtn = document.createElement('div'); dayBtn.className = 'cal-day'; dayBtn.innerText = day;
+                const timeInput = document.createElement('input'); timeInput.type = 'text'; timeInput.className = 'time-input'; timeInput.placeholder = '--:--';
+                timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
+                if (scheduleData[day]) timeInput.value = scheduleData[day];
+                if (scheduleData[day] !== undefined) dayBtn.classList.add('selected');
+                dayBtn.onclick = () => {
+                    if (scheduleData[day] !== undefined) { delete scheduleData[day]; dayBtn.classList.remove('selected'); timeInput.style.display = 'none'; timeInput.value = ''; }
+                    else { scheduleData[day] = ''; dayBtn.classList.add('selected'); timeInput.style.display = 'block'; timeInput.focus(); }
+                    updateScheduleHiddenInput();
+                };
+                timeInput.oninput = (e) => { scheduleData[day] = e.target.value; updateScheduleHiddenInput(); };
+                wrapper.appendChild(dayBtn); wrapper.appendChild(timeInput); calGrid.appendChild(wrapper);
             }
-        };
+        }
+        function updateScheduleHiddenInput() {
+            const str = Object.keys(scheduleData).map(day => `${day}=${scheduleData[day] || ''}`).join(',');
+            document.getElementById('schedule-days').value = str;
+        }
+        function parseSchedule(str) {
+            const obj = {}; if (!str) return obj;
+            str.split(',').forEach(item => { const [day, time] = item.split('='); if (day) obj[day] = time || ''; });
+            return obj;
+        }
+        calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
 
         // --- ВКЛАДКИ ---
         const tabStudents = document.getElementById('tab-students');
@@ -505,11 +529,8 @@
         const sectionTeachers = document.getElementById('section-teachers');
 
         function switchTab(activeTab, activeSection) {
-            [tabStudents, tabBoards, tabTeachers].forEach(t => {
-                t.style.color = 'var(--text-main)'; t.style.borderBottom = 'none'; t.style.opacity = '0.5';
-            });
+            [tabStudents, tabBoards, tabTeachers].forEach(t => { t.style.color = 'var(--text-main)'; t.style.borderBottom = 'none'; t.style.opacity = '0.5'; });
             [sectionStudents, sectionBoards, sectionTeachers].forEach(s => s.style.display = 'none');
-            
             activeTab.style.color = 'var(--accent-lime)'; activeTab.style.borderBottom = '2px solid var(--accent-lime)'; activeTab.style.opacity = '1';
             activeSection.style.display = 'block';
         }
@@ -518,9 +539,9 @@
         tabBoards.onclick = () => { switchTab(tabBoards, sectionBoards); renderBoards(); };
         tabTeachers.onclick = () => { switchTab(tabTeachers, sectionTeachers); loadTeachers(); };
 
-        document.getElementById('addBtn').onclick = () => openModal();
+        document.getElementById('addBtn').onclick = () => openStudentModal();
+        document.getElementById('addTeacherBtn').onclick = () => openTeacherModal();
         
-        renderBoards();
         init();
     </script>
 </body>
