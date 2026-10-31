@@ -32,7 +32,6 @@
         .level-bar-container { background: var(--bg-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
         .level-bar-fill { background: var(--accent-lime); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.8rem; font-weight: 800; color: var(--bg-color); transition: width 1s ease-in-out; }
         
-        /* Стили для календаря */
         .calendar-student { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-top: 15px; }
         .cal-header-st { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
         .cal-day-st { padding: 8px 5px; text-align: center; border-radius: 8px; font-size: 0.9rem; border: 1px solid transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
@@ -40,11 +39,9 @@
         .cal-time-st { font-size: 0.65rem; font-weight: normal; margin-top: 2px; opacity: 0.8; }
         .cal-month-title { font-size: 1.2rem; font-weight: 800; color: white; margin-bottom: 10px; }
 
-        /* Списки */
         .custom-list { list-style: none; }
         .custom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
         .custom-list li:last-child { border-bottom: none; }
-        .homework-list li::before { content: '📝'; }
         .tests-list li::before { content: '📊'; }
         .topics-list li::before { content: '✓'; color: var(--accent-lime); font-weight: 800; }
         .iom-list li::before { content: '→'; color: var(--accent-purple); font-weight: 800; }
@@ -53,7 +50,6 @@
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
-        /* Кнопки досок */
         .boards-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
         .board-btn { 
             display: inline-block; 
@@ -69,6 +65,12 @@
             cursor: pointer;
         }
         .board-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(197, 240, 90, 0.3); }
+        
+        .notebook-btn {
+            background: var(--accent-purple);
+            color: white;
+        }
+        .notebook-btn:hover { box-shadow: 0 10px 20px rgba(116, 85, 217, 0.3); }
 
         @media (max-width: 768px) {
             .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
@@ -160,20 +162,21 @@
             const main = document.getElementById('main-content');
             const level = parseInt(s.level) || 0;
             
-            // Формируем теги предметов
             let subs = (s.subjects || '').split(',').map(x=>x.trim()).filter(x=>x);
             let subsHtml = subs.length > 0 ? subs.map(sub => `<span class="subject-tag">${sub}</span>`).join('') : '<span class="subject-tag">Предмет не указан</span>';
 
-            // Формируем кнопки для досок (по одной на каждый предмет)
             let boardsButtons = '';
             if (subs.length > 0) {
                 boardsButtons = subs.map(sub => `
                     <a href="board.html?subject=${encodeURIComponent(sub)}&role=student" target="_blank" class="board-btn">
                         Доска: ${sub}
                     </a>
+                    <a href="notebook.html?subject=${encodeURIComponent(sub)}&role=student" target="_blank" class="board-btn notebook-btn">
+                        Тетрадь: ${sub}
+                    </a>
                 `).join('');
             } else {
-                boardsButtons = '<p style="opacity:0.5;">Предметы не указаны, доступ к доскам закрыт.</p>';
+                boardsButtons = '<p style="opacity:0.5;">Предметы не указаны, доступ к материалам закрыт.</p>';
             }
 
             main.innerHTML = `
@@ -188,8 +191,8 @@
 
                 <div class="info-grid">
                     <div class="info-card" style="grid-column: 1 / -1;">
-                        <h3>Мои интерактивные доски</h3>
-                        <p style="opacity:0.7; margin-bottom: 15px; font-size: 0.9rem;">Нажмите на кнопку, чтобы открыть доску по предмету. Вы сможете видеть всё, что пишет преподаватель.</p>
+                        <h3>Мои интерактивные материалы</h3>
+                        <p style="opacity:0.7; margin-bottom: 15px; font-size: 0.9rem;">Нажмите на кнопку, чтобы открыть доску или тетрадь с домашним заданием по предмету.</p>
                         <div class="boards-container">
                             ${boardsButtons}
                         </div>
@@ -212,10 +215,6 @@
                 </div>
 
                 <div class="info-grid">
-                    <div class="info-card">
-                        <h3>Домашняя работа</h3>
-                        <ul class="custom-list homework-list">${createList(s.homework)}</ul>
-                    </div>
                     <div class="info-card">
                         <h3>Результаты тестирований</h3>
                         <ul class="custom-list tests-list">${createList(s.tests)}</ul>

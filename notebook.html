@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тетрадь | The Curator’s</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg-color: #25283d; --card-bg: #313452; --accent-lime: #c5f05a; --text-main: #f4f3ee; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--text-main); min-height: 100vh; }
+        
+        header {
+            padding: 15px 5%; display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo-container img { width: 150px; height: auto; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .header-right span { font-size: 0.9rem; opacity: 0.7; }
+        .btn-logout { color: var(--accent-lime); text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--accent-lime); padding: 8px 15px; border-radius: 10px; transition: 0.3s; cursor: pointer; background: none; }
+        .btn-logout:hover { background: var(--accent-lime); color: var(--bg-color); }
+
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        .notebook-paper {
+            background: #fff; color: #333; border-radius: 10px; padding: 40px;
+            min-height: 80vh; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            font-family: 'Inter', sans-serif; position: relative;
+            background-image: linear-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 100% 30px; /* Линейка как в тетради */
+            line-height: 30px;
+        }
+
+        /* Поле для текста (только для админа) */
+        .editor-area {
+            width: 100%; min-height: 80vh; border: none; background: transparent;
+            font-family: 'Inter', sans-serif; font-size: 1.1rem; line-height: 30px;
+            resize: none; outline: none; color: #333; position: relative; z-index: 2;
+        }
+
+        /* Текст для чтения (только для ученика) */
+        .reader-area {
+            font-size: 1.1rem; line-height: 30px; white-space: pre-wrap;
+            position: relative; z-index: 2;
+        }
+
+        /* Картинки */
+        .image-preview {
+            max-width: 100%; border-radius: 8px; margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+
+        /* Панель инструментов админа */
+        .admin-toolbar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--card-bg); padding: 15px 25px; border-radius: 20px;
+            display: flex; gap: 15px; align-items: center; z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-tool {
+            background: var(--accent-lime); color: var(--bg-color); border: none;
+            padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: 0.3s;
+        }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(197, 240, 90, 0.3); }
+        .btn-tool input[type="file"] { display: none; }
+
+        /* Статус сохранения */
+        .status {
+            position: fixed; top: 80px; right: 20px; background: var(--card-bg);
+            padding: 10px 20px; border-radius: 10px; font-size: 0.9rem;
+            opacity: 0; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .status.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="admin.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
+        <div class="header-right">
+            <span id="header-name">Загрузка...</span>
+            <a href="admin.html" class="btn-logout" id="backBtn">Выйти</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="notebook-paper" id="paper">
+            <!-- Сюда будет вставлен контент -->
+        </div>
+    </div>
+
+    <div id="status" class="status">Сохранено</div>
+
+    <script>
+        const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const subject = urlParams.get('subject') || 'Общая доска';
+        const isStudent = urlParams.get('role') === 'student';
+        
+        // Заголовок
+        document.getElementById('header-name').innerText = `Тетрадь: ${subject}`;
+        
+        if (isStudent) {
+            document.getElementById('backBtn').href = 'student.html';
+            document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
+        }
+
+        const paper = document.getElementById('paper');
+        const statusEl = document.getElementById('status');
+
+        // --- АДМИН ---
+        if (!isStudent) {
+            // Создаем интерфейс редактора
+            const editorHTML = `
+                <textarea id="editor" class="editor-area" placeholder="Пишите здесь домашнее задание..."></textarea>
+                <div id="images-container"></div>
+            `;
+            paper.innerHTML = editorHTML;
+
+            const editor = document.getElementById('editor');
+            const imagesContainer = document.getElementById('images-container');
+
+            // Панель инструментов
+            const toolbar = document.createElement('div');
+            toolbar.className = 'admin-toolbar';
+            toolbar.innerHTML = `
+                <label class="btn-tool">
+                    🖼️ Добавить картинку
+                    <input type="file" id="imageInput" accept="image/*">
+                </label>
+                <button class="btn-tool" id="saveBtn">💾 Сохранить</button>
+            `;
+            document.body.appendChild(toolbar);
+
+            // Загрузка данных при открытии
+            loadNotebookData(editor, imagesContainer);
+
+            // Загрузка картинки
+            document.getElementById('imageInput').addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // Показываем превью
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'image-preview';
+                    imagesContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Сохранение
+            document.getElementById('saveBtn').addEventListener('click', async () => {
+                const text = editor.value;
+                const images = Array.from(imagesContainer.querySelectorAll('img')).map(img => img.src);
+
+                const { error } = await supabaseClient.from('homework').upsert([{
+                    board_id: subject,
+                    text_content: text,
+                    images: images
+                }], { onConflict: 'board_id' });
+
+                if (error) {
+                    alert('Ошибка сохранения: ' + error.message);
+                } else {
+                    showStatus('Сохранено!');
+                }
+            });
+        } 
+        // --- УЧЕНИК ---
+        else {
+            // Создаем интерфейс для чтения
+            const readerHTML = `
+                <div id="reader-text" class="reader-area"></div>
+                <div id="reader-images"></div>
+            `;
+            paper.innerHTML = readerHTML;
+
+            loadNotebookData(null, null, true);
+        }
+
+        // --- ФУНКЦИИ ЗАГРУЗКИ ---
+        async function loadNotebookData(editor, imagesContainer, isReadOnly = false) {
+            const { data, error } = await supabaseClient.from('homework').select('*').eq('board_id', subject).single();
+
+            if (error || !data) {
+                if (!isReadOnly) {
+                    showStatus('Новая тетрадь');
+                }
+                return;
+            }
+
+            if (isReadOnly) {
+                // Режим ученика: выводим текст и картинки
+                document.getElementById('reader-text').innerText = data.text_content || '';
+                const readerImages = document.getElementById('reader-images');
+                if (data.images && data.images.length > 0) {
+                    data.images.forEach(src => {
+                        const img = document.createElement('img');
+                        img.src = src;
+                        img.className = 'image-preview';
+                        readerImages.appendChild(img);
+                    });
+                }
+            } else {
+                // Режим админа: заполняем редактор
+                editor.value = data.text_content || '';
+                if (data.images && data.images.length > 0) {
+                    data.images.forEach(src => {
+                        const img = document.createElement('img');
+                        img.src = src;
+                        img.className = 'image-preview';
+                        imagesContainer.appendChild(img);
+                    });
+                }
+                showStatus('Загружено');
+            }
+        }
+
+        function showStatus(text) {
+            statusEl.innerText = text;
+            statusEl.classList.add('show');
+            setTimeout(() => statusEl.classList.remove('show'), 2000);
+        }
+    </script>
+</body>
+</html>
