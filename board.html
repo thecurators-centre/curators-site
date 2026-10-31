@@ -121,49 +121,48 @@
         }
 
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        
-        // Два слоя: один для фона (сетки), другой для рисования
         const bgLayer = new Konva.Layer({ listening: false });
         const layer = new Konva.Layer();
         stage.add(bgLayer);
         stage.add(layer);
 
-        // --- СЕТКА (ОПТИМИЗИРОВАННАЯ) ---
-        // Рисуем сетку только на размер экрана + запас, и повторяем её при движении
+        // --- СЕТКА С БЕСКОНЕЧНОЙ ПРОКРУТКОЙ ---
+        let gridShape = null;
+
         function drawGrid() {
-            bgLayer.destroyChildren();
-            const spacing = 20;
-            // Рисуем чуть больше экрана, чтобы при сдвиге не было пустоты
-            const width = window.innerWidth + 100; 
-            const height = window.innerHeight + 100;
+            if (gridShape) gridShape.destroy();
             
-            const grid = new Konva.Shape({
+            const spacing = 20;
+            const width = window.innerWidth + spacing * 2;
+            const height = window.innerHeight + spacing * 2;
+            
+            // Вычисляем смещение, чтобы сетка "следовала" за камерой
+            const offsetX = stage.x() % spacing;
+            const offsetY = stage.y() % spacing;
+
+            gridShape = new Konva.Shape({
+                x: offsetX,
+                y: offsetY,
                 sceneFunc: function(context) {
                     context.beginPath();
-                    for (let x = 0; x < width; x += spacing) {
-                        for (let y = 0; y < height; y += spacing) {
+                    for (let x = -spacing; x < width; x += spacing) {
+                        for (let y = -spacing; y < height; y += spacing) {
                             context.moveTo(x, y);
                             context.arc(x, y, 1, 0, Math.PI * 2);
                         }
                     }
-                    context.fillStyle = 'rgba(255,255,255,0.1)'; // Чуть ярче для видимости
+                    context.fillStyle = 'rgba(255,255,255,0.1)';
                     context.fill();
                 }
             });
             
-            // Позиционируем сетку так, чтобы она двигалась вместе с камерой
-            // Но поскольку мы не можем бесконечно двигать один Shape, мы будем перерисовывать его при движении
-            grid.x(stage.x() % spacing);
-            grid.y(stage.y() % spacing);
-            
-            bgLayer.add(grid);
+            bgLayer.add(gridShape);
             bgLayer.batchDraw();
         }
 
-        // Центрируем доску
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
-        drawGrid(); // Первая отрисовка
+        drawGrid();
 
         let currentTool = 'pen';
         let currentShapeType = 'rect';
@@ -189,13 +188,23 @@
             });
         });
 
-        // ИСПРАВЛЕННАЯ ЛОГИКА МЕНЮ ФИГУР
+        // ИСПРАВЛЕННАЯ ЛОГИКА МЕНЮ ФИГУР (через onclick и stopPropagation)
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeMenu = document.getElementById('shapeMenu');
         
         shapeBtn.onclick = (e) => {
             e.stopPropagation();
             shapeMenu.classList.toggle('active');
+        };
+
+        // Закрываем меню при клике в любом другом месте
+        document.addEventListener('click', () => {
+            shapeMenu.classList.remove('active');
+        });
+
+        // Предотвращаем закрытие меню при клике внутри него
+        shapeMenu.onclick = (e) => {
+            e.stopPropagation();
         };
 
         document.querySelectorAll('#shapeMenu button').forEach(btn => {
@@ -348,7 +357,7 @@
             } else {
                 stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
             }
-            drawGrid(); // Перерисовываем сетку при движении
+            drawGrid(); // Перерисовываем сетку
             saveCameraState();
         });
 
