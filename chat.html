@@ -37,7 +37,6 @@
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-info p { font-size: 0.85rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Бейдж непрочитанных */
         .unread-badge {
             background: var(--danger);
             color: white;
@@ -179,7 +178,7 @@
         async function loadChats() {
             const chatList = document.getElementById('chat-list');
             
-            // 1. Получаем список чатов
+            // 1. Получаем список чатов, где мы участник
             const { data: myChats, error } = await supabaseClient
                 .from('chat_participants')
                 .select(`chat_id, chats (id, type, name)`)
@@ -189,16 +188,42 @@
 
             allChats = myChats.map(item => item.chats);
 
-            // 2. Для каждого чата считаем непрочитанные
+            // 2. Для каждого чата подтягиваем имя собеседника и кол-во непрочитанных
             for (let i = 0; i < allChats.length; i++) {
+                const chat = allChats[i];
+
+                // Получаем ID всех участников чата, кроме себя
+                const { data: otherParticipants } = await supabaseClient
+                    .from('chat_participants')
+                    .select('user_id')
+                    .eq('chat_id', chat.id)
+                    .neq('user_id', currentUser.id);
+
+                if (otherParticipants && otherParticipants.length > 0) {
+                    const otherUserId = otherParticipants[0].user_id;
+                    // Получаем имя этого пользователя из profiles
+                    const { data: otherProfile } = await supabaseClient
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('id', otherUserId)
+                        .single();
+                    
+                    if (otherProfile) {
+                        chat.displayName = otherProfile.full_name; // Используем имя собеседника
+                    }
+                } else {
+                    chat.displayName = 'Личный чат';
+                }
+
+                // Считаем непрочитанные
                 const { count } = await supabaseClient
                     .from('messages')
                     .select('*', { count: 'exact', head: true })
-                    .eq('chat_id', allChats[i].id)
+                    .eq('chat_id', chat.id)
                     .eq('is_read', false)
-                    .neq('sender_id', currentUser.id); // Не считаем свои сообщения
+                    .neq('sender_id', currentUser.id);
                 
-                allChats[i].unreadCount = count || 0;
+                chat.unreadCount = count || 0;
             }
 
             renderChatList();
@@ -218,10 +243,10 @@
                 div.className = 'chat-item';
                 if (chat.id === currentChatId) div.classList.add('active');
                 
-                const avatarLetter = chat.type === 'group' ? 'Г' : 'Ч';
-                const chatName = chat.name || 'Личный чат';
+                // Берем первую букву имени собеседника для аватара
+                const displayName = chat.displayName || 'Личный чат';
+                const avatarLetter = displayName.charAt(0).toUpperCase();
                 
-                // Если есть непрочитанные, показываем бейдж
                 const badge = chat.unreadCount > 0 
                     ? `<div class="unread-badge">${chat.unreadCount}</div>` 
                     : '';
@@ -229,7 +254,7 @@
                 div.innerHTML = `
                     <div class="chat-avatar">${avatarLetter}</div>
                     <div class="chat-info">
-                        <h4>${chatName}</h4>
+                        <h4>${displayName}</h4>
                         <p>Нажмите, чтобы открыть</p>
                     </div>
                     ${badge}
@@ -245,9 +270,9 @@
             document.getElementById('chat-window').style.display = 'flex';
             document.getElementById('chat-container').classList.add('show-chat');
             
-            const avatar = document.getElementById('chat-header-avatar');
-            avatar.innerText = chat.type === 'group' ? 'Г' : 'Ч';
-            document.getElementById('chat-header-name').innerText = chat.name || 'Личный чат';
+            const displayName = chat.displayName || 'Личный чат';
+            document.getElementById('chat-header-avatar').innerText = displayName.charAt(0).toUpperCase();
+            document.getElementById('chat-header-name').innerText = displayName;
 
             // Помечаем сообщения как прочитанные
             await supabaseClient
@@ -257,7 +282,6 @@
                 .eq('is_read', false)
                 .neq('sender_id', currentUser.id);
 
-            // Обнуляем счетчик и перерисовываем список
             chat.unreadCount = 0;
             renderChatList();
 
@@ -329,7 +353,6 @@
                     if (newMsg.sender_id !== currentUser.id) {
                         appendMessage(newMsg);
                         scrollToBottom();
-                        // Помечаем как прочитанное, так как мы в этом чате
                         supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
                     }
                 })
