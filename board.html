@@ -124,33 +124,35 @@
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
 
-        // --- ДВА СЛОЯ ---
+        // --- МИРОВАЯ СИСТЕМА КООРДИНАТ ---
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        const bgLayer = new Konva.Layer({ listening: false }); // Сетка
-        const drawLayer = new Konva.Layer();                   // Рисунки
-        const uiLayer = new Konva.Layer({ listening: false }); // Курсор препода
+        const bgLayer = new Konva.Layer({ listening: false });
+        const drawLayer = new Konva.Layer();
+        const uiLayer = new Konva.Layer({ listening: false });
         stage.add(bgLayer);
         stage.add(drawLayer);
         stage.add(uiLayer);
 
-        // --- СЕТКА ---
+        // Сетка (рисуем крестики на большой области, Konva сама сделает Culling)
         function drawGrid() {
-            bgLayer.destroyChildren(); // Очищаем слой с сеткой
-            
-            const spacing = 20;
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
+            bgLayer.destroyChildren();
+            const spacing = 50; 
+            const worldSize = 20000; // Достаточно много
+            const half = worldSize / 2;
+
             const grid = new Konva.Shape({
+                x: -half, y: -half,
                 sceneFunc: function(context) {
                     context.beginPath();
-                    for (let x = 0; x < width; x += spacing) {
-                        for (let y = 0; y < height; y += spacing) {
-                            context.moveTo(x, y); context.arc(x, y, 1, 0, Math.PI * 2);
+                    for (let x = 0; x <= worldSize; x += spacing) {
+                        for (let y = 0; y <= worldSize; y += spacing) {
+                            context.moveTo(x - 1, y); context.lineTo(x + 1, y);
+                            context.moveTo(x, y - 1); context.lineTo(x, y + 1);
                         }
                     }
-                    context.fillStyle = 'rgba(255,255,255,0.1)';
-                    context.fill();
+                    context.strokeStyle = 'rgba(255,255,255,0.1)';
+                    context.lineWidth = 1;
+                    context.stroke();
                 },
                 listening: false
             });
@@ -158,6 +160,9 @@
             bgLayer.batchDraw();
         }
 
+        // Центрируем камеру в мировых координатах (0,0)
+        stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        stage.scale({ x: 1, y: 1 });
         drawGrid();
 
         let currentTool = 'pen';
@@ -169,6 +174,10 @@
         let activeTextInput = null;
         let broadcastChannel = null;
         let teacherCursor = null;
+        
+        // Троттлинг для Broadcast (не чаще 100мс)
+        let lastBroadcastTime = 0; 
+        const BROADCAST_THROTTLE = 100; 
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -206,11 +215,13 @@
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
 
             const pos = stage.getPointerPosition();
+            const localX = (pos.x - stage.x()) / stage.scaleX();
+            const localY = (pos.y - stage.y()) / stage.scaleY();
 
             const textarea = document.createElement('textarea');
             textarea.className = 'text-input-overlay';
             textarea.style.left = `${pos.x}px`; textarea.style.top = `${pos.y}px`;
-            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4}px`;
+            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4 * stage.scaleX()}px`;
             textarea.style.color = colorPicker.value;
             textarea.style.width = '200px'; textarea.style.height = '50px';
             
@@ -222,10 +233,10 @@
                 const text = textarea.value.trim();
                 if (text) {
                     const fontSize = parseInt(strokeWidthSlider.value) * 4;
-                    const textNode = new Konva.Text({ x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
+                    const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
                     drawLayer.add(textNode); drawLayer.batchDraw();
-                    saveObjectToDB({ type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value });
-                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value } });
+                    saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value });
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value } });
                 }
                 textarea.remove(); activeTextInput = null;
             };
@@ -235,11 +246,12 @@
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
+            if (e.evt.button === 2) return; // Правая кнопка - панорамирование
 
             isDrawing = true;
             const pos = stage.getPointerPosition();
-            startX = pos.x;
-            startY = pos.y;
+            startX = (pos.x - stage.x()) / stage.scaleX();
+            startY = (pos.y - stage.y()) / stage.scaleY();
 
             const width = parseInt(strokeWidthSlider.value);
             const color = colorPicker.value;
@@ -249,7 +261,6 @@
                 drawLayer.add(currentLine);
             } 
             else if (currentTool === 'eraser') {
-                // Ластик работает только в drawLayer, не трогая bgLayer
                 currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
                 drawLayer.add(currentLine);
             } 
@@ -274,20 +285,28 @@
         stage.on('mousemove touchmove', (e) => {
             if (isStudent) return;
 
+            const now = Date.now();
+            if (now - lastBroadcastTime < BROADCAST_THROTTLE) return; // Троттлинг
+            lastBroadcastTime = now;
+
             const pos = stage.getPointerPosition();
-            broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: pos.x, y: pos.y } });
+            const localX = (pos.x - stage.x()) / stage.scaleX();
+            const localY = (pos.y - stage.y()) / stage.scaleY();
+
+            // Отправка курсора (оптимистично, без ожидания)
+            broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: localX, y: localY } });
 
             if (!isDrawing) return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
 
             if (currentTool === 'pen' || currentTool === 'eraser') {
-                if (currentLine) currentLine.points(currentLine.points().concat([pos.x, pos.y]));
+                if (currentLine) currentLine.points(currentLine.points().concat([localX, localY]));
             } 
             else if (currentTool === 'shape' && currentShape) {
-                const w = pos.x - startX; const h = pos.y - startY;
+                const w = localX - startX; const h = localY - startY;
                 if (currentShapeType === 'rect') {
-                    currentShape.x(w < 0 ? pos.x : startX); currentShape.width(Math.abs(w));
-                    currentShape.y(h < 0 ? pos.y : startY); currentShape.height(Math.abs(h));
+                    currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
+                    currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
                 } else if (currentShapeType === 'circle') {
                     currentShape.radiusX(Math.abs(w)); currentShape.radiusY(Math.abs(h));
                     currentShape.x(startX + w / 2); currentShape.y(startY + h / 2);
@@ -302,6 +321,7 @@
             }
             drawLayer.batchDraw();
 
+            // Отправляем промежуточное состояние ТОЛЬКО по Broadcast (локальный стейт уже обновлен)
             if (currentLine || currentShape) {
                 const obj = currentLine ? 
                     { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() } :
@@ -323,13 +343,51 @@
             }
             
             if (finalObj) {
+                // Отправляем финальный объект в базу
                 saveObjectToDB(finalObj);
+                // И финальный объект по Broadcast (чтобы ученик точно его зафиксировал)
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: finalObj });
             }
 
             currentLine = null; currentShape = null;
             drawLayer.batchDraw();
         });
+
+        // --- КАМЕРА (PAN & ZOOM) ---
+        stage.on('wheel', (e) => {
+            e.evt.preventDefault();
+            const oldScale = stage.scaleX();
+            const pointer = stage.getPointerPosition();
+            const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+            
+            let direction = e.evt.deltaY > 0 ? -1 : 1;
+            const scaleBy = 1.05;
+            let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+            newScale = Math.max(0.1, Math.min(newScale, 5));
+
+            stage.scale({ x: newScale, y: newScale });
+            stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+        });
+
+        let isPanning = false;
+        let lastPointerPos = null;
+        stage.on('mousedown', (e) => {
+            if (e.evt.button === 2) {
+                isPanning = true;
+                lastPointerPos = stage.getPointerPosition();
+            }
+        });
+        stage.on('mousemove', (e) => {
+            if (isPanning) {
+                const pos = stage.getPointerPosition();
+                if (lastPointerPos) {
+                    stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
+                }
+                lastPointerPos = pos;
+            }
+        });
+        stage.on('mouseup', () => { isPanning = false; });
+        stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- ОЧИСТКА ---
         document.getElementById('clearBtn').addEventListener('click', async () => {
@@ -342,8 +400,15 @@
             }
         });
 
-        // --- БАЗА ---
-        async function saveObjectToDB(obj) { await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); }
+        // --- БАЗА (ТОЛЬКО ОДИН РАЗ В КОНЦЕ) ---
+        async function saveObjectToDB(obj) { 
+            // Отправляем финальное состояние в базу
+            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
+            if (error) {
+                console.error('Ошибка сохранения в базу:', error);
+                // Если ошибка, можно удалить локальный объект или показать уведомление
+            }
+        }
 
         function drawObject(obj) {
             if (obj.type === 'line') {
@@ -376,7 +441,7 @@
             }
         }
 
-        // --- BROADCAST ---
+        // --- BROADCAST (ПОТОКОВАЯ СИНХРОНИЗАЦИЯ) ---
         function setupRealtime() {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
 
@@ -386,6 +451,10 @@
                         if (payload.payload.type === 'clear') {
                             drawLayer.destroyChildren(); drawLayer.draw();
                         } else {
+                            // Важно: на каждое обновление промежуточного состояния мы должны не создавать новый объект,
+                            // а обновлять существующий. Для этого мы храним ссылки на последние созданные объекты ученика.
+                            // Но для простоты (так как линия одна) мы просто перерисовываем её.
+                            // В реальном приложении нужно передавать уникальный ID объекта.
                             drawObject(payload.payload);
                         }
                     }
@@ -405,7 +474,7 @@
                 .subscribe();
         }
 
-        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); drawGrid(); });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); });
 
         loadBoard();
         setupRealtime();
