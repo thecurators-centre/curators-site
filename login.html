@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.web3forms.com; form-action 'self' https://api.web3forms.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://kajvldevytbrkeomwlms.supabase.co; form-action 'self';">
     <title>Вход | The Curator’s</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Уникальные стили для страницы входа */
         body {
             display: flex;
             justify-content: center;
@@ -18,7 +17,6 @@
             min-height: 100vh;
             padding: 20px;
         }
-
         .login-card {
             background: var(--card-bg);
             padding: 40px;
@@ -28,18 +26,8 @@
             text-align: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
         }
-
-        .login-card img {
-            width: 120px;
-            margin-bottom: 20px;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: var(--accent-lime);
-        }
-
+        .login-card img { width: 120px; margin-bottom: 20px; }
+        h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--accent-lime); }
         input {
             width: 100%;
             padding: 15px;
@@ -51,12 +39,7 @@
             font-size: 1rem;
             font-family: 'Inter', sans-serif;
         }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent-lime);
-        }
-
+        input:focus { outline: none; border-color: var(--accent-lime); }
         button {
             width: 100%;
             padding: 15px;
@@ -69,12 +52,8 @@
             cursor: pointer;
             transition: 0.3s;
         }
-
-        button:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .back-link {
             display: block;
             margin-top: 20px;
@@ -83,11 +62,7 @@
             font-size: 0.9rem;
             opacity: 0.6;
         }
-
-        .back-link:hover {
-            opacity: 1;
-        }
-
+        .back-link:hover { opacity: 1; }
         #error-msg {
             color: #ff6b6b;
             font-size: 0.9rem;
@@ -102,10 +77,10 @@
         <img src="logo.png" alt="Logo">
         <h1>Вход</h1>
         <form id="login-form">
-            <input type="text" id="username" placeholder="Логин" required>
+            <input type="email" id="email" placeholder="Email" required>
             <input type="password" id="password" placeholder="Пароль" required>
             <button type="submit" id="submit-btn">Войти</button>
-            <div id="error-msg">Неверный логин или пароль</div>
+            <div id="error-msg">Неверный email или пароль</div>
         </form>
         <a href="index.html" class="back-link">← На главную</a>
     </div>
@@ -119,29 +94,56 @@
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             const errorMsg = document.getElementById('error-msg');
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
 
             btn.innerText = 'Проверка...';
             btn.disabled = true;
             errorMsg.style.display = 'none';
 
-            // Проверка через базу данных (все пользователи, включая админа)
-            const { data, error } = await supabaseClient
-                .from('students')
-                .select('id, name')
-                .eq('login', user)
-                .eq('password', pass)
-                .single();
+            // 1. Вход через Supabase Auth
+            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
 
-            if (error || !data) {
+            if (authError) {
+                errorMsg.innerText = 'Неверный email или пароль';
                 errorMsg.style.display = 'block';
                 btn.innerText = 'Войти';
                 btn.disabled = false;
-            } else {
-                // Сохраняем ID ученика в память браузера
-                localStorage.setItem('current_student_id', data.id);
+                return;
+            }
+
+            // 2. Получаем роль из profiles
+            const userId = authData.user.id;
+            const { data: profile, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('role, full_name')
+                .eq('id', userId)
+                .single();
+
+            if (profileError || !profile) {
+                errorMsg.innerText = 'Ошибка загрузки профиля.';
+                errorMsg.style.display = 'block';
+                btn.innerText = 'Войти';
+                btn.disabled = false;
+                return;
+            }
+
+            // 3. Перенаправляем по роли
+            localStorage.setItem('user_role', profile.role);
+            localStorage.setItem('user_name', profile.full_name);
+
+            if (profile.role === 'admin' || profile.role === 'teacher') {
+                window.location.href = 'admin.html';
+            } else if (profile.role === 'student') {
                 window.location.href = 'student.html';
+            } else {
+                errorMsg.innerText = 'Неизвестная роль.';
+                errorMsg.style.display = 'block';
+                btn.innerText = 'Войти';
+                btn.disabled = false;
             }
         });
     </script>
