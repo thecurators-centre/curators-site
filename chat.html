@@ -41,10 +41,13 @@
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
         .chat-main-header h3 { font-size: 1.1rem; }
         .messages-area { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        /* ИСПРАВЛЕННЫЕ СТИЛИ СООБЩЕНИЙ */
         .message { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; word-wrap: break-word; }
         .message.sent { align-self: flex-end; background: var(--accent-purple); color: white; border-bottom-right-radius: 4px; }
         .message.received { align-self: flex-start; background: var(--card-bg); color: var(--text-main); border-bottom-left-radius: 4px; }
         .message-time { font-size: 0.7rem; opacity: 0.6; margin-top: 5px; text-align: right; }
+        
         .chat-input-area { padding: 20px; background: var(--card-bg); border-top: 1px solid rgba(244, 243, 238, 0.1); display: flex; gap: 15px; align-items: center; }
         .btn-attach { background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; opacity: 0.7; }
         .chat-input { flex: 1; padding: 15px; border-radius: 12px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-family: inherit; resize: none; height: 50px; outline: none; }
@@ -230,6 +233,7 @@
 
         function appendMessage(msg) {
             const area = document.getElementById('messages-area');
+            // Сравниваем ID отправителя с ID текущего пользователя
             const isSent = msg.sender_id === currentUser.id;
             const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             
@@ -272,12 +276,12 @@
                 .channel('chat_' + chatId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, payload => {
                     const newMsg = payload.new;
+                    // Проверяем, что сообщение пришло не от нас (чтобы не дублировать)
                     if (newMsg.sender_id !== currentUser.id) { appendMessage(newMsg); scrollToBottom(); }
                 })
                 .subscribe();
         }
 
-        // --- СОЗДАНИЕ ЧАТА (ИСПРАВЛЕНО) ---
         const modal = document.getElementById('new-chat-modal');
         document.getElementById('btn-new-chat').onclick = () => { modal.classList.add('active'); loadUsersForNewChat(); };
         document.getElementById('close-modal').onclick = () => modal.classList.remove('active');
@@ -305,17 +309,14 @@
         }
 
         async function createDirectChat(targetUserId) {
-            // Генерируем ID чата на клиенте, чтобы не ждать ответа от базы
             const newChatId = crypto.randomUUID();
 
-            // Создаем чат (без .select(), чтобы не требовалась политика на чтение)
             const { error: chatError } = await supabaseClient
                 .from('chats')
                 .insert([{ id: newChatId, type: 'direct' }]);
 
             if (chatError) { alert('Ошибка создания чата: ' + chatError.message); return; }
 
-            // Добавляем участников
             const { error: partError } = await supabaseClient.from('chat_participants').insert([
                 { chat_id: newChatId, user_id: currentUser.id },
                 { chat_id: newChatId, user_id: targetUserId }
