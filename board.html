@@ -31,6 +31,7 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
+        /* Выпадающее меню фигур */
         .shape-menu {
             display: none; position: absolute; top: 100%; left: 0;
             background: var(--card-bg); border-radius: 10px; padding: 10px;
@@ -74,15 +75,16 @@
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         
+        <!-- Кнопка фигур и меню -->
         <div style="position: relative;">
             <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
             <div class="shape-menu" id="shapeMenu">
-                <button data-shape="rect">⬛ Прямоугольник</button>
-                <button data-shape="circle">⭕ Круг</button>
-                <button data-shape="triangle">🔺 Треугольник</button>
-                <button data-shape="diamond">🔷 Ромб</button>
-                <button data-shape="star">⭐ Звезда</button>
-                <button data-shape="xy">📈 График XY</button>
+                <button type="button" data-shape="rect">⬛ Прямоугольник</button>
+                <button type="button" data-shape="circle">⭕ Круг</button>
+                <button type="button" data-shape="triangle">🔺 Треугольник</button>
+                <button type="button" data-shape="diamond">🔷 Ромб</button>
+                <button type="button" data-shape="star">⭐ Звезда</button>
+                <button type="button" data-shape="xy">📈 График XY</button>
             </div>
         </div>
 
@@ -123,9 +125,9 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // --- СЕТКА (В ТОМ ЖЕ СЛОЕ, ЧТО И РИСУНКИ) ---
+        // --- СЕТКА (В ТОМ ЖЕ СЛОЕ) ---
         const spacing = 20;
-        const gridWidth = 5000;  // Достаточно большой размер, чтобы покрыть экран с запасом
+        const gridWidth = 5000; 
         const gridHeight = 5000;
 
         const bgGrid = new Konva.Shape({
@@ -146,7 +148,6 @@
         });
         layer.add(bgGrid);
 
-        // Центрируем доску
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
 
@@ -174,29 +175,34 @@
             });
         });
 
-        // МЕНЮ ФИГУР
+        // --- ЛОГИКА МЕНЮ ФИГУР (ПЕРЕПИСАНО) ---
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeMenu = document.getElementById('shapeMenu');
         
-        shapeBtn.onclick = (e) => {
+        shapeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
             shapeMenu.classList.toggle('active');
-        };
-
-        document.addEventListener('click', () => {
-            shapeMenu.classList.remove('active');
         });
 
-        shapeMenu.onclick = (e) => { e.stopPropagation(); };
-
-        document.querySelectorAll('#shapeMenu button').forEach(btn => {
-            btn.onclick = (e) => {
-                currentShapeType = e.currentTarget.dataset.shape;
+        // Выбор фигуры
+        shapeMenu.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                currentShapeType = this.dataset.shape;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 shapeBtn.classList.add('active');
                 currentTool = 'shape';
                 shapeMenu.classList.remove('active');
-            };
+            });
+        });
+
+        // Закрываем меню при клике в любом другом месте
+        document.addEventListener('click', function(e) {
+            if (!shapeMenu.contains(e.target) && e.target !== shapeBtn) {
+                shapeMenu.classList.remove('active');
+            }
         });
 
         // --- ТЕКСТ ---
@@ -406,7 +412,6 @@
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
                 layer.destroyChildren(); layer.draw();
-                // Возвращаем сетку обратно
                 layer.add(bgGrid);
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
             }
