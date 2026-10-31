@@ -32,21 +32,17 @@
         .chat-item { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; margin-bottom: 5px; position: relative; }
         .chat-item:hover { background: rgba(255,255,255,0.05); }
         .chat-item.active { background: rgba(197, 240, 90, 0.1); border: 1px solid rgba(197, 240, 90, 0.3); }
-        .chat-avatar { width: 45px; height: 45px; background: var(--accent-lime); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--bg-color); flex-shrink: 0; }
+        
+        /* Базовый аватар (по умолчанию - учитель/фиолетовый) */
+        .chat-avatar { width: 45px; height: 45px; background: var(--accent-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; }
+        /* Если это ученик - зеленый */
+        .chat-avatar.avatar-student { background: var(--accent-lime); color: var(--bg-color); }
+
         .chat-info { flex: 1; overflow: hidden; }
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-info p { font-size: 0.85rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .unread-badge {
-            background: var(--danger);
-            color: white;
-            font-size: 0.75rem;
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 10px;
-            min-width: 20px;
-            text-align: center;
-        }
+        .unread-badge { background: var(--danger); color: white; font-size: 0.75rem; font-weight: bold; padding: 2px 8px; border-radius: 10px; min-width: 20px; text-align: center; }
 
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #1a1c29; position: relative; }
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
@@ -178,7 +174,6 @@
         async function loadChats() {
             const chatList = document.getElementById('chat-list');
             
-            // 1. Получаем список чатов, где мы участник
             const { data: myChats, error } = await supabaseClient
                 .from('chat_participants')
                 .select(`chat_id, chats (id, type, name)`)
@@ -188,11 +183,10 @@
 
             allChats = myChats.map(item => item.chats);
 
-            // 2. Для каждого чата подтягиваем имя собеседника и кол-во непрочитанных
             for (let i = 0; i < allChats.length; i++) {
                 const chat = allChats[i];
 
-                // Получаем ID всех участников чата, кроме себя
+                // Получаем второго участника
                 const { data: otherParticipants } = await supabaseClient
                     .from('chat_participants')
                     .select('user_id')
@@ -201,21 +195,23 @@
 
                 if (otherParticipants && otherParticipants.length > 0) {
                     const otherUserId = otherParticipants[0].user_id;
-                    // Получаем имя этого пользователя из profiles
+                    // Получаем его профиль (имя и РОЛЬ)
                     const { data: otherProfile } = await supabaseClient
                         .from('profiles')
-                        .select('full_name')
+                        .select('full_name, role')
                         .eq('id', otherUserId)
                         .single();
                     
                     if (otherProfile) {
-                        chat.displayName = otherProfile.full_name; // Используем имя собеседника
+                        chat.displayName = otherProfile.full_name;
+                        chat.otherRole = otherProfile.role; // Сохраняем роль собеседника
                     }
                 } else {
                     chat.displayName = 'Личный чат';
+                    chat.otherRole = 'teacher'; // По умолчанию
                 }
 
-                // Считаем непрочитанные
+                // Непрочитанные
                 const { count } = await supabaseClient
                     .from('messages')
                     .select('*', { count: 'exact', head: true })
@@ -243,16 +239,18 @@
                 div.className = 'chat-item';
                 if (chat.id === currentChatId) div.classList.add('active');
                 
-                // Берем первую букву имени собеседника для аватара
                 const displayName = chat.displayName || 'Личный чат';
                 const avatarLetter = displayName.charAt(0).toUpperCase();
                 
+                // Если собеседник - ученик, добавляем класс .avatar-student (зеленый)
+                const avatarClass = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+
                 const badge = chat.unreadCount > 0 
                     ? `<div class="unread-badge">${chat.unreadCount}</div>` 
                     : '';
 
                 div.innerHTML = `
-                    <div class="chat-avatar">${avatarLetter}</div>
+                    <div class="${avatarClass}">${avatarLetter}</div>
                     <div class="chat-info">
                         <h4>${displayName}</h4>
                         <p>Нажмите, чтобы открыть</p>
@@ -271,10 +269,13 @@
             document.getElementById('chat-container').classList.add('show-chat');
             
             const displayName = chat.displayName || 'Личный чат';
-            document.getElementById('chat-header-avatar').innerText = displayName.charAt(0).toUpperCase();
+            const headerAvatar = document.getElementById('chat-header-avatar');
+            
+            // Красим аватар в шапке чата тоже
+            headerAvatar.className = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+            headerAvatar.innerText = displayName.charAt(0).toUpperCase();
             document.getElementById('chat-header-name').innerText = displayName;
 
-            // Помечаем сообщения как прочитанные
             await supabaseClient
                 .from('messages')
                 .update({ is_read: true })
@@ -379,7 +380,9 @@
             users.forEach(u => {
                 const div = document.createElement('div');
                 div.className = 'user-list-item';
-                div.innerHTML = `<div class="chat-avatar" style="width:35px;height:35px;font-size:0.8rem;">${u.full_name.charAt(0)}</div><div><b>${u.full_name}</b><br><small style="opacity:0.6;">${u.role}</small></div>`;
+                // В модалке тоже красим аватарки
+                const avatarClass = u.role === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+                div.innerHTML = `<div class="${avatarClass}" style="width:35px;height:35px;font-size:0.8rem;">${u.full_name.charAt(0)}</div><div><b>${u.full_name}</b><br><small style="opacity:0.6;">${u.role}</small></div>`;
                 div.onclick = () => createDirectChat(u.id);
                 list.appendChild(div);
             });
@@ -387,18 +390,13 @@
 
         async function createDirectChat(targetUserId) {
             const newChatId = crypto.randomUUID();
-
-            const { error: chatError } = await supabaseClient
-                .from('chats')
-                .insert([{ id: newChatId, type: 'direct' }]);
-
+            const { error: chatError } = await supabaseClient.from('chats').insert([{ id: newChatId, type: 'direct' }]);
             if (chatError) { alert('Ошибка создания чата: ' + chatError.message); return; }
 
             const { error: partError } = await supabaseClient.from('chat_participants').insert([
                 { chat_id: newChatId, user_id: currentUser.id },
                 { chat_id: newChatId, user_id: targetUserId }
             ]);
-
             if (partError) { alert('Ошибка добавления участников: ' + partError.message); return; }
 
             modal.classList.remove('active');
