@@ -9,7 +9,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        header { padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); z-index: 100; flex-shrink: 0; }
+        
+        /* Шапка с жестким z-index */
+        header { 
+            padding: 15px 5%; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: var(--card-bg); 
+            border-bottom: 1px solid rgba(244, 243, 238, 0.1); 
+            z-index: 9999; /* Поверх всего */
+            position: relative;
+            flex-shrink: 0; 
+        }
         .logo-container img { width: 150px; height: auto; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .header-right span { font-size: 0.9rem; opacity: 0.7; }
@@ -18,26 +30,32 @@
         
         .chat-container { display: flex; flex: 1; overflow: hidden; max-width: 1400px; margin: 0 auto; width: 100%; background: var(--bg-color); }
         
-        .chat-sidebar { width: 320px; background: var(--card-bg); border-right: 1px solid rgba(244, 243, 238, 0.1); display: flex; flex-direction: column; flex-shrink: 0; }
+        /* Левая панель */
+        .chat-sidebar { width: 320px; background: var(--card-bg); border-right: 1px solid rgba(244, 243, 238, 0.1); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 10; }
+        
         .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(244, 243, 238, 0.1); }
         
-        /* ИСПРАВЛЕННЫЙ БЛОК ЗАГОЛОВКА И КНОПКИ */
+        /* Блок с заголовком и кнопкой */
         .sidebar-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .sidebar-top h2 { font-size: 1.2rem; color: var(--accent-lime); margin: 0; }
+        
+        /* Кнопка "+" */
         .btn-new-chat { 
             background: var(--accent-lime); 
             color: var(--bg-color); 
             border: none; 
-            width: 32px; 
-            height: 32px; 
+            width: 35px; 
+            height: 35px; 
             border-radius: 50%; 
-            font-size: 1.4rem; 
+            font-size: 1.5rem; 
             font-weight: bold;
             cursor: pointer; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             transition: 0.2s;
+            z-index: 20;
+            position: relative;
         }
         .btn-new-chat:hover { transform: scale(1.1); }
 
@@ -52,6 +70,7 @@
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-info p { font-size: 0.85rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+        /* Правая панель */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #1a1c29; position: relative; }
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
         .chat-main-header h3 { font-size: 1.1rem; }
@@ -68,8 +87,8 @@
         
         .empty-state { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; opacity: 0.5; text-align: center; padding: 20px; }
 
-        /* Модалка выбора пользователя */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; }
+        /* Модалка */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 10000; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
@@ -98,7 +117,6 @@
     <div class="chat-container" id="chat-container">
         <div class="chat-sidebar">
             <div class="sidebar-header">
-                <!-- НОВЫЙ БЛОК -->
                 <div class="sidebar-top">
                     <h2>Чаты</h2>
                     <button class="btn-new-chat" id="btn-new-chat" style="display: none;">+</button>
@@ -131,7 +149,6 @@
         </div>
     </div>
 
-    <!-- Модалка нового чата -->
     <div class="modal" id="new-chat-modal">
         <div class="modal-content">
             <button class="close-btn" id="close-modal">&times;</button>
@@ -165,10 +182,9 @@
             currentUserRole = profile.role;
             document.getElementById('header-name').innerText = profile.full_name;
 
-            // Показываем кнопку создания чата только сотрудникам
             if (currentUserRole === 'admin' || currentUserRole === 'teacher') {
                 const btn = document.getElementById('btn-new-chat');
-                btn.style.display = 'flex'; // Показываем
+                if (btn) btn.style.display = 'flex';
             }
 
             loadChats();
@@ -298,7 +314,6 @@
                 .subscribe();
         }
 
-        // --- СОЗДАНИЕ ЧАТА ---
         const modal = document.getElementById('new-chat-modal');
         document.getElementById('btn-new-chat').onclick = () => { modal.classList.add('active'); loadUsersForNewChat(); };
         document.getElementById('close-modal').onclick = () => modal.classList.remove('active');
