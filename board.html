@@ -124,22 +124,24 @@
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
 
+        // --- ДВА СЛОЯ ---
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        const layer = new Konva.Layer();
-        stage.add(layer);
+        const bgLayer = new Konva.Layer({ listening: false }); // Сетка
+        const drawLayer = new Konva.Layer();                   // Рисунки
+        const uiLayer = new Konva.Layer({ listening: false }); // Курсор препода
+        stage.add(bgLayer);
+        stage.add(drawLayer);
+        stage.add(uiLayer);
 
-        // --- БЕСКОНЕЧНАЯ СЕТКА НА ФОНЕ ЭКРАНА ---
+        // --- СЕТКА ---
         function drawGrid() {
-            // Удаляем старую сетку, если есть
-            const oldGrid = layer.findOne('.grid');
-            if (oldGrid) oldGrid.destroy();
-
+            bgLayer.destroyChildren(); // Очищаем слой с сеткой
+            
             const spacing = 20;
             const width = window.innerWidth;
             const height = window.innerHeight;
             
             const grid = new Konva.Shape({
-                name: 'grid',
                 sceneFunc: function(context) {
                     context.beginPath();
                     for (let x = 0; x < width; x += spacing) {
@@ -152,13 +154,10 @@
                 },
                 listening: false
             });
-            // Добавляем сетку в самый низ (под всеми объектами)
-            grid.moveToBottom();
-            layer.add(grid);
-            layer.batchDraw();
+            bgLayer.add(grid);
+            bgLayer.batchDraw();
         }
 
-        // Рисуем сетку при старте
         drawGrid();
 
         let currentTool = 'pen';
@@ -224,7 +223,7 @@
                 if (text) {
                     const fontSize = parseInt(strokeWidthSlider.value) * 4;
                     const textNode = new Konva.Text({ x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
-                    layer.add(textNode); layer.batchDraw();
+                    drawLayer.add(textNode); drawLayer.batchDraw();
                     saveObjectToDB({ type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value });
                     broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value } });
                 }
@@ -247,11 +246,12 @@
 
             if (currentTool === 'pen') {
                 currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'source-over' });
-                layer.add(currentLine);
+                drawLayer.add(currentLine);
             } 
             else if (currentTool === 'eraser') {
+                // Ластик работает только в drawLayer, не трогая bgLayer
                 currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
-                layer.add(currentLine);
+                drawLayer.add(currentLine);
             } 
             else if (currentTool === 'shape') {
                 if (currentShapeType === 'rect') currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
@@ -266,17 +266,15 @@
                     currentShape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: color, strokeWidth: width, fill: color }));
                     currentShape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: color, strokeWidth: width, fill: color }));
                 }
-                layer.add(currentShape);
+                drawLayer.add(currentShape);
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
         });
 
         stage.on('mousemove touchmove', (e) => {
             if (isStudent) return;
 
             const pos = stage.getPointerPosition();
-            
-            // Отправка курсора
             broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: pos.x, y: pos.y } });
 
             if (!isDrawing) return;
@@ -302,13 +300,13 @@
                     currentShape.scale({ x: scale, y: scale });
                 }
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
 
-            // Отправляем промежуточное состояние (для плавности)
             if (currentLine || currentShape) {
                 const obj = currentLine ? 
                     { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() } :
                     { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
+                
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             }
         });
@@ -330,18 +328,15 @@
             }
 
             currentLine = null; currentShape = null;
-            layer.batchDraw();
+            drawLayer.batchDraw();
         });
 
         // --- ОЧИСТКА ---
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
-                // Удаляем все, кроме сетки
-                layer.getChildren().forEach(child => {
-                    if (child.name() !== 'grid') child.destroy();
-                });
-                layer.draw();
+                drawLayer.destroyChildren(); 
+                drawLayer.draw();
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
@@ -352,7 +347,7 @@
 
         function drawObject(obj) {
             if (obj.type === 'line') {
-                layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
+                drawLayer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
             } else if (obj.type === 'shape') {
                 let shape;
                 if (obj.shapeType === 'rect') shape = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
@@ -367,11 +362,11 @@
                     shape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                     shape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                 }
-                layer.add(shape);
+                drawLayer.add(shape);
             } else if (obj.type === 'text') {
-                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
+                drawLayer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
             }
-            layer.batchDraw();
+            drawLayer.batchDraw();
         }
 
         async function loadBoard() {
@@ -379,10 +374,6 @@
             if (data) {
                 data.forEach(item => drawObject(item.object_data));
             }
-            // Возвращаем сетку на самый низ
-            const grid = layer.findOne('.grid');
-            if (grid) grid.moveToBottom();
-            layer.batchDraw();
         }
 
         // --- BROADCAST ---
@@ -393,8 +384,7 @@
                 .on('broadcast', { event: 'draw' }, payload => {
                     if (isStudent) {
                         if (payload.payload.type === 'clear') {
-                            layer.getChildren().forEach(child => { if (child.name() !== 'grid') child.destroy(); });
-                            layer.draw();
+                            drawLayer.destroyChildren(); drawLayer.draw();
                         } else {
                             drawObject(payload.payload);
                         }
@@ -405,13 +395,11 @@
                         const pos = payload.payload;
                         if (!teacherCursor) {
                             teacherCursor = new Konva.Circle({ x: pos.x, y: pos.y, radius: 8, fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2, listening: false });
-                            layer.add(teacherCursor);
-                            const grid = layer.findOne('.grid');
-                            if (grid) grid.moveToBottom();
+                            uiLayer.add(teacherCursor);
                         } else {
                             teacherCursor.position({ x: pos.x, y: pos.y });
                         }
-                        layer.batchDraw();
+                        uiLayer.batchDraw();
                     }
                 })
                 .subscribe();
