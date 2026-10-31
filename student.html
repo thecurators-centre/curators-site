@@ -8,20 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Уникальные стили для кабинета ученика */
         body { min-height: 100vh; }
-
-        header {
-            padding: 15px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            border-bottom: 1px solid rgba(244, 243, 238, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        header { padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); position: sticky; top: 0; z-index: 100; }
         .logo-container img { width: 150px; height: auto; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .header-right span { font-size: 0.9rem; opacity: 0.7; }
@@ -30,29 +18,8 @@
 
         .container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
         
-        .profile-header {
-            background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
-            padding: 40px;
-            border-radius: 30px;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-        .avatar {
-            width: 100px;
-            height: 100px;
-            background: var(--accent-lime);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--bg-color);
-            flex-shrink: 0;
-        }
+        .profile-header { background: linear-gradient(135deg, #313452 0%, #7455d9 100%); padding: 40px; border-radius: 30px; margin-bottom: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+        .avatar { width: 100px; height: 100px; background: var(--accent-lime); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: 800; color: var(--bg-color); flex-shrink: 0; }
         .profile-info h1 { font-size: 2rem; margin-bottom: 5px; }
         .profile-info p { opacity: 0.9; font-size: 1.1rem; margin-bottom: 10px; }
         .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -65,7 +32,6 @@
         .level-bar-container { background: var(--bg-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
         .level-bar-fill { background: var(--accent-lime); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-size: 0.8rem; font-weight: 800; color: var(--bg-color); transition: width 1s ease-in-out; }
         
-        /* Календарь */
         .calendar-student { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-top: 15px; }
         .cal-header-st { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
         .cal-day-st { padding: 8px 5px; text-align: center; border-radius: 8px; font-size: 0.9rem; border: 1px solid transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
@@ -73,7 +39,6 @@
         .cal-time-st { font-size: 0.65rem; font-weight: normal; margin-top: 2px; opacity: 0.8; }
         .cal-month-title { font-size: 1.2rem; font-weight: 800; color: white; margin-bottom: 10px; }
 
-        /* Списки */
         .custom-list { list-style: none; }
         .custom-list li { padding: 12px 0; border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: flex-start; gap: 10px; }
         .custom-list li:last-child { border-bottom: none; }
@@ -85,27 +50,10 @@
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
-        /* Кнопки доступа */
         .boards-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
-        .board-btn { 
-            display: inline-block; 
-            background: var(--accent-lime); 
-            color: var(--bg-color); 
-            padding: 12px 25px; 
-            border-radius: 12px; 
-            text-decoration: none; 
-            font-weight: 800; 
-            font-size: 1rem; 
-            transition: 0.3s; 
-            border: none; 
-            cursor: pointer;
-        }
+        .board-btn { display: inline-block; background: var(--accent-lime); color: var(--bg-color); padding: 12px 25px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 1rem; transition: 0.3s; border: none; cursor: pointer; }
         .board-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(197, 240, 90, 0.3); }
-        
-        .notebook-btn {
-            background: var(--accent-purple);
-            color: white;
-        }
+        .notebook-btn { background: var(--accent-purple); color: white; }
         .notebook-btn:hover { box-shadow: 0 10px 20px rgba(116, 85, 217, 0.3); }
 
         @media (max-width: 768px) {
@@ -121,7 +69,7 @@
         <a href="index.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
             <span id="header-name">Загрузка...</span>
-            <a href="login.html" onclick="localStorage.removeItem('current_student_id')" class="btn-logout">Выйти</a>
+            <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" class="btn-logout">Выйти</a>
         </div>
     </header>
 
@@ -135,16 +83,19 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function loadProfile() {
-            const studentId = localStorage.getItem('current_student_id');
-            if (!studentId) {
-                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Вы не вошли. <a href="login.html" style="color:white;">Войти</a></div>';
+            // Получаем текущего пользователя из Auth
+            const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+            
+            if (authError || !user) {
+                window.location.href = 'login.html';
                 return;
             }
 
-            const { data, error } = await supabaseClient.from('students').select('*').eq('id', studentId).single();
+            // Загружаем данные ученика из таблицы students по ID (он совпадает с ID в Auth)
+            const { data, error } = await supabaseClient.from('students').select('*').eq('id', user.id).single();
 
             if (error || !data) {
-                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Ученик не найден.</div>';
+                document.getElementById('main-content').innerHTML = '<div class="loading" style="color:red;">Профиль ученика не найден. Обратитесь к преподавателю.</div>';
                 return;
             }
             renderProfile(data);

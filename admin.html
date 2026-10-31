@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Уникальные стили для админки */
         body { padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
         h1 { color: var(--accent-lime); margin-bottom: 20px; }
@@ -47,8 +46,12 @@
             <div style="display: flex; gap: 20px;">
                 <h1 id="tab-students" style="cursor: pointer; color: var(--accent-lime); border-bottom: 2px solid var(--accent-lime); padding-bottom: 5px;">Ученики</h1>
                 <h1 id="tab-boards" style="cursor: pointer; opacity: 0.5; padding-bottom: 5px;">Доски</h1>
+                <h1 id="tab-teachers" style="cursor: pointer; opacity: 0.5; padding-bottom: 5px; display: none;">Учителя</h1>
             </div>
-            <a href="login.html" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span id="user-info" style="font-size: 0.9rem; opacity: 0.7;"></span>
+                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
+            </div>
         </div>
         
         <div id="section-students">
@@ -59,6 +62,11 @@
         <div id="section-boards" style="display: none;">
             <div class="grid" id="boards-grid"></div>
         </div>
+
+        <div id="section-teachers" style="display: none;">
+            <button class="btn" id="addTeacherBtn">+ Добавить учителя</button>
+            <div class="grid" id="teachers-grid"><div class="loading">Загрузка...</div></div>
+        </div>
     </div>
 
     <div class="modal" id="modal">
@@ -68,7 +76,7 @@
             <form id="form">
                 <input type="hidden" id="id">
                 <div class="form-row">
-                    <div class="form-group"><label>Логин</label><input type="text" id="login" required></div>
+                    <div class="form-group"><label>Логин (без email)</label><input type="text" id="login" required></div>
                     <div class="form-group"><label>Пароль</label><input type="text" id="password" required></div>
                 </div>
                 <div class="form-row">
@@ -132,6 +140,18 @@
         </div>
     </div>
 
+    <div class="modal" id="teacherModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-btn" id="closeTeacherModal">&times;</button>
+            <h2 style="margin-bottom: 20px;">Новый учитель</h2>
+            <form id="teacherForm">
+                <div class="form-group"><label>ФИО учителя</label><input type="text" id="teacher_fullname" required></div>
+                <div class="form-group"><label>Email (логин)</label><input type="email" id="teacher_email" required></div>
+                <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password" required></div>
+                <button type="submit" class="btn-save">Создать аккаунт</button>
+            </form>
+        </div>
+    </div>
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
@@ -145,20 +165,69 @@
         const subjectsList = ['Русский язык', 'Японский язык', 'Английский язык', 'Литература', 'Обществознание', 'История', 'Физика', 'Подготовка к школе'];
 
         let students = [];
+        let currentUser = null;
+        let currentRole = null;
+        
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const form = document.getElementById('form');
         const calGrid = document.getElementById('calendar-admin');
         const calMonth = document.getElementById('cal-month');
         const calYear = document.getElementById('cal-year');
+        const teacherModal = document.getElementById('teacherModal');
         let scheduleData = {};
+
+        async function init() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) { window.location.href = 'login.html'; return; }
+
+            const { data: profile } = await supabaseClient.from('profiles').select('role, full_name').eq('id', user.id).single();
+            if (!profile) { window.location.href = 'login.html'; return; }
+
+            currentUser = user;
+            currentRole = profile.role;
+            document.getElementById('user-info').innerText = `${profile.full_name} (${profile.role})`;
+
+            if (currentRole === 'admin') {
+                document.getElementById('tab-teachers').style.display = 'block';
+            }
+
+            loadStudents();
+        }
 
         async function loadStudents() {
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
-            const { data, error } = await supabaseClient.from('students').select('*').order('id', { ascending: true });
+            let query = supabaseClient.from('students').select('*').order('id', { ascending: true });
+            if (currentRole === 'teacher') {
+                query = query.eq('teacher_id', currentUser.id);
+            }
+
+            const { data, error } = await query;
             if (error) { grid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
             students = data || [];
             render();
+        }
+
+        async function loadTeachers() {
+            const teachersGrid = document.getElementById('teachers-grid');
+            teachersGrid.innerHTML = '<div class="loading">Загрузка...</div>';
+            const { data, error } = await supabaseClient.from('profiles').select('*').eq('role', 'teacher');
+            
+            if (error) { teachersGrid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
+            
+            if (data.length === 0) {
+                teachersGrid.innerHTML = '<p style="opacity:0.5;">Учителей пока нет.</p>';
+                return;
+            }
+
+            teachersGrid.innerHTML = '';
+            data.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.background = '#313452';
+                card.innerHTML = `<h3 style="color:white;">${t.full_name}</h3><p>Логин: ${t.login}</p>`;
+                teachersGrid.appendChild(card);
+            });
         }
 
         function render() {
@@ -284,8 +353,49 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('id').value;
+            
+            if (!id) {
+                // --- СОЗДАНИЕ НОВОГО УЧЕНИКА ---
+                const login = document.getElementById('login').value.trim();
+                const password = document.getElementById('password').value.trim();
+                const surname = document.getElementById('surname').value.trim();
+                const name = document.getElementById('name').value.trim();
+                
+                const btn = form.querySelector('button[type="submit"]');
+                btn.innerText = 'Создание...';
+                btn.disabled = true;
+
+                try {
+                    // Вызываем Edge Function для создания аккаунта ученика
+                    const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
+                        body: { 
+                            login: login, 
+                            password: password, 
+                            full_name: `${surname} ${name}`, 
+                            role: 'student',
+                            teacher_id: currentRole === 'teacher' ? currentUser.id : null
+                        }
+                    });
+
+                    if (error) throw new Error(error.message);
+                    if (data && data.error) throw new Error(data.error);
+
+                    alert('Ученик успешно создан!');
+                    modal.classList.remove('active');
+                    loadStudents();
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                } finally {
+                    btn.innerText = 'Сохранить';
+                    btn.disabled = false;
+                }
+                return;
+            }
+
+            // --- ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕГО УЧЕНИКА ---
             const select = document.getElementById('subjects');
             const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+            
             const data = {
                 login: document.getElementById('login').value.trim(),
                 password: document.getElementById('password').value.trim(),
@@ -305,14 +415,14 @@
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
-            let error;
-            if (id) { const res = await supabaseClient.from('students').update(data).eq('id', id); error = res.error; } 
-            else { const res = await supabaseClient.from('students').insert([data]); error = res.error; }
+
+            const { error } = await supabaseClient.from('students').update(data).eq('id', id);
             if (error) alert('Ошибка: ' + error.message);
             else { modal.classList.remove('active'); loadStudents(); }
         };
 
         document.getElementById('deleteBtn').onclick = async () => {
+            if (currentRole !== 'admin') { alert('Удалять учеников может только администратор.'); return; }
             const id = document.getElementById('id').value;
             if (confirm('Удалить?')) {
                 const { error } = await supabaseClient.from('students').delete().eq('id', id);
@@ -321,27 +431,67 @@
             }
         };
 
+        // --- УЧИТЕЛЯ ---
+        document.getElementById('addTeacherBtn').onclick = () => { teacherModal.classList.add('active'); };
+        document.getElementById('closeTeacherModal').onclick = () => { teacherModal.classList.remove('active'); };
+        teacherModal.onclick = (e) => { if (e.target === teacherModal) teacherModal.classList.remove('active'); };
+
+        document.getElementById('teacherForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const fullname = document.getElementById('teacher_fullname').value.trim();
+            const email = document.getElementById('teacher_email').value.trim();
+            const password = document.getElementById('teacher_password').value.trim();
+            const btn = e.target.querySelector('button[type="submit"]');
+            
+            btn.innerText = 'Создание...';
+            btn.disabled = true;
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
+                    body: { login: email, password, full_name: fullname, role: 'teacher' }
+                });
+
+                if (error) throw new Error(error.message);
+                if (data && data.error) throw new Error(data.error);
+
+                alert('Учитель успешно создан!');
+                teacherModal.classList.remove('active');
+                document.getElementById('teacherForm').reset();
+                loadTeachers();
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            } finally {
+                btn.innerText = 'Создать аккаунт';
+                btn.disabled = false;
+            }
+        };
+
+        // --- ВКЛАДКИ ---
         const tabStudents = document.getElementById('tab-students');
         const tabBoards = document.getElementById('tab-boards');
+        const tabTeachers = document.getElementById('tab-teachers');
         const sectionStudents = document.getElementById('section-students');
         const sectionBoards = document.getElementById('section-boards');
+        const sectionTeachers = document.getElementById('section-teachers');
 
-        tabStudents.onclick = () => {
-            tabStudents.style.color = 'var(--accent-lime)'; tabStudents.style.borderBottom = '2px solid var(--accent-lime)'; tabStudents.style.opacity = '1';
-            tabBoards.style.color = 'var(--text-main)'; tabBoards.style.borderBottom = 'none'; tabBoards.style.opacity = '0.5';
-            sectionStudents.style.display = 'block'; sectionBoards.style.display = 'none';
-        };
-        tabBoards.onclick = () => {
-            tabBoards.style.color = 'var(--accent-lime)'; tabBoards.style.borderBottom = '2px solid var(--accent-lime)'; tabBoards.style.opacity = '1';
-            tabStudents.style.color = 'var(--text-main)'; tabStudents.style.borderBottom = 'none'; tabStudents.style.opacity = '0.5';
-            sectionStudents.style.display = 'none'; sectionBoards.style.display = 'block';
-            renderBoards();
-        };
+        function switchTab(activeTab, activeSection) {
+            [tabStudents, tabBoards, tabTeachers].forEach(t => {
+                t.style.color = 'var(--text-main)'; t.style.borderBottom = 'none'; t.style.opacity = '0.5';
+            });
+            [sectionStudents, sectionBoards, sectionTeachers].forEach(s => s.style.display = 'none');
+            
+            activeTab.style.color = 'var(--accent-lime)'; activeTab.style.borderBottom = '2px solid var(--accent-lime)'; activeTab.style.opacity = '1';
+            activeSection.style.display = 'block';
+        }
+
+        tabStudents.onclick = () => switchTab(tabStudents, sectionStudents);
+        tabBoards.onclick = () => { switchTab(tabBoards, sectionBoards); renderBoards(); };
+        tabTeachers.onclick = () => { switchTab(tabTeachers, sectionTeachers); loadTeachers(); };
 
         document.getElementById('addBtn').onclick = () => openModal();
         
         renderBoards();
-        loadStudents();
+        init();
     </script>
 </body>
 </html>

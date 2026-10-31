@@ -10,65 +10,18 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .login-card {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 30px;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .login-card { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .login-card img { width: 120px; margin-bottom: 20px; }
         h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--accent-lime); }
-        input {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(244, 243, 238, 0.15);
-            background: var(--bg-color);
-            color: white;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-        }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-size: 1rem; font-family: 'Inter', sans-serif; }
         input:focus { outline: none; border-color: var(--accent-lime); }
-        button {
-            width: 100%;
-            padding: 15px;
-            background: var(--accent-lime);
-            color: var(--bg-color);
-            border: none;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        button { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
         button:hover { opacity: 0.9; transform: translateY(-2px); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .back-link {
-            display: block;
-            margin-top: 20px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            opacity: 0.6;
-        }
+        .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; opacity: 0.6; }
         .back-link:hover { opacity: 1; }
-        #error-msg {
-            color: #ff6b6b;
-            font-size: 0.9rem;
-            margin-top: 15px;
-            display: none;
-        }
+        #error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
@@ -77,10 +30,10 @@
         <img src="logo.png" alt="Logo">
         <h1>Вход</h1>
         <form id="login-form">
-            <input type="email" id="email" placeholder="Email" required>
+            <input type="text" id="login-input" placeholder="Логин (или Email для учителя)" required>
             <input type="password" id="password" placeholder="Пароль" required>
             <button type="submit" id="submit-btn">Войти</button>
-            <div id="error-msg">Неверный email или пароль</div>
+            <div id="error-msg">Неверный логин или пароль</div>
         </form>
         <a href="index.html" class="back-link">← На главную</a>
     </div>
@@ -94,12 +47,18 @@
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             const errorMsg = document.getElementById('error-msg');
-            const email = document.getElementById('email').value.trim();
+            const inputVal = document.getElementById('login-input').value.trim();
             const password = document.getElementById('password').value.trim();
 
             btn.innerText = 'Проверка...';
             btn.disabled = true;
             errorMsg.style.display = 'none';
+
+            // Хитрость: если введен не email (нет символа @), подставляем домен ученика
+            let email = inputVal;
+            if (!inputVal.includes('@')) {
+                email = `${inputVal}@student.curators.local`;
+            }
 
             // 1. Вход через Supabase Auth
             const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
@@ -108,7 +67,7 @@
             });
 
             if (authError) {
-                errorMsg.innerText = 'Неверный email или пароль';
+                errorMsg.innerText = 'Неверный логин или пароль';
                 errorMsg.style.display = 'block';
                 btn.innerText = 'Войти';
                 btn.disabled = false;
