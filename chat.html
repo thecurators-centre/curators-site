@@ -20,9 +20,28 @@
         
         .chat-sidebar { width: 320px; background: var(--card-bg); border-right: 1px solid rgba(244, 243, 238, 0.1); display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(244, 243, 238, 0.1); }
-        .sidebar-header h2 { font-size: 1.2rem; margin-bottom: 15px; color: var(--accent-lime); display: flex; justify-content: space-between; align-items: center; }
-        .btn-new-chat { background: var(--accent-lime); color: var(--bg-color); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
-        .search-input { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-family: inherit; }
+        
+        /* ИСПРАВЛЕННЫЙ БЛОК ЗАГОЛОВКА И КНОПКИ */
+        .sidebar-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .sidebar-top h2 { font-size: 1.2rem; color: var(--accent-lime); margin: 0; }
+        .btn-new-chat { 
+            background: var(--accent-lime); 
+            color: var(--bg-color); 
+            border: none; 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            font-size: 1.4rem; 
+            font-weight: bold;
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            transition: 0.2s;
+        }
+        .btn-new-chat:hover { transform: scale(1.1); }
+
+        .search-input { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-family: inherit; box-sizing: border-box; }
         
         .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
         .chat-item { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
@@ -79,7 +98,11 @@
     <div class="chat-container" id="chat-container">
         <div class="chat-sidebar">
             <div class="sidebar-header">
-                <h2>Чаты <button class="btn-new-chat" id="btn-new-chat" style="display:none;">+</button></h2>
+                <!-- НОВЫЙ БЛОК -->
+                <div class="sidebar-top">
+                    <h2>Чаты</h2>
+                    <button class="btn-new-chat" id="btn-new-chat" style="display: none;">+</button>
+                </div>
                 <input type="text" class="search-input" id="search-input" placeholder="Поиск...">
             </div>
             <div class="chat-list" id="chat-list">
@@ -144,7 +167,8 @@
 
             // Показываем кнопку создания чата только сотрудникам
             if (currentUserRole === 'admin' || currentUserRole === 'teacher') {
-                document.getElementById('btn-new-chat').style.display = 'flex';
+                const btn = document.getElementById('btn-new-chat');
+                btn.style.display = 'flex'; // Показываем
             }
 
             loadChats();
@@ -284,7 +308,6 @@
             const list = document.getElementById('user-list');
             list.innerHTML = 'Загрузка...';
             
-            // Получаем всех, кроме себя
             const { data: users, error } = await supabaseClient
                 .from('profiles')
                 .select('id, full_name, role')
@@ -303,8 +326,6 @@
         }
 
         async function createDirectChat(targetUserId) {
-            // Проверяем, есть ли уже личный чат с этим пользователем
-            // (Упрощенно: ищем чат, где оба участника)
             const { data: existing } = await supabaseClient.rpc('get_direct_chat', { user1: currentUser.id, user2: targetUserId });
             
             if (existing) {
@@ -313,7 +334,6 @@
                 return;
             }
 
-            // Создаем новый чат
             const { data: newChat, error: chatError } = await supabaseClient
                 .from('chats')
                 .insert([{ type: 'direct' }])
@@ -322,14 +342,13 @@
 
             if (chatError) { alert('Ошибка: ' + chatError.message); return; }
 
-            // Добавляем участников
             await supabaseClient.from('chat_participants').insert([
                 { chat_id: newChat.id, user_id: currentUser.id },
                 { chat_id: newChat.id, user_id: targetUserId }
             ]);
 
             modal.classList.remove('active');
-            loadChats(); // Перезагружаем список чатов
+            loadChats();
         }
 
         document.getElementById('search-input').addEventListener('input', (e) => {
