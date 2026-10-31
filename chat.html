@@ -10,7 +10,6 @@
     <style>
         body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Шапка с жестким z-index */
         header { 
             padding: 15px 5%; 
             display: flex; 
@@ -18,7 +17,7 @@
             align-items: center; 
             background: var(--card-bg); 
             border-bottom: 1px solid rgba(244, 243, 238, 0.1); 
-            z-index: 9999; /* Поверх всего */
+            z-index: 9999; 
             position: relative;
             flex-shrink: 0; 
         }
@@ -30,24 +29,22 @@
         
         .chat-container { display: flex; flex: 1; overflow: hidden; max-width: 1400px; margin: 0 auto; width: 100%; background: var(--bg-color); }
         
-        /* Левая панель */
         .chat-sidebar { width: 320px; background: var(--card-bg); border-right: 1px solid rgba(244, 243, 238, 0.1); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 10; }
         
         .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(244, 243, 238, 0.1); }
         
-        /* Блок с заголовком и кнопкой */
         .sidebar-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .sidebar-top h2 { font-size: 1.2rem; color: var(--accent-lime); margin: 0; }
         
-        /* Кнопка "+" */
+        /* ИСПРАВЛЕННАЯ КНОПКА */
         .btn-new-chat { 
             background: var(--accent-lime); 
             color: var(--bg-color); 
             border: none; 
-            width: 35px; 
-            height: 35px; 
+            width: 32px; 
+            height: 32px; 
             border-radius: 50%; 
-            font-size: 1.5rem; 
+            font-size: 1.4rem; 
             font-weight: bold;
             cursor: pointer; 
             display: flex; 
@@ -56,6 +53,8 @@
             transition: 0.2s;
             z-index: 20;
             position: relative;
+            line-height: 1; /* Убираем лишний отступ по высоте */
+            padding: 0; /* Убираем внутренние отступы */
         }
         .btn-new-chat:hover { transform: scale(1.1); }
 
@@ -70,7 +69,6 @@
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-info p { font-size: 0.85rem; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Правая панель */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #1a1c29; position: relative; }
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
         .chat-main-header h3 { font-size: 1.1rem; }
@@ -87,7 +85,6 @@
         
         .empty-state { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; opacity: 0.5; text-align: center; padding: 20px; }
 
-        /* Модалка */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 10000; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; }
