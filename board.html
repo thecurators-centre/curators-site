@@ -14,7 +14,7 @@
         .toolbar {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             background: var(--card-bg); padding: 10px 20px; border-radius: 20px;
-            display: flex; gap: 15px; align-items: center; z-index: 1000;
+            display: flex; gap: 10px; align-items: center; z-index: 1000;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
             flex-wrap: wrap; justify-content: center; width: max-content; max-width: 95vw;
         }
@@ -36,16 +36,21 @@
             font-size: 1.2rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; }
+        #container { width: 100vw; height: 100vh; background-color: #1a1c29; }
         
+        /* Курсоры для разных инструментов */
+        #container.tool-pen { cursor: crosshair; }
+        #container.tool-eraser { cursor: cell; }
+        #container.tool-hand { cursor: grab; }
+        #container.tool-hand:active { cursor: grabbing; }
+        #container.tool-text { cursor: text; }
+
         .exit-btn {
             position: absolute; bottom: 20px; right: 20px; background: var(--card-bg);
             color: var(--text-main); padding: 10px 20px; border-radius: 10px; text-decoration: none;
             z-index: 1000; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
         }
         .exit-btn:hover { background: #ff6b6b; color: white; }
-
-        .background-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.05; z-index: 0; background-image: radial-gradient(var(--text-main) 1px, transparent 1px); background-size: 20px 20px; }
     </style>
 </head>
 <body>
@@ -53,7 +58,8 @@
     <div class="board-title" id="boardTitle">Загрузка...</div>
 
     <div class="toolbar" id="toolbar">
-        <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
+        <button class="tool-btn active" data-tool="hand" title="Перемещение">🖐️</button>
+        <button class="tool-btn" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         <button class="tool-btn" data-tool="rect" title="Прямоугольник">⬛</button>
         <button class="tool-btn" data-tool="circle" title="Окружность">⭕</button>
@@ -70,25 +76,22 @@
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
-    <div class="background-grid" id="grid"></div>
-    <div id="container"></div>
+    <div id="container" class="tool-hand"></div>
 
     <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
 
     <script>
-        // --- НАСТРОЙКИ БАЗЫ ДАННЫХ ---
+        // --- НАСТРОЙКИ БАЗЫ ---
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- ПАРАМЕТРЫ ИЗ URL ---
         const urlParams = new URLSearchParams(window.location.search);
         const subject = urlParams.get('subject') || 'Общая доска';
         const isStudent = urlParams.get('role') === 'student';
         
         document.getElementById('boardTitle').innerText = `Доска: ${subject}`;
         
-        // Если ученик, прячем инструменты
         if (isStudent) {
             document.getElementById('toolbar').style.display = 'none';
             document.getElementById('backBtn').href = 'student.html';
@@ -96,7 +99,7 @@
         }
 
         // --- ИНИЦИАЛИЗАЦИЯ KONVA ---
-        const container = document.getElementById('container');
+        // Создаем огромную сцену (10000x10000), чтобы было куда рисовать
         const stage = new Konva.Stage({
             container: 'container',
             width: window.innerWidth,
@@ -106,7 +109,13 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        let currentTool = 'pen';
+        // Начальное положение: центрируем огромную доску на экране
+        const centerX = 5000; 
+        const centerY = 5000;
+        stage.position({ x: window.innerWidth / 2 - centerX, y: window.innerHeight / 2 - centerY });
+
+        // Переменные
+        let currentTool = 'hand';
         let isDrawing = false;
         let currentLine = null;
         let currentShape = null;
@@ -115,48 +124,71 @@
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
         const strokeVal = document.getElementById('strokeVal');
+        const container = document.getElementById('container');
+
+        // Меняем курсор при смене инструмента
+        function updateCursor() {
+            container.className = `tool-${currentTool}`;
+            // Для ученика всегда "рука", так как он не рисует
+            if (isStudent) container.className = 'tool-hand';
+        }
 
         strokeWidthSlider.addEventListener('input', (e) => { strokeVal.innerText = e.target.value; });
 
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentTool = e.target.dataset.tool;
+                updateCursor();
             });
         });
 
-        // --- РИСОВАНИЕ ---
+        // --- ЛОГИКА ПЕРЕМЕЩЕНИЯ (ПАНОРАМИРОВАНИЕ) ---
+        let isPanning = false;
+        let lastPointerPos = null;
+
         stage.on('mousedown touchstart', (e) => {
-            if (isStudent) return;
+            // Если выбран инструмент "Рука" ИЛИ это ученик - включаем перемещение
+            if (currentTool === 'hand' || isStudent) {
+                isPanning = true;
+                lastPointerPos = stage.getPointerPosition();
+                return; 
+            }
+            
+            // --- РИСОВАНИЕ (только для препода) ---
             isDrawing = true;
             const pos = stage.getPointerPosition();
-            startX = pos.x; startY = pos.y;
+            // Координаты с учетом смещения (чтобы рисовать там, куда кликнули)
+            startX = (pos.x - stage.x()) / stage.scaleX();
+            startY = (pos.y - stage.y()) / stage.scaleY();
+
             const width = parseInt(strokeWidthSlider.value);
             const color = colorPicker.value;
 
             if (currentTool === 'pen') {
-                currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [pos.x, pos.y], globalCompositeOperation: 'source-over' });
+                currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'source-over' });
                 layer.add(currentLine);
             } 
             else if (currentTool === 'eraser') {
-                currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [pos.x, pos.y], globalCompositeOperation: 'destination-out' });
+                currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
                 layer.add(currentLine);
             } 
             else if (currentTool === 'rect') {
-                currentShape = new Konva.Rect({ x: pos.x, y: pos.y, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 layer.add(currentShape);
             }
             else if (currentTool === 'circle') {
-                currentShape = new Konva.Ellipse({ x: pos.x, y: pos.y, radiusX: 0, radiusY: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                currentShape = new Konva.Ellipse({ x: startX, y: startY, radiusX: 0, radiusY: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 layer.add(currentShape);
             }
             else if (currentTool === 'text') {
                 const text = prompt('Введите текст:');
                 if (text) {
-                    const textNode = new Konva.Text({ x: pos.x, y: pos.y, text: text, fontSize: width * 4, fill: color, fontFamily: 'Inter' });
+                    const textNode = new Konva.Text({ x: startX, y: startY, text: text, fontSize: width * 4, fill: color, fontFamily: 'Inter' });
                     layer.add(textNode);
-                    saveObjectToDB({ type: 'text', x: pos.x, y: pos.y, text: text, fontSize: width * 4, fill: color });
+                    saveObjectToDB({ type: 'text', x: startX, y: startY, text: text, fontSize: width * 4, fill: color });
                 }
                 isDrawing = false;
             }
@@ -164,42 +196,55 @@
         });
 
         stage.on('mousemove touchmove', (e) => {
-            if (!isDrawing || isStudent) return;
             const pos = stage.getPointerPosition();
 
+            // Если перемещаемся
+            if (isPanning) {
+                const dx = pos.x - lastPointerPos.x;
+                const dy = pos.y - lastPointerPos.y;
+                stage.position({ x: stage.x() + dx, y: stage.y() + dy });
+                lastPointerPos = pos;
+                return;
+            }
+
+            // Если рисуем
+            if (!isDrawing || isStudent) return;
+
+            const localX = (pos.x - stage.x()) / stage.scaleX();
+            const localY = (pos.y - stage.y()) / stage.scaleY();
+
             if (currentTool === 'pen' || currentTool === 'eraser') {
-                if (currentLine) currentLine.points(currentLine.points().concat([pos.x, pos.y]));
+                if (currentLine) currentLine.points(currentLine.points().concat([localX, localY]));
             } 
             else if (currentTool === 'rect' && currentShape) {
-                const w = pos.x - startX; const h = pos.y - startY;
-                currentShape.x(w < 0 ? pos.x : startX); currentShape.width(Math.abs(w));
-                currentShape.y(h < 0 ? pos.y : startY); currentShape.height(Math.abs(h));
+                const w = localX - startX; const h = localY - startY;
+                currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
+                currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
             }
             else if (currentTool === 'circle' && currentShape) {
-                const rX = Math.abs(pos.x - startX); const rY = Math.abs(pos.y - startY);
+                const rX = Math.abs(localX - startX); const rY = Math.abs(localY - startY);
                 currentShape.radiusX(rX); currentShape.radiusY(rY);
-                currentShape.x(startX + (pos.x - startX) / 2); currentShape.y(startY + (pos.y - startY) / 2);
+                currentShape.x(startX + (localX - startX) / 2); currentShape.y(startY + (localY - startY) / 2);
             }
             layer.batchDraw();
         });
 
         stage.on('mouseup touchend', () => {
+            if (isPanning) {
+                isPanning = false;
+                return;
+            }
             if (!isDrawing || isStudent) return;
             isDrawing = false;
             
-            // СОХРАНЕНИЕ В БАЗУ ПРИ ЗАВЕРШЕНИИ ШТРИХА
+            // Сохранение
             if (currentLine) {
                 saveObjectToDB({
-                    type: 'line',
-                    points: currentLine.points(),
-                    stroke: currentLine.stroke(),
-                    strokeWidth: currentLine.strokeWidth(),
-                    globalCompositeOperation: currentLine.globalCompositeOperation()
+                    type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation()
                 });
             } else if (currentShape) {
                 saveObjectToDB({
-                    type: currentTool,
-                    x: currentShape.x(), y: currentShape.y(),
+                    type: currentTool, x: currentShape.x(), y: currentShape.y(),
                     width: currentShape.width ? currentShape.width() : currentShape.radiusX() * 2,
                     height: currentShape.height ? currentShape.height() : currentShape.radiusY() * 2,
                     radiusX: currentShape.radiusX ? currentShape.radiusX() : null,
@@ -211,68 +256,7 @@
             layer.batchDraw();
         });
 
-        // --- РАБОТА С БАЗОЙ ДАННЫХ ---
-        async function saveObjectToDB(obj) {
-            const { error } = await supabaseClient.from('board_objects').insert([{
-                board_id: subject, // Используем название предмета как ID доски
-                object_data: obj
-            }]);
-            if (error) console.error('Ошибка сохранения:', error);
-        }
-
-        async function loadBoard() {
-            const { data, error } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject);
-            if (error) { console.error('Ошибка загрузки:', error); return; }
-            
-            data.forEach(item => {
-                const obj = item.object_data;
-                if (obj.type === 'line') {
-                    layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
-                } else if (obj.type === 'rect') {
-                    layer.add(new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
-                } else if (obj.type === 'circle') {
-                    layer.add(new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.radiusX, radiusY: obj.radiusY, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
-                } else if (obj.type === 'text') {
-                    layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter' }));
-                }
-            });
-            layer.batchDraw();
-        }
-
-        // --- СИНХРОНИЗАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ ---
-        function subscribeToRealtime() {
-            supabaseClient
-                .channel('board_realtime')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
-                    const newObj = payload.new.object_data;
-                    if (payload.new.board_id !== subject) return; // Игнорируем другие доски
-                    
-                    // Отрисовываем то, что сделал препод
-                    if (newObj.type === 'line') {
-                        layer.add(new Konva.Line({ points: newObj.points, stroke: newObj.stroke, strokeWidth: newObj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: newObj.globalCompositeOperation }));
-                    } else if (newObj.type === 'rect') {
-                        layer.add(new Konva.Rect({ x: newObj.x, y: newObj.y, width: newObj.width, height: newObj.height, stroke: newObj.stroke, strokeWidth: newObj.strokeWidth, fill: 'transparent' }));
-                    } else if (newObj.type === 'circle') {
-                        layer.add(new Konva.Ellipse({ x: newObj.x, y: newObj.y, radiusX: newObj.radiusX, radiusY: newObj.radiusY, stroke: newObj.stroke, strokeWidth: newObj.strokeWidth, fill: 'transparent' }));
-                    } else if (newObj.type === 'text') {
-                        layer.add(new Konva.Text({ x: newObj.x, y: newObj.y, text: newObj.text, fontSize: newObj.fontSize, fill: newObj.fill, fontFamily: 'Inter' }));
-                    }
-                    layer.batchDraw();
-                })
-                .subscribe();
-        }
-
-        // --- ОЧИСТКА ---
-        document.getElementById('clearBtn').addEventListener('click', async () => {
-            if (isStudent) return;
-            if (confirm('Очистить доску для всех?')) {
-                layer.destroyChildren();
-                layer.draw();
-                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
-            }
-        });
-
-        // --- ЗУМ И ПАНОРАМИРОВАНИЕ ---
+        // --- ЗУМ (Масштабирование) ---
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             const oldScale = stage.scaleX();
@@ -284,17 +268,49 @@
             stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
         });
 
-        stage.on('mousedown', (e) => { if (e.evt.button === 2) stage.draggable(true); });
-        stage.on('mouseup', () => { stage.draggable(false); });
-        stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
+        // --- РАБОТА С БАЗОЙ ---
+        async function saveObjectToDB(obj) {
+            await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]);
+        }
+
+        function drawObject(obj) {
+            if (obj.type === 'line') {
+                layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
+            } else if (obj.type === 'rect') {
+                layer.add(new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
+            } else if (obj.type === 'circle') {
+                layer.add(new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.radiusX, radiusY: obj.radiusY, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
+            } else if (obj.type === 'text') {
+                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter' }));
+            }
+            layer.batchDraw();
+        }
+
+        async function loadBoard() {
+            const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject);
+            if (data) data.forEach(item => drawObject(item.object_data));
+        }
+
+        // Синхронизация
+        supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
+            if (payload.new.board_id === subject) {
+                drawObject(payload.new.object_data);
+            }
+        }).subscribe();
+
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            if (isStudent) return;
+            if (confirm('Очистить доску?')) {
+                layer.destroyChildren(); layer.draw();
+                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
+            }
+        });
 
         window.addEventListener('resize', () => {
             stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw();
         });
 
-        // --- СТАРТ ---
         loadBoard();
-        subscribeToRealtime();
     </script>
 </body>
 </html>
