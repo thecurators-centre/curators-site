@@ -124,7 +124,6 @@
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
 
-        // --- МИРОВАЯ СИСТЕМА КООРДИНАТ ---
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
         const bgLayer = new Konva.Layer({ listening: false });
         const drawLayer = new Konva.Layer();
@@ -133,11 +132,11 @@
         stage.add(drawLayer);
         stage.add(uiLayer);
 
-        // Сетка (рисуем крестики на большой области, Konva сама сделает Culling)
+        // --- СЕТКА ---
         function drawGrid() {
             bgLayer.destroyChildren();
             const spacing = 50; 
-            const worldSize = 20000; // Достаточно много
+            const worldSize = 20000;
             const half = worldSize / 2;
 
             const grid = new Konva.Shape({
@@ -160,7 +159,6 @@
             bgLayer.batchDraw();
         }
 
-        // Центрируем камеру в мировых координатах (0,0)
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
         drawGrid();
@@ -174,10 +172,12 @@
         let activeTextInput = null;
         let broadcastChannel = null;
         let teacherCursor = null;
-        
-        // Троттлинг для Broadcast (не чаще 100мс)
         let lastBroadcastTime = 0; 
         const BROADCAST_THROTTLE = 100; 
+
+        // Для ученика: храним последние созданные объекты по ID
+        let studentObjects = {}; 
+        let currentStrokeId = null;
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -246,7 +246,7 @@
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
-            if (e.evt.button === 2) return; // Правая кнопка - панорамирование
+            if (e.evt.button === 2) return;
 
             isDrawing = true;
             const pos = stage.getPointerPosition();
@@ -255,6 +255,8 @@
 
             const width = parseInt(strokeWidthSlider.value);
             const color = colorPicker.value;
+
+            currentStrokeId = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
             if (currentTool === 'pen') {
                 currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'source-over' });
@@ -286,14 +288,13 @@
             if (isStudent) return;
 
             const now = Date.now();
-            if (now - lastBroadcastTime < BROADCAST_THROTTLE) return; // Троттлинг
+            if (now - lastBroadcastTime < BROADCAST_THROTTLE) return; 
             lastBroadcastTime = now;
 
             const pos = stage.getPointerPosition();
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
-            // Отправка курсора (оптимистично, без ожидания)
             broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: localX, y: localY } });
 
             if (!isDrawing) return;
@@ -321,12 +322,12 @@
             }
             drawLayer.batchDraw();
 
-            // Отправляем промежуточное состояние ТОЛЬКО по Broadcast (локальный стейт уже обновлен)
-            if (currentLine || currentShape) {
-                const obj = currentLine ? 
-                    { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() } :
-                    { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
-                
+            // Отправляем промежуточное состояние ВСЕГДА
+            if (currentLine) {
+                const obj = { type: 'line', id: currentStrokeId, points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
+                broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
+            } else if (currentShape) {
+                const obj = { type: 'shape', id: currentStrokeId, shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             }
         });
@@ -343,30 +344,36 @@
             }
             
             if (finalObj) {
-                // Отправляем финальный объект в базу
                 saveObjectToDB(finalObj);
-                // И финальный объект по Broadcast (чтобы ученик точно его зафиксировал)
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: finalObj });
             }
 
             currentLine = null; currentShape = null;
+            currentStrokeId = null;
             drawLayer.batchDraw();
         });
 
-        // --- КАМЕРА (PAN & ZOOM) ---
+        // --- КАМЕРА (ИСПРАВЛЕНО ДЛЯ MAC) ---
+        // На тачпаде Mac: обычная прокрутка = ctrlKey:false (движение), щипок = ctrlKey:true (зум)
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
-            const oldScale = stage.scaleX();
-            const pointer = stage.getPointerPosition();
-            const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
             
-            let direction = e.evt.deltaY > 0 ? -1 : 1;
-            const scaleBy = 1.05;
-            let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-            newScale = Math.max(0.1, Math.min(newScale, 5));
+            if (e.evt.ctrlKey) {
+                // ЗУМ
+                const oldScale = stage.scaleX();
+                const pointer = stage.getPointerPosition();
+                const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+                let direction = e.evt.deltaY > 0 ? -1 : 1;
+                const scaleBy = 1.05;
+                let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+                newScale = Math.max(0.1, Math.min(newScale, 5));
 
-            stage.scale({ x: newScale, y: newScale });
-            stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+                stage.scale({ x: newScale, y: newScale });
+                stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+            } else {
+                // ПЕРЕМЕЩЕНИЕ (два пальца)
+                stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
+            }
         });
 
         let isPanning = false;
@@ -400,38 +407,40 @@
             }
         });
 
-        // --- БАЗА (ТОЛЬКО ОДИН РАЗ В КОНЦЕ) ---
+        // --- БАЗА ---
         async function saveObjectToDB(obj) { 
-            // Отправляем финальное состояние в базу
             const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
-            if (error) {
-                console.error('Ошибка сохранения в базу:', error);
-                // Если ошибка, можно удалить локальный объект или показать уведомление
-            }
+            if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
+        // --- ОТРИСОВКА ОБЪЕКТОВ ---
         function drawObject(obj) {
+            let node = null;
             if (obj.type === 'line') {
-                drawLayer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
+                node = new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation });
             } else if (obj.type === 'shape') {
-                let shape;
-                if (obj.shapeType === 'rect') shape = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
-                else if (obj.shapeType === 'circle') shape = new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.width/2, radiusY: obj.height/2, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
-                else if (obj.shapeType === 'triangle') shape = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 3, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
-                else if (obj.shapeType === 'diamond') shape = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 4, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
-                else if (obj.shapeType === 'star') shape = new Konva.Star({ x: obj.x, y: obj.y, numPoints: 5, innerRadius: obj.innerRadius, outerRadius: obj.outerRadius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                if (obj.shapeType === 'rect') node = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'circle') node = new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.width/2, radiusY: obj.height/2, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'triangle') node = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 3, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'diamond') node = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 4, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'star') node = new Konva.Star({ x: obj.x, y: obj.y, numPoints: 5, innerRadius: obj.innerRadius, outerRadius: obj.outerRadius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
                 else if (obj.shapeType === 'xy') {
-                    shape = new Konva.Group({ x: obj.x, y: obj.y, scaleX: obj.scaleX, scaleY: obj.scaleY });
-                    shape.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    shape.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    shape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    shape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    node = new Konva.Group({ x: obj.x, y: obj.y, scaleX: obj.scaleX, scaleY: obj.scaleY });
+                    node.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    node.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    node.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    node.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                 }
-                drawLayer.add(shape);
             } else if (obj.type === 'text') {
-                drawLayer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
+                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
             }
-            drawLayer.batchDraw();
+            
+            if (node) {
+                drawLayer.add(node);
+                drawLayer.batchDraw();
+                // Если у объекта есть ID, сохраняем ссылку для обновлений
+                if (obj.id) studentObjects[obj.id] = node;
+            }
         }
 
         async function loadBoard() {
@@ -441,21 +450,32 @@
             }
         }
 
-        // --- BROADCAST (ПОТОКОВАЯ СИНХРОНИЗАЦИЯ) ---
+        // --- BROADCAST ---
         function setupRealtime() {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
 
             broadcastChannel
                 .on('broadcast', { event: 'draw' }, payload => {
                     if (isStudent) {
-                        if (payload.payload.type === 'clear') {
+                        const data = payload.payload;
+                        if (data.type === 'clear') {
                             drawLayer.destroyChildren(); drawLayer.draw();
+                            studentObjects = {};
                         } else {
-                            // Важно: на каждое обновление промежуточного состояния мы должны не создавать новый объект,
-                            // а обновлять существующий. Для этого мы храним ссылки на последние созданные объекты ученика.
-                            // Но для простоты (так как линия одна) мы просто перерисовываем её.
-                            // В реальном приложении нужно передавать уникальный ID объекта.
-                            drawObject(payload.payload);
+                            // Если объект с таким ID уже есть, обновляем его. Иначе создаем новый.
+                            if (data.id && studentObjects[data.id]) {
+                                const node = studentObjects[data.id];
+                                // Обновляем в зависимости от типа
+                                if (data.type === 'line') {
+                                    node.points(data.points);
+                                } else if (data.type === 'shape') {
+                                    if (node.setAttrs) node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
+                                }
+                                drawLayer.batchDraw();
+                            } else {
+                                // Создаем новый объект
+                                drawObject(data);
+                            }
                         }
                     }
                 })
