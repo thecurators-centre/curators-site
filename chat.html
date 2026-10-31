@@ -42,7 +42,6 @@
         .chat-main-header h3 { font-size: 1.1rem; }
         .messages-area { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* ИСПРАВЛЕННЫЕ СТИЛИ СООБЩЕНИЙ */
         .message { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; word-wrap: break-word; }
         .message.sent { align-self: flex-end; background: var(--accent-purple); color: white; border-bottom-right-radius: 4px; }
         .message.received { align-self: flex-start; background: var(--card-bg); color: var(--text-main); border-bottom-left-radius: 4px; }
@@ -76,7 +75,7 @@
         <a href="admin.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
             <span id="header-name">Загрузка...</span>
-            <a href="admin.html" class="btn-logout">Вернуться в админку</a>
+            <a href="#" id="back-btn" class="btn-logout">Вернуться</a>
         </div>
     </header>
 
@@ -148,6 +147,17 @@
             currentUserRole = profile.role;
             document.getElementById('header-name').innerText = profile.full_name;
 
+            // Меняем ссылку и текст кнопки возврата в зависимости от роли
+            const backBtn = document.getElementById('back-btn');
+            if (currentUserRole === 'student') {
+                backBtn.href = 'student.html';
+                backBtn.innerText = 'Вернуться в кабинет';
+            } else {
+                backBtn.href = 'admin.html';
+                backBtn.innerText = 'Вернуться в админку';
+            }
+
+            // Показываем кнопку создания чата только сотрудникам
             if (currentUserRole === 'admin' || currentUserRole === 'teacher') {
                 const btn = document.getElementById('btn-new-chat');
                 if (btn) btn.style.display = 'flex';
@@ -233,7 +243,6 @@
 
         function appendMessage(msg) {
             const area = document.getElementById('messages-area');
-            // Сравниваем ID отправителя с ID текущего пользователя
             const isSent = msg.sender_id === currentUser.id;
             const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             
@@ -276,7 +285,6 @@
                 .channel('chat_' + chatId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, payload => {
                     const newMsg = payload.new;
-                    // Проверяем, что сообщение пришло не от нас (чтобы не дублировать)
                     if (newMsg.sender_id !== currentUser.id) { appendMessage(newMsg); scrollToBottom(); }
                 })
                 .subscribe();
