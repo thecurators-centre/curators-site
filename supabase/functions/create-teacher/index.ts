@@ -19,12 +19,19 @@ serve(async (req) => {
 
     const body = await req.json()
     const { 
-      login, password, full_name, role, teacher_id, 
+      action, login, password, full_name, role, teacher_id, 
       surname, name, patronymic, age, grade, 
       subjects, level, hourly_rate, about_student,
       schedule_month, schedule_year, schedule_days,
-      tests, topics, iom
+      tests, topics, iom, rate, phone, id
     } = body
+
+    // --- ОБНОВЛЕНИЕ ПАРОЛЯ (ЕСЛИ ПЕРЕДАН ID И ПАРОЛЬ) ---
+    if (action === 'update_password' && id && password) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password: password });
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     if (!login || !password) throw new Error('Не передан логин или пароль')
 
@@ -33,9 +40,7 @@ serve(async (req) => {
 
     // 1. Создаем пользователя в Auth
     const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true
+      email: email, password: password, email_confirm: true
     })
 
     if (authError) {
@@ -44,11 +49,11 @@ serve(async (req) => {
 
     // 2. Создаем профиль
     const { error: profileError } = await supabaseAdmin.from('profiles').insert([{
-      id: user.user.id, role: role, full_name: full_name || `${surname} ${name}`, login: login
+      id: user.user.id, role: role, full_name: full_name || `${surname} ${name}`, login: login,
+      surname, name, rate: rate ? parseInt(rate) : null, phone, subject: subjects
     }])
 
     if (profileError) {
-      // Откат: удаляем пользователя из Auth
       await supabaseAdmin.auth.admin.deleteUser(user.user.id);
       return new Response(JSON.stringify({ error: `Profile Error: ${profileError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -56,29 +61,14 @@ serve(async (req) => {
     // 3. Если ученик, создаем запись в students
     if (role === 'student') {
       const { error: studentError } = await supabaseAdmin.from('students').insert([{
-        id: user.user.id,
-        login: login,
-        password: password,
-        surname: surname || '',
-        name: name || '',
-        patronymic: patronymic || '', // Передаем отчество
-        age: age ? parseInt(age) : null,
-        grade: grade || '',
-        subjects: subjects || '',
-        level: level ? parseInt(level) : 3,
-        hourly_rate: hourly_rate ? parseInt(hourly_rate) : null,
-        about_student: about_student || '',
-        schedule_month: schedule_month || '0',
-        schedule_year: schedule_year || '2026',
-        schedule_days: schedule_days || '',
-        tests: tests || '',
-        topics: topics || '',
-        iom: iom || '',
-        teacher_id: teacher_id || null
+        id: user.user.id, login: login, password: password, surname: surname || '', name: name || '',
+        patronymic: patronymic || '', age: age ? parseInt(age) : null, grade: grade || '',
+        subjects: subjects || '', level: level ? parseInt(level) : 3, hourly_rate: hourly_rate ? parseInt(hourly_rate) : null,
+        about_student: about_student || '', schedule_month: schedule_month || '0', schedule_year: schedule_year || '2026',
+        schedule_days: schedule_days || '', tests: tests || '', topics: topics || '', iom: iom || '', teacher_id: teacher_id || null
       }])
 
       if (studentError) {
-        // Откат: удаляем профиль и пользователя из Auth
         await supabaseAdmin.from('profiles').delete().eq('id', user.user.id);
         await supabaseAdmin.auth.admin.deleteUser(user.user.id);
         return new Response(JSON.stringify({ error: `Student Error: ${studentError.message}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
