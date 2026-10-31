@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="VCNf-_1JkrdQMqgtXgRR5j-pdMmnDsjOH8499wALYqA" />
     <meta name="yandex-verification" content="2991571c7cd82f66" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Curator’s | Прогресс, у которого есть маршрут</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
             text-decoration: none;
             color: var(--text-main);
             transition: var(--transition);
-            z-index: 1001;
+            z-index: 1001; /* Логотип поверх */
         }
 
         .logo-img {
@@ -62,6 +62,7 @@
             display: flex;
             gap: 25px;
             align-items: center;
+            z-index: 1002; /* Меню поверх логотипа */
         }
 
         nav a {
@@ -100,7 +101,7 @@
             cursor: pointer;
             flex-direction: column;
             gap: 5px;
-            z-index: 1001;
+            z-index: 1003; /* Бургер тоже поверх */
         }
         .burger span {
             display: block;
@@ -255,6 +256,7 @@
                 justify-content: center;
                 transition: 0.3s ease-in-out;
                 box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+                z-index: 1002; /* Меню поверх логотипа */
             }
             nav.active { right: 0; }
             nav a { font-size: 1.2rem; }
@@ -278,7 +280,7 @@
             <a href="reviews.html">Отзывы</a>
             <a href="payment.html">Оплата</a>
             <a href="contacts.html">Контакты</a>
-            <a href="login.html">Вход</a> <!-- НОВАЯ КНОПКА -->
+            <a href="login.html">Вход</a>
             <a href="enroll.html" class="btn-header">Записаться</a>
         </nav>
         <div class="burger" id="burger">
