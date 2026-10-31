@@ -2,7 +2,7 @@
   "name": "The Curator's",
   "short_name": "Curator",
   "description": "Образовательная платформа The Curator's",
-  "start_url": "/curators-site/index.html",
+  "start_url": "/curators-site/login.html",
   "scope": "/curators-site/",
   "display": "standalone",
   "background_color": "#25283d",
