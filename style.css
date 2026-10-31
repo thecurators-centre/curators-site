@@ -160,3 +160,15 @@ footer {
     nav a { font-size: 1.2rem; }
     .btn-main { width: 100%; padding: 15px 20px; font-size: 1rem; }
 }
+
+/* --- PWA SAFE AREA (Для iPhone с вырезом и статус-баром) --- */
+header {
+    padding-top: calc(15px + env(safe-area-inset-top)) !important;
+    padding-left: calc(5% + env(safe-area-inset-left)) !important;
+    padding-right: calc(5% + env(safe-area-inset-right)) !important;
+}
+
+body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
