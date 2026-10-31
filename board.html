@@ -125,35 +125,41 @@
         }
 
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        const bgLayer = new Konva.Layer({ listening: false });
-        const drawLayer = new Konva.Layer();
-        const uiLayer = new Konva.Layer({ listening: false });
-        stage.add(bgLayer);
-        stage.add(drawLayer);
-        stage.add(uiLayer);
+        const layer = new Konva.Layer();
+        stage.add(layer);
 
-        // --- СЕТКА ---
-        const spacing = 20;
-        const gridWidth = 5000; 
-        const gridHeight = 5000;
+        // --- БЕСКОНЕЧНАЯ СЕТКА НА ФОНЕ ЭКРАНА ---
+        function drawGrid() {
+            // Удаляем старую сетку, если есть
+            const oldGrid = layer.findOne('.grid');
+            if (oldGrid) oldGrid.destroy();
 
-        const bgGrid = new Konva.Shape({
-            x: -gridWidth / 2, y: -gridHeight / 2,
-            sceneFunc: function(context) {
-                context.beginPath();
-                for (let x = 0; x < gridWidth; x += spacing) {
-                    for (let y = 0; y < gridHeight; y += spacing) {
-                        context.moveTo(x, y); context.arc(x, y, 1, 0, Math.PI * 2);
+            const spacing = 20;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            const grid = new Konva.Shape({
+                name: 'grid',
+                sceneFunc: function(context) {
+                    context.beginPath();
+                    for (let x = 0; x < width; x += spacing) {
+                        for (let y = 0; y < height; y += spacing) {
+                            context.moveTo(x, y); context.arc(x, y, 1, 0, Math.PI * 2);
+                        }
                     }
-                }
-                context.fillStyle = 'rgba(255,255,255,0.1)';
-                context.fill();
-            }, listening: false
-        });
-        bgLayer.add(bgGrid);
+                    context.fillStyle = 'rgba(255,255,255,0.1)';
+                    context.fill();
+                },
+                listening: false
+            });
+            // Добавляем сетку в самый низ (под всеми объектами)
+            grid.moveToBottom();
+            layer.add(grid);
+            layer.batchDraw();
+        }
 
-        stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-        stage.scale({ x: 1, y: 1 });
+        // Рисуем сетку при старте
+        drawGrid();
 
         let currentTool = 'pen';
         let currentShapeType = 'rect';
@@ -162,11 +168,8 @@
         let currentShape = null;
         let startX, startY;
         let activeTextInput = null;
-
-        // Для Broadcast
         let broadcastChannel = null;
         let teacherCursor = null;
-        let isFirstCursorReceived = false; // Флаг для центрирования
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -204,13 +207,11 @@
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
 
             const pos = stage.getPointerPosition();
-            const localX = (pos.x - stage.x()) / stage.scaleX();
-            const localY = (pos.y - stage.y()) / stage.scaleY();
 
             const textarea = document.createElement('textarea');
             textarea.className = 'text-input-overlay';
             textarea.style.left = `${pos.x}px`; textarea.style.top = `${pos.y}px`;
-            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4 * stage.scaleX()}px`;
+            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4}px`;
             textarea.style.color = colorPicker.value;
             textarea.style.width = '200px'; textarea.style.height = '50px';
             
@@ -222,10 +223,10 @@
                 const text = textarea.value.trim();
                 if (text) {
                     const fontSize = parseInt(strokeWidthSlider.value) * 4;
-                    const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
-                    drawLayer.add(textNode); drawLayer.batchDraw();
-                    saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value });
-                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value } });
+                    const textNode = new Konva.Text({ x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
+                    layer.add(textNode); layer.batchDraw();
+                    saveObjectToDB({ type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value });
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: pos.x, y: pos.y, text: text, fontSize: fontSize, fill: colorPicker.value } });
                 }
                 textarea.remove(); activeTextInput = null;
             };
@@ -238,19 +239,19 @@
 
             isDrawing = true;
             const pos = stage.getPointerPosition();
-            startX = (pos.x - stage.x()) / stage.scaleX();
-            startY = (pos.y - stage.y()) / stage.scaleY();
+            startX = pos.x;
+            startY = pos.y;
 
             const width = parseInt(strokeWidthSlider.value);
             const color = colorPicker.value;
 
             if (currentTool === 'pen') {
                 currentLine = new Konva.Line({ stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'source-over' });
-                drawLayer.add(currentLine);
+                layer.add(currentLine);
             } 
             else if (currentTool === 'eraser') {
                 currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
-                drawLayer.add(currentLine);
+                layer.add(currentLine);
             } 
             else if (currentTool === 'shape') {
                 if (currentShapeType === 'rect') currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
@@ -265,32 +266,30 @@
                     currentShape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: color, strokeWidth: width, fill: color }));
                     currentShape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: color, strokeWidth: width, fill: color }));
                 }
-                drawLayer.add(currentShape);
+                layer.add(currentShape);
             }
-            drawLayer.batchDraw();
+            layer.batchDraw();
         });
 
         stage.on('mousemove touchmove', (e) => {
             if (isStudent) return;
 
             const pos = stage.getPointerPosition();
-            const localX = (pos.x - stage.x()) / stage.scaleX();
-            const localY = (pos.y - stage.y()) / stage.scaleY();
-
-            // Отправляем позицию курсора всем
-            broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: localX, y: localY } });
+            
+            // Отправка курсора
+            broadcastChannel.send({ type: 'broadcast', event: 'cursor', payload: { x: pos.x, y: pos.y } });
 
             if (!isDrawing) return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
 
             if (currentTool === 'pen' || currentTool === 'eraser') {
-                if (currentLine) currentLine.points(currentLine.points().concat([localX, localY]));
+                if (currentLine) currentLine.points(currentLine.points().concat([pos.x, pos.y]));
             } 
             else if (currentTool === 'shape' && currentShape) {
-                const w = localX - startX; const h = localY - startY;
+                const w = pos.x - startX; const h = pos.y - startY;
                 if (currentShapeType === 'rect') {
-                    currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
-                    currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
+                    currentShape.x(w < 0 ? pos.x : startX); currentShape.width(Math.abs(w));
+                    currentShape.y(h < 0 ? pos.y : startY); currentShape.height(Math.abs(h));
                 } else if (currentShapeType === 'circle') {
                     currentShape.radiusX(Math.abs(w)); currentShape.radiusY(Math.abs(h));
                     currentShape.x(startX + w / 2); currentShape.y(startY + h / 2);
@@ -303,14 +302,13 @@
                     currentShape.scale({ x: scale, y: scale });
                 }
             }
-            drawLayer.batchDraw();
+            layer.batchDraw();
 
-            // Отправляем промежуточное состояние
+            // Отправляем промежуточное состояние (для плавности)
             if (currentLine || currentShape) {
                 const obj = currentLine ? 
                     { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() } :
                     { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
-                
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             }
         });
@@ -332,49 +330,29 @@
             }
 
             currentLine = null; currentShape = null;
-            drawLayer.batchDraw();
+            layer.batchDraw();
         });
 
-        // --- УПРАВЛЕНИЕ ---
-        stage.on('wheel', (e) => {
-            e.evt.preventDefault();
-            if (e.evt.ctrlKey) {
-                const oldScale = stage.scaleX(); const pointer = stage.getPointerPosition();
-                const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
-                let direction = e.evt.deltaY > 0 ? -1 : 1;
-                let newScale = direction > 0 ? oldScale * 1.05 : oldScale / 1.05;
-                newScale = Math.max(0.1, Math.min(newScale, 5));
-                stage.scale({ x: newScale, y: newScale });
-                stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
-            } else {
-                stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
-            }
-            // Отправляем камеру
-            if (!isStudent) broadcastChannel.send({ type: 'broadcast', event: 'camera', payload: { x: stage.x(), y: stage.y(), scale: stage.scaleX() } });
-            saveCameraState();
-        });
-
-        let isPanning = false; let lastPointerPos = null;
-        stage.on('mousedown', (e) => { if (e.evt.button === 2) { isPanning = true; lastPointerPos = stage.getPointerPosition(); } });
-        stage.on('mousemove', (e) => {
-            if (isPanning) {
-                const pos = stage.getPointerPosition();
-                if (lastPointerPos) stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
-                lastPointerPos = pos;
-                if (!isStudent) broadcastChannel.send({ type: 'broadcast', event: 'camera', payload: { x: stage.x(), y: stage.y(), scale: stage.scaleX() } });
-                saveCameraState();
+        // --- ОЧИСТКА ---
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            if (isStudent) return;
+            if (confirm('Очистить доску?')) {
+                // Удаляем все, кроме сетки
+                layer.getChildren().forEach(child => {
+                    if (child.name() !== 'grid') child.destroy();
+                });
+                layer.draw();
+                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
+                broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
         });
-        stage.on('mouseup', () => { isPanning = false; });
-        stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- БАЗА ---
         async function saveObjectToDB(obj) { await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); }
-        async function saveCameraState() { if (isStudent) return; const camState = { type: 'camera', x: stage.x(), y: stage.y(), scale: stage.scaleX() }; await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: camState }]); }
 
         function drawObject(obj) {
             if (obj.type === 'line') {
-                drawLayer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
+                layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
             } else if (obj.type === 'shape') {
                 let shape;
                 if (obj.shapeType === 'rect') shape = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
@@ -389,80 +367,57 @@
                     shape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                     shape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
                 }
-                drawLayer.add(shape);
+                layer.add(shape);
             } else if (obj.type === 'text') {
-                drawLayer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
+                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
             }
-            drawLayer.batchDraw();
+            layer.batchDraw();
         }
 
         async function loadBoard() {
             const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject).order('created_at', { ascending: true });
             if (data) {
-                let lastCamera = null;
-                data.forEach(item => {
-                    if (item.object_data.type === 'camera') lastCamera = item.object_data;
-                    else drawObject(item.object_data);
-                });
-                if (lastCamera) { stage.position({ x: lastCamera.x, y: lastCamera.y }); stage.scale({ x: lastCamera.scale, y: lastCamera.scale }); }
+                data.forEach(item => drawObject(item.object_data));
             }
+            // Возвращаем сетку на самый низ
+            const grid = layer.findOne('.grid');
+            if (grid) grid.moveToBottom();
+            layer.batchDraw();
         }
 
-        // --- BROADCAST REALTIME ---
+        // --- BROADCAST ---
         function setupRealtime() {
-            broadcastChannel = supabaseClient.channel(`board_${subject}`, {
-                config: { broadcast: { self: false } }
-            });
+            broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
 
             broadcastChannel
                 .on('broadcast', { event: 'draw' }, payload => {
-                    if (isStudent) drawObject(payload.payload);
+                    if (isStudent) {
+                        if (payload.payload.type === 'clear') {
+                            layer.getChildren().forEach(child => { if (child.name() !== 'grid') child.destroy(); });
+                            layer.draw();
+                        } else {
+                            drawObject(payload.payload);
+                        }
+                    }
                 })
                 .on('broadcast', { event: 'cursor' }, payload => {
                     if (isStudent) {
                         const pos = payload.payload;
                         if (!teacherCursor) {
                             teacherCursor = new Konva.Circle({ x: pos.x, y: pos.y, radius: 8, fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2, listening: false });
-                            uiLayer.add(teacherCursor);
+                            layer.add(teacherCursor);
+                            const grid = layer.findOne('.grid');
+                            if (grid) grid.moveToBottom();
                         } else {
                             teacherCursor.position({ x: pos.x, y: pos.y });
                         }
-                        uiLayer.batchDraw();
+                        layer.batchDraw();
                     }
                 })
-                .on('broadcast', { event: 'camera' }, payload => {
-                    if (isStudent) {
-                        const cam = payload.payload;
-                        stage.position({ x: cam.x, y: cam.y });
-                        stage.scale({ x: cam.scale, y: cam.scale });
-                        // При получении камеры, если ученик не двигал сам, он "прилипает" к преподавателю
-                        uiLayer.batchDraw();
-                    }
-                })
-                .on('broadcast', { event: 'request_camera' }, () => {
-                    // Преподаватель получает запрос и отправляет текущую камеру
-                    if (!isStudent) {
-                        broadcastChannel.send({ type: 'broadcast', event: 'camera', payload: { x: stage.x(), y: stage.y(), scale: stage.scaleX() } });
-                    }
-                })
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED' && isStudent) {
-                        // Как только ученик подключился, он просит камеру
-                        broadcastChannel.send({ type: 'broadcast', event: 'request_camera' });
-                    }
-                });
+                .subscribe();
         }
 
-        document.getElementById('clearBtn').addEventListener('click', async () => {
-            if (isStudent) return;
-            if (confirm('Очистить доску?')) {
-                drawLayer.destroyChildren(); drawLayer.draw();
-                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
-                broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
-            }
-        });
-
-        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); drawLayer.batchDraw(); bgLayer.batchDraw(); uiLayer.batchDraw(); });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); drawGrid(); });
 
         loadBoard();
         setupRealtime();
