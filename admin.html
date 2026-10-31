@@ -29,6 +29,7 @@
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
         .form-row .form-group { flex: 1; min-width: 200px; }
         .btn-save { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
+        .btn-notebook { display: block; text-align: center; background: var(--accent-purple); color: white; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; }
         .calendar-controls { display: flex; gap: 10px; margin-bottom: 15px; }
         .calendar-controls select { flex: 1; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
@@ -125,6 +126,7 @@
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
                 <button type="submit" class="btn-save">Сохранить</button>
+                <a href="#" id="notebookLink" class="btn-notebook" target="_blank" style="display: none;">📓 Открыть тетрадь ученика</a>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none; background: var(--danger); color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer;">Удалить</button>
             </form>
         </div>
@@ -189,7 +191,6 @@
                     <h3>${sub}</h3>
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
                         <a href="board.html?subject=${sub}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Доска</a>
-                        <a href="notebook.html?subject=${sub}" target="_blank" style="background:var(--accent-purple); color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Тетрадь</a>
                     </div>
                 `;
                 boardsGrid.appendChild(card);
@@ -263,11 +264,17 @@
                 document.getElementById('topics').value = s.topics || '';
                 document.getElementById('iom').value = s.iom || '';
                 document.getElementById('deleteBtn').style.display = 'block';
+                
+                // Настраиваем ссылку на тетрадь
+                const notebookLink = document.getElementById('notebookLink');
+                notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
+                notebookLink.style.display = 'block';
             } else {
                 document.getElementById('id').value = '';
                 document.getElementById('level').value = 3;
                 document.getElementById('levelVal').innerText = '3';
                 document.getElementById('deleteBtn').style.display = 'none';
+                document.getElementById('notebookLink').style.display = 'none';
             }
             renderCalendar(); modal.classList.add('active');
         }
@@ -295,7 +302,6 @@
                 schedule_month: calMonth.value,
                 schedule_year: calYear.value,
                 schedule_days: document.getElementById('schedule-days').value,
-                // Убрали homework
                 tests: document.getElementById('tests').value,
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value

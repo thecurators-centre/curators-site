@@ -171,12 +171,9 @@
                     <a href="board.html?subject=${encodeURIComponent(sub)}&role=student" target="_blank" class="board-btn">
                         Доска: ${sub}
                     </a>
-                    <a href="notebook.html?subject=${encodeURIComponent(sub)}&role=student" target="_blank" class="board-btn notebook-btn">
-                        Тетрадь: ${sub}
-                    </a>
                 `).join('');
             } else {
-                boardsButtons = '<p style="opacity:0.5;">Предметы не указаны, доступ к материалам закрыт.</p>';
+                boardsButtons = '<p style="opacity:0.5;">Предметы не указаны, доступ к доскам закрыт.</p>';
             }
 
             main.innerHTML = `
@@ -192,10 +189,13 @@
                 <div class="info-grid">
                     <div class="info-card" style="grid-column: 1 / -1;">
                         <h3>Мои интерактивные материалы</h3>
-                        <p style="opacity:0.7; margin-bottom: 15px; font-size: 0.9rem;">Нажмите на кнопку, чтобы открыть доску или тетрадь с домашним заданием по предмету.</p>
+                        <p style="opacity:0.7; margin-bottom: 15px; font-size: 0.9rem;">Нажмите на кнопку, чтобы открыть доску по предмету.</p>
                         <div class="boards-container">
                             ${boardsButtons}
                         </div>
+                        <a href="notebook.html?student_id=${s.id}&role=student&name=${encodeURIComponent(s.surname + ' ' + s.name)}" target="_blank" class="board-btn notebook-btn" style="margin-top: 15px; display: inline-block;">
+                            📓 Моя тетрадь
+                        </a>
                     </div>
                 </div>
 
