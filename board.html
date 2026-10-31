@@ -31,12 +31,12 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        /* Меню фигур */
+        /* Меню фигур (исправлено) */
         .shape-menu {
-            display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            display: none; position: absolute; top: 100%; left: 0;
             background: var(--card-bg); border-radius: 10px; padding: 10px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 1002; border: 1px solid rgba(255,255,255,0.1);
-            grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; width: max-content;
+            grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; width: max-content;
         }
         .shape-menu.active { display: grid; }
         .shape-menu button {
@@ -54,7 +54,6 @@
 
         #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; position: relative; }
         
-        /* Стиль для поля ввода текста на доске */
         .text-input-overlay {
             position: absolute; z-index: 1000; background: transparent; border: 1px dashed var(--accent-lime);
             color: white; font-family: 'Inter', sans-serif; outline: none; resize: none; overflow: hidden;
@@ -76,15 +75,16 @@
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         
-        <!-- Кнопка вызова меню фигур -->
-        <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
-        <div class="shape-menu" id="shapeMenu">
-            <button data-shape="rect">⬛ Прямоугольник</button>
-            <button data-shape="circle">⭕ Круг</button>
-            <button data-shape="triangle">🔺 Треугольник</button>
-            <button data-shape="diamond">🔷 Ромб</button>
-            <button data-shape="star">⭐ Звезда</button>
-            <button data-shape="xy">📈 График XY</button>
+        <div style="position: relative;">
+            <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
+            <div class="shape-menu" id="shapeMenu">
+                <button data-shape="rect">⬛ Прямоугольник</button>
+                <button data-shape="circle">⭕ Круг</button>
+                <button data-shape="triangle">🔺 Треугольник</button>
+                <button data-shape="diamond">🔷 Ромб</button>
+                <button data-shape="star">⭐ Звезда</button>
+                <button data-shape="xy">📈 График XY</button>
+            </div>
         </div>
 
         <button class="tool-btn" data-tool="text" title="Текст">📝</button>
@@ -102,6 +102,7 @@
     <div id="container"></div>
 
     <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
+
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
@@ -123,7 +124,6 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // ТОЧЕЧНАЯ СЕТКА
         const bgGrid = new Konva.Shape({
             sceneFunc: function(context) {
                 const spacing = 20; const width = window.innerWidth * 3; const height = window.innerHeight * 3;
@@ -143,7 +143,7 @@
         let currentLine = null;
         let currentShape = null;
         let startX, startY;
-        let activeTextInput = null; // Для нового ввода текста
+        let activeTextInput = null;
         
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -151,7 +151,6 @@
 
         strokeWidthSlider.addEventListener('input', (e) => { strokeVal.innerText = e.target.value; });
 
-        // Выбор инструмента
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (isStudent) return;
@@ -162,37 +161,41 @@
             });
         });
 
-        // Меню фигур
-        document.getElementById('shapeBtn').addEventListener('click', (e) => {
-            if (isStudent) return;
+        // ИСПРАВЛЕННАЯ ЛОГИКА МЕНЮ ФИГУР
+        const shapeBtn = document.getElementById('shapeBtn');
+        const shapeMenu = document.getElementById('shapeMenu');
+        
+        shapeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            document.getElementById('shapeMenu').classList.toggle('active');
+            shapeMenu.classList.toggle('active');
         });
 
-        // Выбор фигуры
+        // Закрываем меню при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!shapeMenu.contains(e.target) && e.target !== shapeBtn) {
+                shapeMenu.classList.remove('active');
+            }
+        });
+
         document.querySelectorAll('#shapeMenu button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 currentShapeType = e.currentTarget.dataset.shape;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                document.getElementById('shapeBtn').classList.add('active');
+                shapeBtn.classList.add('active');
                 currentTool = 'shape';
-                document.getElementById('shapeMenu').classList.remove('active');
+                shapeMenu.classList.remove('active');
             });
         });
 
         // --- ЛОГИКА ТЕКСТА ---
-        // При клике на доску с инструментом "Текст" создаем HTML-поле
         stage.on('click tap', (e) => {
             if (currentTool !== 'text' || isStudent) return;
-            
-            // Убираем старое поле, если оно было
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
 
             const pos = stage.getPointerPosition();
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
-            // Создаем textarea поверх canvas
             const textarea = document.createElement('textarea');
             textarea.className = 'text-input-overlay';
             textarea.style.left = `${pos.x}px`;
@@ -206,7 +209,6 @@
             textarea.focus();
             activeTextInput = textarea;
 
-            // При потере фокуса сохраняем текст
             textarea.onblur = () => {
                 const text = textarea.value.trim();
                 if (text) {
@@ -221,7 +223,7 @@
             };
         });
 
-        // --- РИСОВАНИЕ (Линии и фигуры) ---
+        // --- РИСОВАНИЕ ---
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
@@ -311,7 +313,7 @@
             layer.batchDraw();
         });
 
-        // --- УПРАВЛЕНИЕ (Pan & Zoom) ---
+        // --- УПРАВЛЕНИЕ ---
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             if (e.evt.ctrlKey) {
@@ -341,15 +343,8 @@
         stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- БАЗА ---
-        async function saveObjectToDB(obj) {
-            await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]);
-        }
-
-        async function saveCameraState() {
-            if (isStudent) return;
-            const camState = { type: 'camera', x: stage.x(), y: stage.y(), scale: stage.scaleX() };
-            await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: camState }]);
-        }
+        async function saveObjectToDB(obj) { await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); }
+        async function saveCameraState() { if (isStudent) return; const camState = { type: 'camera', x: stage.x(), y: stage.y(), scale: stage.scaleX() }; await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: camState }]); }
 
         function drawObject(obj) {
             if (obj.type === 'line') {
@@ -383,21 +378,15 @@
                     if (item.object_data.type === 'camera') lastCamera = item.object_data;
                     else drawObject(item.object_data);
                 });
-                if (lastCamera) {
-                    stage.position({ x: lastCamera.x, y: lastCamera.y });
-                    stage.scale({ x: lastCamera.scale, y: lastCamera.scale });
-                }
+                if (lastCamera) { stage.position({ x: lastCamera.x, y: lastCamera.y }); stage.scale({ x: lastCamera.scale, y: lastCamera.scale }); }
             }
         }
 
         supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
             if (payload.new.board_id === subject) {
                 const data = payload.new.object_data;
-                if (data.type === 'camera') {
-                    if (isStudent) { stage.position({ x: data.x, y: data.y }); stage.scale({ x: data.scale, y: data.scale }); }
-                } else {
-                    drawObject(data);
-                }
+                if (data.type === 'camera') { if (isStudent) { stage.position({ x: data.x, y: data.y }); stage.scale({ x: data.scale, y: data.scale }); } }
+                else { drawObject(data); }
             }
         }).subscribe();
 
