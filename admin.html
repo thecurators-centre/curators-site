@@ -13,16 +13,11 @@
         .container { max-width: 1100px; margin: 0 auto; }
         h1 { color: var(--accent-lime); margin-bottom: 20px; }
         .btn { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
-        
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        
-        /* Карточки с мульти-градиентом */
         .card { padding: 20px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
         .card h3 { margin-bottom: 5px; color: white; }
         .card p { color: rgba(255,255,255,0.9); font-size: 0.9rem; }
-
-        /* Модалка */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 1000; overflow-y: auto; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 850px; max-height: 95vh; overflow-y: auto; position: relative; }
@@ -33,17 +28,13 @@
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
         .form-row .form-group { flex: 1; min-width: 200px; }
         .btn-save { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
-        
-        /* Стили для календаря в админке */
         .calendar-controls { display: flex; gap: 10px; margin-bottom: 15px; }
         .calendar-controls select { flex: 1; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
-        
         .cal-day-wrapper { display: flex; flex-direction: column; gap: 3px; }
         .cal-day { padding: 8px 5px; text-align: center; border-radius: 8px; cursor: pointer; user-select: none; border: 1px solid transparent; font-size: 0.9rem; transition: 0.2s; }
         .cal-day:hover { background: rgba(255,255,255,0.1); }
         .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
-        
         .time-input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; background: var(--bg-color); color: white; text-align: center; }
         .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
     </style>
@@ -64,12 +55,10 @@
             <h2 style="margin-bottom: 20px;">Карточка ученика</h2>
             <form id="form">
                 <input type="hidden" id="id">
-                
                 <div class="form-row">
                     <div class="form-group"><label>Логин</label><input type="text" id="login" required></div>
                     <div class="form-group"><label>Пароль</label><input type="text" id="password" required></div>
                 </div>
-                
                 <div class="form-row">
                     <div class="form-group"><label>Фамилия</label><input type="text" id="surname" required></div>
                     <div class="form-group"><label>Имя</label><input type="text" id="name" required></div>
@@ -79,7 +68,6 @@
                     <div class="form-group"><label>Возраст</label><input type="number" id="age"></div>
                     <div class="form-group"><label>Класс</label><input type="text" id="grade"></div>
                 </div>
-
                 <div class="form-group">
                     <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
                     <select id="subjects" multiple size="5">
@@ -93,16 +81,20 @@
                         <option value="Подготовка к школе">Подготовка к школе</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label>Уровень знаний (1-5)</label>
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
                 
+                <!-- НОВЫЕ ПОЛЯ -->
+                <div class="form-row">
+                    <div class="form-group"><label>Стоимость часа (руб.)</label><input type="number" id="hourly_rate" placeholder="Например: 1500"></div>
+                </div>
+                <div class="form-group"><label>Об ученике (заметки преподавателя)</label><textarea id="about_student" placeholder="Скрытая информация..."></textarea></div>
+                
                 <hr style="border-color: #444; margin: 20px 0;">
                 <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
-                <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 10px;">Кликни на день, чтобы отметить его и ввести время урока.</p>
                 
                 <div class="calendar-controls">
                     <select id="cal-month">
@@ -117,23 +109,18 @@
                         <option value="2027">2027</option>
                     </select>
                 </div>
-                
                 <div class="calendar-grid" id="calendar-admin"></div>
                 <input type="hidden" id="schedule-days" value="">
-
                 <hr style="border-color: #444; margin: 20px 0;">
-
                 <div class="form-group"><label>Домашняя работа</label><textarea id="homework"></textarea></div>
                 <div class="form-group"><label>Результаты тестирований</label><textarea id="tests"></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
-                
                 <button type="submit" class="btn-save">Сохранить</button>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none; background: var(--danger); color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer;">Удалить</button>
             </form>
         </div>
     </div>
-
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
@@ -152,8 +139,6 @@
         const calGrid = document.getElementById('calendar-admin');
         const calMonth = document.getElementById('cal-month');
         const calYear = document.getElementById('cal-year');
-        
-        // Теперь храним объект: { 5: '16:00', 12: '18:30' }
         let scheduleData = {};
 
         async function loadStudents() {
@@ -181,13 +166,16 @@
                 
                 if (colors.includes('#f1f5f9') && colors.length === 1) { card.style.color = '#1e293b'; card.style.textShadow = 'none'; }
 
-                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
+                card.innerHTML = `
+                    <h3>${s.surname} ${s.name}</h3>
+                    <p>Предметы: ${subs.join(', ') || 'не заданы'}</p>
+                    <a href="board.html?subject=${subs[0] || 'Общая'}" target="_blank" style="display:inline-block; margin-top:10px; background:var(--accent-lime); color:var(--bg-color); padding:5px 10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:0.8rem;" onclick="event.stopPropagation();">Открыть доску</a>
+                `;
                 card.onclick = () => openModal(s);
                 grid.appendChild(card);
             });
         }
 
-        // --- ЛОГИКА КАЛЕНДАРЯ ---
         function renderCalendar() {
             const month = parseInt(calMonth.value);
             const year = parseInt(calYear.value);
@@ -211,11 +199,9 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'cal-day-wrapper';
-                
                 const dayBtn = document.createElement('div');
                 dayBtn.className = 'cal-day';
                 dayBtn.innerText = day;
-                
                 const timeInput = document.createElement('input');
                 timeInput.type = 'text';
                 timeInput.className = 'time-input';
@@ -223,24 +209,19 @@
                 timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
                 if (scheduleData[day]) timeInput.value = scheduleData[day];
 
-                // Если день уже выбран
-                if (scheduleData[day] !== undefined) {
-                    dayBtn.classList.add('selected');
-                }
+                if (scheduleData[day] !== undefined) dayBtn.classList.add('selected');
 
                 dayBtn.onclick = () => {
                     if (scheduleData[day] !== undefined) {
-                        // Удаляем день
                         delete scheduleData[day];
                         dayBtn.classList.remove('selected');
                         timeInput.style.display = 'none';
                         timeInput.value = '';
                     } else {
-                        // Добавляем день
                         scheduleData[day] = '';
                         dayBtn.classList.add('selected');
                         timeInput.style.display = 'block';
-                        timeInput.focus(); // Сразу ставим курсор для ввода времени
+                        timeInput.focus();
                     }
                     updateScheduleHiddenInput();
                 };
@@ -257,15 +238,11 @@
         }
 
         function updateScheduleHiddenInput() {
-            // Преобразуем объект { 5: '16:00' } в строку "5=16:00, 12=18:30"
-            const str = Object.keys(scheduleData)
-                .map(day => `${day}=${scheduleData[day] || ''}`)
-                .join(',');
+            const str = Object.keys(scheduleData).map(day => `${day}=${scheduleData[day] || ''}`).join(',');
             document.getElementById('schedule-days').value = str;
         }
 
         function parseSchedule(str) {
-            // Преобразуем строку "5=16:00, 12=18:30" обратно в объект
             const obj = {};
             if (!str) return obj;
             str.split(',').forEach(item => {
@@ -293,6 +270,8 @@
                 document.getElementById('grade').value = s.grade || '';
                 document.getElementById('level').value = s.level || 3;
                 document.getElementById('levelVal').innerText = s.level || 3;
+                document.getElementById('hourly_rate').value = s.hourly_rate || '';
+                document.getElementById('about_student').value = s.about_student || '';
                 
                 const subs = (s.subjects || '').split(',').map(x=>x.trim());
                 const select = document.getElementById('subjects');
@@ -303,7 +282,6 @@
                 if (s.schedule_month) calMonth.value = s.schedule_month;
                 if (s.schedule_year) calYear.value = s.schedule_year;
                 
-                // Парсим расписание
                 scheduleData = parseSchedule(s.schedule_days);
                 updateScheduleHiddenInput();
 
@@ -343,6 +321,8 @@
                 grade: document.getElementById('grade').value,
                 subjects: selectedSubjects,
                 level: parseInt(document.getElementById('level').value),
+                hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
+                about_student: document.getElementById('about_student').value,
                 schedule_month: calMonth.value,
                 schedule_year: calYear.value,
                 schedule_days: document.getElementById('schedule-days').value,
