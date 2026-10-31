@@ -68,3 +68,65 @@ header {
 .cal-day.selected { background: var(--accent-lime); color: var(--bg-color); font-weight: bold; }
 .time-input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; background: var(--bg-color); color: white; text-align: center; }
 .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; }
+
+/* --- МОБИЛЬНАЯ ШАПКА В ТРИ РЯДА --- */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding-top: calc(10px + env(safe-area-inset-top)) !important;
+        padding-bottom: 10px;
+    }
+
+    /* Ряд 1: Имя пользователя */
+    .header-right {
+        order: 1;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    #user-info {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent-lime);
+    }
+
+    /* Ряд 2: Кнопки Мессенджер и Выйти */
+    .header-right a {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        margin-left: 5px;
+    }
+    .header-right a[href="chat.html"] {
+        border-color: var(--accent-lime);
+        margin-right: auto; /* Прижимаем мессенджер влево */
+    }
+
+    /* Ряд 3: Вкладки (Ученики, Доски, Учителя) */
+    .header-tabs {
+        order: 2;
+        width: 100%;
+        justify-content: space-between;
+        background: var(--card-bg);
+        padding: 10px;
+        border-radius: 12px;
+        gap: 5px;
+    }
+    .header-tabs h1 {
+        font-size: 0.95rem;
+        flex: 1;
+        text-align: center;
+        padding: 8px 5px;
+        border-radius: 8px;
+        margin: 0;
+    }
+    .header-tabs h1.active {
+        background: var(--accent-lime);
+        color: var(--bg-color);
+        border-bottom: none;
+    }
+}
