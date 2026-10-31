@@ -21,6 +21,7 @@
         .tool-btn {
             background: none; border: none; color: var(--text-main); cursor: pointer;
             padding: 8px 12px; border-radius: 10px; font-size: 1.2rem; transition: 0.2s;
+            position: relative;
         }
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-lime); color: var(--bg-color); }
@@ -29,6 +30,21 @@
         .slider-container { display: flex; align-items: center; gap: 8px; }
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
+
+        /* Выпадающее меню фигур */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none; position: absolute; top: 100%; left: 0;
+            background: var(--card-bg); min-width: 160px; border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 1001; border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 5px;
+        }
+        .dropdown-content button {
+            background: none; border: none; color: white; padding: 10px 15px;
+            text-align: left; width: 100%; cursor: pointer; font-size: 1rem;
+        }
+        .dropdown-content button:hover { background: rgba(255,255,255,0.1); }
+        .dropdown:hover .dropdown-content { display: block; }
 
         .board-title {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
@@ -53,15 +69,31 @@
     <div class="toolbar" id="toolbar">
         <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
-        <button class="tool-btn" data-tool="rect" title="Прямоугольник">⬛</button>
-        <button class="tool-btn" data-tool="circle" title="Окружность">⭕</button>
+        
+        <!-- Выпадающее меню фигур -->
+        <div class="dropdown">
+            <button class="tool-btn" data-tool="shape" title="Фигуры" id="shapeBtn">⬛</button>
+            <div class="dropdown-content" id="shapeMenu">
+                <button data-shape="rect">⬛ Прямоугольник</button>
+                <button data-shape="circle">⭕ Круг</button>
+                <button data-shape="triangle">🔺 Треугольник</button>
+                <button data-shape="diamond">🔷 Ромб</button>
+                <button data-shape="star">⭐ Звезда</button>
+                <button data-shape="xy">📈 График XY</button>
+            </div>
+        </div>
+
         <button class="tool-btn" data-tool="text" title="Текст">📝</button>
+        
         <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
+        
+        <!-- Ползунок для толщины линии и размера текста -->
         <div class="slider-container">
             <span style="font-size: 1rem;">🔹</span>
-            <input type="range" id="strokeWidth" min="1" max="50" value="4">
+            <input type="range" id="strokeWidth" min="1" max="100" value="4">
             <span class="slider-label" id="strokeVal">4</span>
         </div>
+
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
@@ -95,10 +127,32 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
+        // --- ФОН (ТОЧЕЧНАЯ СЕТКА) ---
+        const bgGrid = new Konva.Shape({
+            sceneFunc: function(context) {
+                const spacing = 20;
+                const width = window.innerWidth * 3;
+                const height = window.innerHeight * 3;
+                context.beginPath();
+                for (let x = 0; x < width; x += spacing) {
+                    for (let y = 0; y < height; y += spacing) {
+                        context.moveTo(x, y);
+                        context.arc(x, y, 1, 0, Math.PI * 2);
+                    }
+                }
+                context.fillStyle = 'rgba(255,255,255,0.05)';
+                context.fill();
+            },
+            listening: false
+        });
+        layer.add(bgGrid);
+
+        // Центрируем доску
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
 
         let currentTool = 'pen';
+        let currentShapeType = 'rect';
         let isDrawing = false;
         let currentLine = null;
         let currentShape = null;
@@ -110,12 +164,23 @@
 
         strokeWidthSlider.addEventListener('input', (e) => { strokeVal.innerText = e.target.value; });
 
+        // Выбор инструмента
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentTool = e.target.dataset.tool;
+            });
+        });
+
+        // Выбор фигуры из выпадающего меню
+        document.querySelectorAll('#shapeMenu button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentShapeType = e.target.dataset.shape;
+                document.getElementById('shapeBtn').classList.add('active');
+                currentTool = 'shape';
+                document.getElementById('shapeMenu').style.display = 'none';
             });
         });
 
@@ -140,20 +205,42 @@
                 currentLine = new Konva.Line({ stroke: '#000', strokeWidth: width * 2, lineCap: 'round', lineJoin: 'round', points: [startX, startY], globalCompositeOperation: 'destination-out' });
                 layer.add(currentLine);
             } 
-            else if (currentTool === 'rect') {
-                currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
-                layer.add(currentShape);
-            }
-            else if (currentTool === 'circle') {
-                currentShape = new Konva.Ellipse({ x: startX, y: startY, radiusX: 0, radiusY: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+            else if (currentTool === 'shape') {
+                // Создаем фигуру
+                if (currentShapeType === 'rect') {
+                    currentShape = new Konva.Rect({ x: startX, y: startY, width: 0, height: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                } else if (currentShapeType === 'circle') {
+                    currentShape = new Konva.Ellipse({ x: startX, y: startY, radiusX: 0, radiusY: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                } else if (currentShapeType === 'triangle') {
+                    currentShape = new Konva.RegularPolygon({ x: startX, y: startY, sides: 3, radius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                } else if (currentShapeType === 'diamond') {
+                    currentShape = new Konva.RegularPolygon({ x: startX, y: startY, sides: 4, radius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                } else if (currentShapeType === 'star') {
+                    currentShape = new Konva.Star({ x: startX, y: startY, numPoints: 5, innerRadius: 0, outerRadius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
+                } else if (currentShapeType === 'xy') {
+                    // График XY (оси)
+                    currentShape = new Konva.Group({ x: startX, y: startY });
+                    const axisX = new Konva.Line({ points: [0, 0, 100, 0], stroke: color, strokeWidth: width });
+                    const axisY = new Konva.Line({ points: [0, 0, 0, -100], stroke: color, strokeWidth: width });
+                    const arrowX = new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: color, strokeWidth: width, fill: color });
+                    const arrowY = new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: color, strokeWidth: width, fill: color });
+                    currentShape.add(axisX, axisY, arrowX, arrowY);
+                }
                 layer.add(currentShape);
             }
             else if (currentTool === 'text') {
-                const text = prompt('Введите текст:');
-                if (text) {
-                    const textNode = new Konva.Text({ x: startX, y: startY, text: text, fontSize: width * 4, fill: color, fontFamily: 'Inter' });
-                    layer.add(textNode);
-                    saveObjectToDB({ type: 'text', x: startX, y: startY, text: text, fontSize: width * 4, fill: color });
+                const textNode = new Konva.Text({
+                    x: startX, y: startY, text: 'Введите текст...', fontSize: width * 4, fill: color, fontFamily: 'Inter', draggable: !isStudent,
+                    id: 'text-' + Date.now()
+                });
+                layer.add(textNode);
+                // Открываем окно ввода
+                const newText = prompt('Введите текст:', '');
+                if (newText) {
+                    textNode.text(newText);
+                    saveObjectToDB({ type: 'text', x: startX, y: startY, text: newText, fontSize: width * 4, fill: color });
+                } else {
+                    textNode.destroy(); // Если отменили, удаляем
                 }
                 isDrawing = false;
             }
@@ -171,15 +258,27 @@
             if (currentTool === 'pen' || currentTool === 'eraser') {
                 if (currentLine) currentLine.points(currentLine.points().concat([localX, localY]));
             } 
-            else if (currentTool === 'rect' && currentShape) {
+            else if (currentTool === 'shape' && currentShape) {
                 const w = localX - startX; const h = localY - startY;
-                currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
-                currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
-            }
-            else if (currentTool === 'circle' && currentShape) {
-                const rX = Math.abs(localX - startX); const rY = Math.abs(localY - startY);
-                currentShape.radiusX(rX); currentShape.radiusY(rY);
-                currentShape.x(startX + (localX - startX) / 2); currentShape.y(startY + (localY - startY) / 2);
+                if (currentShapeType === 'rect') {
+                    currentShape.x(w < 0 ? localX : startX); currentShape.width(Math.abs(w));
+                    currentShape.y(h < 0 ? localY : startY); currentShape.height(Math.abs(h));
+                } else if (currentShapeType === 'circle') {
+                    const rX = Math.abs(w); const rY = Math.abs(h);
+                    currentShape.radiusX(rX); currentShape.radiusY(rY);
+                    currentShape.x(startX + w / 2); currentShape.y(startY + h / 2);
+                } else if (['triangle', 'diamond', 'star'].includes(currentShapeType)) {
+                    const dist = Math.sqrt(w*w + h*h);
+                    if (currentShapeType === 'star') {
+                        currentShape.outerRadius(dist); currentShape.innerRadius(dist * 0.4);
+                    } else {
+                        currentShape.radius(dist);
+                    }
+                } else if (currentShapeType === 'xy') {
+                    // Масштабируем оси
+                    const scale = Math.sqrt(w*w + h*h) / 100;
+                    currentShape.scale({ x: scale, y: scale });
+                }
             }
             layer.batchDraw();
         });
@@ -191,62 +290,54 @@
             if (currentLine) {
                 saveObjectToDB({ type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() });
             } else if (currentShape) {
-                saveObjectToDB({ type: currentTool, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : currentShape.radiusX() * 2, height: currentShape.height ? currentShape.height() : currentShape.radiusY() * 2, radiusX: currentShape.radiusX ? currentShape.radiusX() : null, radiusY: currentShape.radiusY ? currentShape.radiusY() : null, stroke: currentShape.stroke(), strokeWidth: currentShape.strokeWidth() });
+                saveObjectToDB({
+                    type: 'shape',
+                    shapeType: currentShapeType,
+                    x: currentShape.x(), y: currentShape.y(),
+                    width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0),
+                    height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0),
+                    radius: currentShape.radius ? currentShape.radius() : null,
+                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null,
+                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null,
+                    scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(),
+                    stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null),
+                    strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null)
+                });
             }
             currentLine = null; currentShape = null;
             layer.batchDraw();
         });
 
         // --- УПРАВЛЕНИЕ ---
-        // На Mac: 
-        // - Два пальца (wheel без ctrl) -> перемещение (сдвиг сцены)
-        // - Щипок (wheel с ctrl) -> зум
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
-            
             if (e.evt.ctrlKey) {
-                // ЗУМ
                 const oldScale = stage.scaleX();
                 const pointer = stage.getPointerPosition();
                 const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
-                
                 let direction = e.evt.deltaY > 0 ? -1 : 1;
-                const scaleBy = 1.05;
-                let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+                let newScale = direction > 0 ? oldScale * 1.05 : oldScale / 1.05;
                 newScale = Math.max(0.1, Math.min(newScale, 5));
-
                 stage.scale({ x: newScale, y: newScale });
                 stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
             } else {
-                // ПЕРЕМЕЩЕНИЕ (два пальца)
-                stage.position({
-                    x: stage.x() - e.evt.deltaX,
-                    y: stage.y() - e.evt.deltaY
-                });
+                stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
             }
         });
 
-        // Для мыши (правая кнопка = перетаскивание)
         let isPanning = false;
         let lastPointerPos = null;
-
         stage.on('mousedown', (e) => {
-            if (e.evt.button === 2) {
-                isPanning = true;
-                lastPointerPos = stage.getPointerPosition();
-            }
+            if (e.evt.button === 2) { isPanning = true; lastPointerPos = stage.getPointerPosition(); }
         });
         stage.on('mousemove', (e) => {
             if (isPanning) {
                 const pos = stage.getPointerPosition();
-                if (lastPointerPos) {
-                    stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
-                }
+                if (lastPointerPos) stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
                 lastPointerPos = pos;
             }
         });
         stage.on('mouseup', () => { isPanning = false; });
-
         stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- БАЗА ---
@@ -257,12 +348,23 @@
         function drawObject(obj) {
             if (obj.type === 'line') {
                 layer.add(new Konva.Line({ points: obj.points, stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: obj.globalCompositeOperation }));
-            } else if (obj.type === 'rect') {
-                layer.add(new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
-            } else if (obj.type === 'circle') {
-                layer.add(new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.radiusX, radiusY: obj.radiusY, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' }));
+            } else if (obj.type === 'shape') {
+                let shape;
+                if (obj.shapeType === 'rect') shape = new Konva.Rect({ x: obj.x, y: obj.y, width: obj.width, height: obj.height, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'circle') shape = new Konva.Ellipse({ x: obj.x, y: obj.y, radiusX: obj.width/2, radiusY: obj.height/2, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'triangle') shape = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 3, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'diamond') shape = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 4, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'star') shape = new Konva.Star({ x: obj.x, y: obj.y, numPoints: 5, innerRadius: obj.innerRadius, outerRadius: obj.outerRadius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
+                else if (obj.shapeType === 'xy') {
+                    shape = new Konva.Group({ x: obj.x, y: obj.y, scaleX: obj.scaleX, scaleY: obj.scaleY });
+                    shape.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    shape.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    shape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                    shape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                }
+                layer.add(shape);
             } else if (obj.type === 'text') {
-                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter' }));
+                layer.add(new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent }));
             }
             layer.batchDraw();
         }
@@ -279,7 +381,9 @@
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
-                layer.destroyChildren(); layer.draw();
+                layer.destroyChildren(); 
+                layer.add(bgGrid); // Возвращаем сетку
+                layer.draw();
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
             }
         });
