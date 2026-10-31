@@ -36,7 +36,7 @@
             font-size: 1.2rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: default; }
+        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; }
         
         .exit-btn {
             position: absolute; bottom: 20px; right: 20px; background: var(--card-bg);
@@ -86,7 +86,6 @@
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ KONVA ---
         const stage = new Konva.Stage({
             container: 'container',
             width: window.innerWidth,
@@ -96,15 +95,9 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // --- ОБЩАЯ ТОЧКА ОТСЧЕТА (ЦЕНТРИРОВАНИЕ) ---
-        // Центрируем сцену так, чтобы координата (0,0) была ровно посередине экрана
-        // Это гарантирует, что учитель и ученик видят одно и то же место.
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        stage.position({ x: centerX, y: centerY });
+        stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
 
-        // Переменные
         let currentTool = 'pen';
         let isDrawing = false;
         let currentLine = null;
@@ -119,6 +112,7 @@
 
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentTool = e.target.dataset.tool;
@@ -128,10 +122,10 @@
         // --- РИСОВАНИЕ ---
         stage.on('mousedown touchstart', (e) => {
             if (isStudent) return;
+            if (e.evt.touches && e.evt.touches.length > 1) return;
+
             isDrawing = true;
             const pos = stage.getPointerPosition();
-            
-            // Переводим экранные координаты в мировые (с учетом сдвига и зума)
             startX = (pos.x - stage.x()) / stage.scaleX();
             startY = (pos.y - stage.y()) / stage.scaleY();
 
@@ -168,8 +162,9 @@
 
         stage.on('mousemove touchmove', (e) => {
             if (!isDrawing || isStudent) return;
+            if (e.evt.touches && e.evt.touches.length > 1) return;
+
             const pos = stage.getPointerPosition();
-            
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
@@ -194,75 +189,67 @@
             isDrawing = false;
             
             if (currentLine) {
-                saveObjectToDB({
-                    type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation()
-                });
+                saveObjectToDB({ type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() });
             } else if (currentShape) {
-                saveObjectToDB({
-                    type: currentTool, x: currentShape.x(), y: currentShape.y(),
-                    width: currentShape.width ? currentShape.width() : currentShape.radiusX() * 2,
-                    height: currentShape.height ? currentShape.height() : currentShape.radiusY() * 2,
-                    radiusX: currentShape.radiusX ? currentShape.radiusX() : null,
-                    radiusY: currentShape.radiusY ? currentShape.radiusY() : null,
-                    stroke: currentShape.stroke(), strokeWidth: currentShape.strokeWidth()
-                });
+                saveObjectToDB({ type: currentTool, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : currentShape.radiusX() * 2, height: currentShape.height ? currentShape.height() : currentShape.radiusY() * 2, radiusX: currentShape.radiusX ? currentShape.radiusX() : null, radiusY: currentShape.radiusY ? currentShape.radiusY() : null, stroke: currentShape.stroke(), strokeWidth: currentShape.strokeWidth() });
             }
             currentLine = null; currentShape = null;
             layer.batchDraw();
         });
 
-        // --- УПРАВЛЕНИЕ КАК В HOLST / FIGMA ---
-        
-        // Зум колесиком мыши
+        // --- УПРАВЛЕНИЕ ---
+        // На Mac: 
+        // - Два пальца (wheel без ctrl) -> перемещение (сдвиг сцены)
+        // - Щипок (wheel с ctrl) -> зум
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
-            const oldScale = stage.scaleX();
-            const pointer = stage.getPointerPosition();
-            const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
             
-            let direction = e.evt.deltaY > 0 ? -1 : 1;
-            const scaleBy = 1.05;
-            let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-            
-            // Ограничиваем зум (чтобы не было слишком сильно)
-            newScale = Math.max(0.1, Math.min(newScale, 5));
+            if (e.evt.ctrlKey) {
+                // ЗУМ
+                const oldScale = stage.scaleX();
+                const pointer = stage.getPointerPosition();
+                const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+                
+                let direction = e.evt.deltaY > 0 ? -1 : 1;
+                const scaleBy = 1.05;
+                let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+                newScale = Math.max(0.1, Math.min(newScale, 5));
 
-            stage.scale({ x: newScale, y: newScale });
-            stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+                stage.scale({ x: newScale, y: newScale });
+                stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+            } else {
+                // ПЕРЕМЕЩЕНИЕ (два пальца)
+                stage.position({
+                    x: stage.x() - e.evt.deltaX,
+                    y: stage.y() - e.evt.deltaY
+                });
+            }
         });
 
-        // Панорамирование (перемещение) двумя пальцами (или правой кнопкой мыши)
+        // Для мыши (правая кнопка = перетаскивание)
         let isPanning = false;
         let lastPointerPos = null;
 
-        stage.on('mousedown touchstart', (e) => {
-            // Если нажата правая кнопка мыши или это touch-событие с двумя пальцами
-            if (e.evt.button === 2 || (e.evt.touches && e.evt.touches.length === 2)) {
+        stage.on('mousedown', (e) => {
+            if (e.evt.button === 2) {
                 isPanning = true;
                 lastPointerPos = stage.getPointerPosition();
             }
         });
-
-        stage.on('mousemove touchmove', (e) => {
+        stage.on('mousemove', (e) => {
             if (isPanning) {
                 const pos = stage.getPointerPosition();
                 if (lastPointerPos) {
                     stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
                 }
                 lastPointerPos = pos;
-                return;
             }
         });
+        stage.on('mouseup', () => { isPanning = false; });
 
-        stage.on('mouseup touchend', () => {
-            isPanning = false;
-            lastPointerPos = null;
-        });
-
-        // Запрет контекстного меню
         stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // --- РАБОТА С БАЗОЙ ---
+        // --- БАЗА ---
         async function saveObjectToDB(obj) {
             await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]);
         }
@@ -286,9 +273,7 @@
         }
 
         supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
-            if (payload.new.board_id === subject) {
-                drawObject(payload.new.object_data);
-            }
+            if (payload.new.board_id === subject) drawObject(payload.new.object_data);
         }).subscribe();
 
         document.getElementById('clearBtn').addEventListener('click', async () => {
