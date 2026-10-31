@@ -36,15 +36,8 @@
             font-size: 1.2rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #container { width: 100vw; height: 100vh; background-color: #1a1c29; }
+        #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: default; }
         
-        /* Курсоры для разных инструментов */
-        #container.tool-pen { cursor: crosshair; }
-        #container.tool-eraser { cursor: cell; }
-        #container.tool-hand { cursor: grab; }
-        #container.tool-hand:active { cursor: grabbing; }
-        #container.tool-text { cursor: text; }
-
         .exit-btn {
             position: absolute; bottom: 20px; right: 20px; background: var(--card-bg);
             color: var(--text-main); padding: 10px 20px; border-radius: 10px; text-decoration: none;
@@ -58,30 +51,25 @@
     <div class="board-title" id="boardTitle">Загрузка...</div>
 
     <div class="toolbar" id="toolbar">
-        <button class="tool-btn active" data-tool="hand" title="Перемещение">🖐️</button>
-        <button class="tool-btn" data-tool="pen" title="Карандаш">✏️</button>
+        <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
         <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
         <button class="tool-btn" data-tool="rect" title="Прямоугольник">⬛</button>
         <button class="tool-btn" data-tool="circle" title="Окружность">⭕</button>
         <button class="tool-btn" data-tool="text" title="Текст">📝</button>
-        
         <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
-        
         <div class="slider-container">
             <span style="font-size: 1rem;">🔹</span>
             <input type="range" id="strokeWidth" min="1" max="50" value="4">
             <span class="slider-label" id="strokeVal">4</span>
         </div>
-
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
-    <div id="container" class="tool-hand"></div>
+    <div id="container"></div>
 
     <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
 
     <script>
-        // --- НАСТРОЙКИ БАЗЫ ---
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -99,7 +87,6 @@
         }
 
         // --- ИНИЦИАЛИЗАЦИЯ KONVA ---
-        // Создаем огромную сцену (10000x10000), чтобы было куда рисовать
         const stage = new Konva.Stage({
             container: 'container',
             width: window.innerWidth,
@@ -109,13 +96,16 @@
         const layer = new Konva.Layer();
         stage.add(layer);
 
-        // Начальное положение: центрируем огромную доску на экране
-        const centerX = 5000; 
-        const centerY = 5000;
-        stage.position({ x: window.innerWidth / 2 - centerX, y: window.innerHeight / 2 - centerY });
+        // --- ОБЩАЯ ТОЧКА ОТСЧЕТА (ЦЕНТРИРОВАНИЕ) ---
+        // Центрируем сцену так, чтобы координата (0,0) была ровно посередине экрана
+        // Это гарантирует, что учитель и ученик видят одно и то же место.
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        stage.position({ x: centerX, y: centerY });
+        stage.scale({ x: 1, y: 1 });
 
         // Переменные
-        let currentTool = 'hand';
+        let currentTool = 'pen';
         let isDrawing = false;
         let currentLine = null;
         let currentShape = null;
@@ -124,43 +114,24 @@
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
         const strokeVal = document.getElementById('strokeVal');
-        const container = document.getElementById('container');
-
-        // Меняем курсор при смене инструмента
-        function updateCursor() {
-            container.className = `tool-${currentTool}`;
-            // Для ученика всегда "рука", так как он не рисует
-            if (isStudent) container.className = 'tool-hand';
-        }
 
         strokeWidthSlider.addEventListener('input', (e) => { strokeVal.innerText = e.target.value; });
 
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentTool = e.target.dataset.tool;
-                updateCursor();
             });
         });
 
-        // --- ЛОГИКА ПЕРЕМЕЩЕНИЯ (ПАНОРАМИРОВАНИЕ) ---
-        let isPanning = false;
-        let lastPointerPos = null;
-
+        // --- РИСОВАНИЕ ---
         stage.on('mousedown touchstart', (e) => {
-            // Если выбран инструмент "Рука" ИЛИ это ученик - включаем перемещение
-            if (currentTool === 'hand' || isStudent) {
-                isPanning = true;
-                lastPointerPos = stage.getPointerPosition();
-                return; 
-            }
-            
-            // --- РИСОВАНИЕ (только для препода) ---
+            if (isStudent) return;
             isDrawing = true;
             const pos = stage.getPointerPosition();
-            // Координаты с учетом смещения (чтобы рисовать там, куда кликнули)
+            
+            // Переводим экранные координаты в мировые (с учетом сдвига и зума)
             startX = (pos.x - stage.x()) / stage.scaleX();
             startY = (pos.y - stage.y()) / stage.scaleY();
 
@@ -196,20 +167,9 @@
         });
 
         stage.on('mousemove touchmove', (e) => {
-            const pos = stage.getPointerPosition();
-
-            // Если перемещаемся
-            if (isPanning) {
-                const dx = pos.x - lastPointerPos.x;
-                const dy = pos.y - lastPointerPos.y;
-                stage.position({ x: stage.x() + dx, y: stage.y() + dy });
-                lastPointerPos = pos;
-                return;
-            }
-
-            // Если рисуем
             if (!isDrawing || isStudent) return;
-
+            const pos = stage.getPointerPosition();
+            
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
@@ -230,14 +190,9 @@
         });
 
         stage.on('mouseup touchend', () => {
-            if (isPanning) {
-                isPanning = false;
-                return;
-            }
             if (!isDrawing || isStudent) return;
             isDrawing = false;
             
-            // Сохранение
             if (currentLine) {
                 saveObjectToDB({
                     type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation()
@@ -256,17 +211,56 @@
             layer.batchDraw();
         });
 
-        // --- ЗУМ (Масштабирование) ---
+        // --- УПРАВЛЕНИЕ КАК В HOLST / FIGMA ---
+        
+        // Зум колесиком мыши
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
             const oldScale = stage.scaleX();
             const pointer = stage.getPointerPosition();
             const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+            
             let direction = e.evt.deltaY > 0 ? -1 : 1;
-            const newScale = direction > 0 ? oldScale * 1.1 : oldScale / 1.1;
+            const scaleBy = 1.05;
+            let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+            
+            // Ограничиваем зум (чтобы не было слишком сильно)
+            newScale = Math.max(0.1, Math.min(newScale, 5));
+
             stage.scale({ x: newScale, y: newScale });
             stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
         });
+
+        // Панорамирование (перемещение) двумя пальцами (или правой кнопкой мыши)
+        let isPanning = false;
+        let lastPointerPos = null;
+
+        stage.on('mousedown touchstart', (e) => {
+            // Если нажата правая кнопка мыши или это touch-событие с двумя пальцами
+            if (e.evt.button === 2 || (e.evt.touches && e.evt.touches.length === 2)) {
+                isPanning = true;
+                lastPointerPos = stage.getPointerPosition();
+            }
+        });
+
+        stage.on('mousemove touchmove', (e) => {
+            if (isPanning) {
+                const pos = stage.getPointerPosition();
+                if (lastPointerPos) {
+                    stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
+                }
+                lastPointerPos = pos;
+                return;
+            }
+        });
+
+        stage.on('mouseup touchend', () => {
+            isPanning = false;
+            lastPointerPos = null;
+        });
+
+        // Запрет контекстного меню
+        stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- РАБОТА С БАЗОЙ ---
         async function saveObjectToDB(obj) {
@@ -291,7 +285,6 @@
             if (data) data.forEach(item => drawObject(item.object_data));
         }
 
-        // Синхронизация
         supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
             if (payload.new.board_id === subject) {
                 drawObject(payload.new.object_data);
