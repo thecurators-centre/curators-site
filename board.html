@@ -31,7 +31,6 @@
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
         .slider-label { font-size: 0.8rem; opacity: 0.7; width: 20px; text-align: center; }
 
-        /* Меню фигур */
         .shape-menu {
             display: none; position: absolute; top: 100%; left: 0;
             background: var(--card-bg); border-radius: 10px; padding: 10px;
@@ -121,48 +120,35 @@
         }
 
         const stage = new Konva.Stage({ container: 'container', width: window.innerWidth, height: window.innerHeight });
-        const bgLayer = new Konva.Layer({ listening: false });
         const layer = new Konva.Layer();
-        stage.add(bgLayer);
         stage.add(layer);
 
-        // --- СЕТКА С БЕСКОНЕЧНОЙ ПРОКРУТКОЙ ---
-        let gridShape = null;
+        // --- СЕТКА (В ТОМ ЖЕ СЛОЕ, ЧТО И РИСУНКИ) ---
+        const spacing = 20;
+        const gridWidth = 5000;  // Достаточно большой размер, чтобы покрыть экран с запасом
+        const gridHeight = 5000;
 
-        function drawGrid() {
-            if (gridShape) gridShape.destroy();
-            
-            const spacing = 20;
-            const width = window.innerWidth + spacing * 2;
-            const height = window.innerHeight + spacing * 2;
-            
-            // Вычисляем смещение, чтобы сетка "следовала" за камерой
-            const offsetX = stage.x() % spacing;
-            const offsetY = stage.y() % spacing;
-
-            gridShape = new Konva.Shape({
-                x: offsetX,
-                y: offsetY,
-                sceneFunc: function(context) {
-                    context.beginPath();
-                    for (let x = -spacing; x < width; x += spacing) {
-                        for (let y = -spacing; y < height; y += spacing) {
-                            context.moveTo(x, y);
-                            context.arc(x, y, 1, 0, Math.PI * 2);
-                        }
+        const bgGrid = new Konva.Shape({
+            x: -gridWidth / 2,
+            y: -gridHeight / 2,
+            sceneFunc: function(context) {
+                context.beginPath();
+                for (let x = 0; x < gridWidth; x += spacing) {
+                    for (let y = 0; y < gridHeight; y += spacing) {
+                        context.moveTo(x, y);
+                        context.arc(x, y, 1, 0, Math.PI * 2);
                     }
-                    context.fillStyle = 'rgba(255,255,255,0.1)';
-                    context.fill();
                 }
-            });
-            
-            bgLayer.add(gridShape);
-            bgLayer.batchDraw();
-        }
+                context.fillStyle = 'rgba(255,255,255,0.1)';
+                context.fill();
+            },
+            listening: false
+        });
+        layer.add(bgGrid);
 
+        // Центрируем доску
         stage.position({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         stage.scale({ x: 1, y: 1 });
-        drawGrid();
 
         let currentTool = 'pen';
         let currentShapeType = 'rect';
@@ -188,7 +174,7 @@
             });
         });
 
-        // ИСПРАВЛЕННАЯ ЛОГИКА МЕНЮ ФИГУР (через onclick и stopPropagation)
+        // МЕНЮ ФИГУР
         const shapeBtn = document.getElementById('shapeBtn');
         const shapeMenu = document.getElementById('shapeMenu');
         
@@ -197,15 +183,11 @@
             shapeMenu.classList.toggle('active');
         };
 
-        // Закрываем меню при клике в любом другом месте
         document.addEventListener('click', () => {
             shapeMenu.classList.remove('active');
         });
 
-        // Предотвращаем закрытие меню при клике внутри него
-        shapeMenu.onclick = (e) => {
-            e.stopPropagation();
-        };
+        shapeMenu.onclick = (e) => { e.stopPropagation(); };
 
         document.querySelectorAll('#shapeMenu button').forEach(btn => {
             btn.onclick = (e) => {
@@ -357,7 +339,6 @@
             } else {
                 stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
             }
-            drawGrid(); // Перерисовываем сетку
             saveCameraState();
         });
 
@@ -367,9 +348,7 @@
             if (isPanning) {
                 const pos = stage.getPointerPosition();
                 if (lastPointerPos) stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
-                lastPointerPos = pos; 
-                drawGrid(); // Перерисовываем сетку
-                saveCameraState();
+                lastPointerPos = pos; saveCameraState();
             }
         });
         stage.on('mouseup', () => { isPanning = false; });
@@ -411,14 +390,14 @@
                     if (item.object_data.type === 'camera') lastCamera = item.object_data;
                     else drawObject(item.object_data);
                 });
-                if (lastCamera) { stage.position({ x: lastCamera.x, y: lastCamera.y }); stage.scale({ x: lastCamera.scale, y: lastCamera.scale }); drawGrid(); }
+                if (lastCamera) { stage.position({ x: lastCamera.x, y: lastCamera.y }); stage.scale({ x: lastCamera.scale, y: lastCamera.scale }); }
             }
         }
 
         supabaseClient.channel('board_realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'board_objects' }, payload => {
             if (payload.new.board_id === subject) {
                 const data = payload.new.object_data;
-                if (data.type === 'camera') { if (isStudent) { stage.position({ x: data.x, y: data.y }); stage.scale({ x: data.scale, y: data.scale }); drawGrid(); } }
+                if (data.type === 'camera') { if (isStudent) { stage.position({ x: data.x, y: data.y }); stage.scale({ x: data.scale, y: data.scale }); } }
                 else { drawObject(data); }
             }
         }).subscribe();
@@ -427,12 +406,13 @@
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
                 layer.destroyChildren(); layer.draw();
-                drawGrid();
+                // Возвращаем сетку обратно
+                layer.add(bgGrid);
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
             }
         });
 
-        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw(); drawGrid(); });
+        window.addEventListener('resize', () => { stage.width(window.innerWidth); stage.height(window.innerHeight); layer.batchDraw(); });
 
         loadBoard();
     </script>
