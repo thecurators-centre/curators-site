@@ -10,8 +10,37 @@
     <style>
         body { padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        h1 { color: var(--accent-lime); margin-bottom: 20px; }
+        
+        /* Шапка */
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px 0; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+        }
+        .header-tabs { display: flex; gap: 20px; }
+        .header-tabs h1 { 
+            cursor: pointer; 
+            color: var(--text-main); 
+            border-bottom: none; 
+            padding-bottom: 5px; 
+            margin: 0; 
+            font-size: 1.5rem;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+        .header-tabs h1.active {
+            color: var(--accent-lime); 
+            border-bottom: 2px solid var(--accent-lime); 
+            opacity: 1;
+        }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .header-right span { font-size: 0.9rem; opacity: 0.7; }
+        .header-right a { text-decoration: none; }
+        .chat-badge { position: absolute; top: -5px; right: -10px; background: var(--danger); color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid var(--card-bg); display: none; }
+
         .btn { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
         .card { padding: 20px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); color: white; position: relative; overflow: hidden; }
@@ -43,27 +72,31 @@
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div style="display: flex; gap: 20px;">
-                <h1 id="tab-students" style="cursor: pointer; color: var(--accent-lime); border-bottom: 2px solid var(--accent-lime); padding-bottom: 5px;">Ученики</h1>
-                <h1 id="tab-boards" style="cursor: pointer; opacity: 0.5; padding-bottom: 5px;">Доски</h1>
-                <h1 id="tab-teachers" style="cursor: pointer; opacity: 0.5; padding-bottom: 5px; display: none;">Учителя</h1>
+        <header>
+            <div class="header-tabs">
+                <h1 id="tab-students" class="active" onclick="switchTab('students')">Ученики</h1>
+                <h1 id="tab-boards" onclick="switchTab('boards')">Доски</h1>
+                <h1 id="tab-teachers" onclick="switchTab('teachers')" style="display: none;">Учителя</h1>
             </div>
-            <div style="display: flex; gap: 15px; align-items: center;">
-                <span id="user-info" style="font-size: 0.9rem; opacity: 0.7;"></span>
-                <a href="chat.html" style="color: var(--accent-lime); text-decoration: none; font-weight: 600; margin-right: 15px; position: relative;">💬 Мессенджер</a> <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
+            <div class="header-right">
+                <span id="user-info">Загрузка...</span>
+                <a href="chat.html" style="color: var(--accent-lime); font-weight: 600; position: relative; margin-right: 15px;">💬 Мессенджер</a>
+                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: var(--text-main);">Выйти</a>
             </div>
-        </div>
+        </header>
         
+        <!-- Вкладка Ученики -->
         <div id="section-students">
             <button class="btn" id="addBtn">+ Добавить ученика</button>
             <div class="grid" id="grid"><div class="loading">Загрузка...</div></div>
         </div>
 
+        <!-- Вкладка Доски -->
         <div id="section-boards" style="display: none;">
             <div class="grid" id="boards-grid"></div>
         </div>
 
+        <!-- Вкладка Учителя -->
         <div id="section-teachers" style="display: none;">
             <button class="btn" id="addTeacherBtn">+ Добавить учителя</button>
             <div class="grid" id="teachers-grid"><div class="loading">Загрузка...</div></div>
@@ -78,7 +111,7 @@
             <form id="form">
                 <input type="hidden" id="id">
                 <div class="form-row">
-                    <div class="form-group"><label>Логин</label><input type="text" id="login" placeholder="Например: kain" required></div>
+                    <div class="form-group"><label>Логин</label><input type="text" id="login" required></div>
                     <div class="form-group"><label>Пароль (мин. 6 символов)</label><input type="text" id="password" required></div>
                 </div>
                 <div class="form-row">
@@ -109,10 +142,9 @@
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Стоимость часа (руб.)</label><input type="number" id="hourly_rate" placeholder="Например: 1500"></div>
+                    <div class="form-group"><label>Стоимость часа (руб.)</label><input type="number" id="hourly_rate"></div>
                 </div>
-                <div class="form-group"><label>Об ученике (заметки преподавателя)</label><textarea id="about_student" placeholder="Скрытая информация..."></textarea></div>
-                
+                <div class="form-group"><label>Об ученике</label><textarea id="about_student"></textarea></div>
                 <hr style="border-color: #444; margin: 20px 0;">
                 <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
                 <div class="calendar-controls">
@@ -131,7 +163,6 @@
                 <div class="calendar-grid" id="calendar-admin"></div>
                 <input type="hidden" id="schedule-days" value="">
                 <hr style="border-color: #444; margin: 20px 0;">
-                
                 <div class="form-group"><label>Результаты тестирований</label><textarea id="tests"></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
@@ -158,8 +189,8 @@
                     <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password" required></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Ставка (%)</label><input type="number" id="teacher_rate" placeholder="Например: 40"></div>
-                    <div class="form-group"><label>Телефон</label><input type="tel" id="teacher_phone" placeholder="+7 900 000 00 00"></div>
+                    <div class="form-group"><label>Ставка (%)</label><input type="number" id="teacher_rate"></div>
+                    <div class="form-group"><label>Телефон</label><input type="tel" id="teacher_phone"></div>
                 </div>
                 <div class="form-group">
                     <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
@@ -204,6 +235,20 @@
         const teacherModal = document.getElementById('teacherModal');
         let scheduleData = {};
 
+        // --- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ---
+        function switchTab(tabName) {
+            ['students', 'boards', 'teachers'].forEach(t => {
+                document.getElementById('tab-' + t).classList.remove('active');
+                document.getElementById('section-' + t).style.display = 'none';
+            });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.getElementById('section-' + tabName).style.display = 'block';
+
+            if (tabName === 'boards') renderBoards();
+            if (tabName === 'teachers') loadTeachers();
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) { window.location.href = 'login.html'; return; }
@@ -214,7 +259,7 @@
             if (profile.role !== 'admin' && profile.role !== 'teacher') { window.location.href = 'student.html'; return; }
 
             currentRole = profile.role;
-            document.getElementById('user-info').innerText = `${profile.full_name} (${profile.role})`;
+            document.getElementById('user-info').innerText = profile.full_name;
 
             if (currentRole === 'admin') {
                 document.getElementById('tab-teachers').style.display = 'block';
@@ -224,6 +269,7 @@
             loadUnreadCount(user.id);
         }
 
+        // --- НЕПРОЧИТАННЫЕ ---
         async function loadUnreadCount(userId) {
             const { data: myChats } = await supabaseClient.from('chat_participants').select('chat_id').eq('user_id', userId);
             if (!myChats || myChats.length === 0) return;
@@ -236,7 +282,7 @@
                     if (!badge) {
                         badge = document.createElement('span');
                         badge.className = 'chat-badge';
-                        btn.style.position = 'relative';
+                        badge.style.cssText = 'position:absolute; top:-5px; right:-10px; background:var(--danger); color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px;';
                         btn.appendChild(badge);
                     }
                     badge.innerText = count;
@@ -269,6 +315,25 @@
                 card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
                 card.onclick = () => openStudentModal(s);
                 grid.appendChild(card);
+            });
+        }
+
+        // --- ДОСКИ ---
+        function renderBoards() {
+            const boardsGrid = document.getElementById('boards-grid');
+            boardsGrid.innerHTML = '';
+            subjectsList.forEach(sub => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                let color = subjectColors[sub] || '#313452';
+                card.style.background = color;
+                card.innerHTML = `
+                    <h3>${sub}</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <a href="board.html?subject=${sub}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Доска</a>
+                    </div>
+                `;
+                boardsGrid.appendChild(card);
             });
         }
 
@@ -314,6 +379,7 @@
                 for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
                 document.getElementById('teacherSaveBtn').innerText = 'Сохранить изменения';
                 document.getElementById('teacher_email').disabled = true;
+                document.getElementById('teacher_password').disabled = false;
             } else {
                 document.getElementById('teacher_id').value = '';
                 document.getElementById('teacherSaveBtn').innerText = 'Создать аккаунт';
@@ -341,6 +407,9 @@
 
             if (id) {
                 btn.innerText = 'Сохранение...'; btn.disabled = true;
+                if (password) {
+                    await supabaseClient.functions.invoke('create-teacher', { body: { action: 'update_password', id: id, password: password } });
+                }
                 const { error } = await supabaseClient.from('profiles').update({
                     surname: surname, name: name, full_name: `${surname} ${name}`,
                     rate: rate ? parseInt(rate) : null, phone: phone, subject: subjects
@@ -364,7 +433,7 @@
             }
         };
 
-        // --- ОСТАЛЬНОЕ (УЧЕНИКИ) ---
+        // --- УЧЕНИКИ (МОДАЛКА) ---
         function openStudentModal(s = null) {
             form.reset(); scheduleData = {};
             if (s) {
@@ -520,28 +589,9 @@
         }
         calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
 
-        // --- ВКЛАДКИ ---
-        const tabStudents = document.getElementById('tab-students');
-        const tabBoards = document.getElementById('tab-boards');
-        const tabTeachers = document.getElementById('tab-teachers');
-        const sectionStudents = document.getElementById('section-students');
-        const sectionBoards = document.getElementById('section-boards');
-        const sectionTeachers = document.getElementById('section-teachers');
-
-        function switchTab(activeTab, activeSection) {
-            [tabStudents, tabBoards, tabTeachers].forEach(t => { t.style.color = 'var(--text-main)'; t.style.borderBottom = 'none'; t.style.opacity = '0.5'; });
-            [sectionStudents, sectionBoards, sectionTeachers].forEach(s => s.style.display = 'none');
-            activeTab.style.color = 'var(--accent-lime)'; activeTab.style.borderBottom = '2px solid var(--accent-lime)'; activeTab.style.opacity = '1';
-            activeSection.style.display = 'block';
-        }
-
-        tabStudents.onclick = () => switchTab(tabStudents, sectionStudents);
-        tabBoards.onclick = () => { switchTab(tabBoards, sectionBoards); renderBoards(); };
-        tabTeachers.onclick = () => { switchTab(tabTeachers, sectionTeachers); loadTeachers(); };
-
         document.getElementById('addBtn').onclick = () => openStudentModal();
         document.getElementById('addTeacherBtn').onclick = () => openTeacherModal();
-        
+
         init();
     </script>
 </body>
