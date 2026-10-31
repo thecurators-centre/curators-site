@@ -41,14 +41,23 @@
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>Ученики</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; gap: 20px;">
+                <h1 id="tab-students" style="cursor: pointer; color: var(--accent-lime); border-bottom: 2px solid var(--accent-lime); padding-bottom: 5px;">Ученики</h1>
+                <h1 id="tab-boards" style="cursor: pointer; opacity: 0.5; padding-bottom: 5px;">Доски</h1>
+            </div>
             <a href="login.html" style="color: #f4f3ee; text-decoration: none;">Выйти</a>
         </div>
-        <button class="btn" id="addBtn">+ Добавить ученика</button>
-        <div class="grid" id="grid"><div class="loading">Загрузка...</div></div>
-    </div>
+        
+        <div id="section-students">
+            <button class="btn" id="addBtn">+ Добавить ученика</button>
+            <div class="grid" id="grid"><div class="loading">Загрузка...</div></div>
+        </div>
 
+        <div id="section-boards" style="display: none;">
+            <div class="grid" id="boards-grid"></div>
+        </div>
+    </div>
     <div class="modal" id="modal">
         <div class="modal-content">
             <button class="close-btn" id="closeModal">&times;</button>
@@ -86,8 +95,6 @@
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
-                
-                <!-- НОВЫЕ ПОЛЯ -->
                 <div class="form-row">
                     <div class="form-group"><label>Стоимость часа (руб.)</label><input type="number" id="hourly_rate" placeholder="Например: 1500"></div>
                 </div>
@@ -95,7 +102,6 @@
                 
                 <hr style="border-color: #444; margin: 20px 0;">
                 <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
-                
                 <div class="calendar-controls">
                     <select id="cal-month">
                         <option value="0">Январь</option><option value="1">Февраль</option><option value="2">Март</option>
@@ -131,6 +137,7 @@
             'Литература': '#d97706', 'Обществознание': '#4f46e5', 'История': '#84cc16',
             'Физика': '#2dd4bf', 'Подготовка к школе': '#ec4899'
         };
+        const subjectsList = ['Русский язык', 'Японский язык', 'Английский язык', 'Литература', 'Обществознание', 'История', 'Физика', 'Подготовка к школе'];
 
         let students = [];
         const grid = document.getElementById('grid');
@@ -152,27 +159,37 @@
         function render() {
             grid.innerHTML = '';
             if (students.length === 0) { grid.innerHTML = '<p style="opacity:0.5;">Пусто</p>'; return; }
-            
             students.forEach((s) => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                
                 let subs = (s.subjects || '').split(',').map(x => x.trim()).filter(x => x);
                 let colors = subs.map(sub => subjectColors[sub] || '#313452');
                 if (colors.length === 0) colors = ['#313452'];
-                
                 if (colors.length === 1) { card.style.background = colors[0]; } 
                 else { card.style.background = `linear-gradient(135deg, ${colors.join(', ')})`; }
-                
                 if (colors.includes('#f1f5f9') && colors.length === 1) { card.style.color = '#1e293b'; card.style.textShadow = 'none'; }
 
-                card.innerHTML = `
-                    <h3>${s.surname} ${s.name}</h3>
-                    <p>Предметы: ${subs.join(', ') || 'не заданы'}</p>
-                    <a href="board.html?subject=${subs[0] || 'Общая'}" target="_blank" style="display:inline-block; margin-top:10px; background:var(--accent-lime); color:var(--bg-color); padding:5px 10px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:0.8rem;" onclick="event.stopPropagation();">Открыть доску</a>
-                `;
+                card.innerHTML = `<h3>${s.surname} ${s.name}</h3><p>Предметы: ${subs.join(', ') || 'не заданы'}</p>`;
                 card.onclick = () => openModal(s);
                 grid.appendChild(card);
+            });
+        }
+
+        function renderBoards() {
+            const boardsGrid = document.getElementById('boards-grid');
+            boardsGrid.innerHTML = '';
+            subjectsList.forEach(sub => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                let color = subjectColors[sub] || '#313452';
+                card.style.background = color;
+                if (sub === 'Японский язык') { card.style.color = '#1e293b'; card.style.textShadow = 'none'; }
+                card.innerHTML = `
+                    <h3>${sub}</h3>
+                    <p>Интерактивная доска</p>
+                    <a href="board.html?subject=${sub}" target="_blank" style="display:inline-block; margin-top:15px; background:rgba(0,0,0,0.3); color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold;">Открыть доску</a>
+                `;
+                boardsGrid.appendChild(card);
             });
         }
 
@@ -182,58 +199,28 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-            
             calGrid.innerHTML = '';
-            
             ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
-                const el = document.createElement('div');
-                el.className = 'cal-header';
-                el.innerText = d;
-                calGrid.appendChild(el);
+                const el = document.createElement('div'); el.className = 'cal-header'; el.innerText = d; calGrid.appendChild(el);
             });
-
-            for (let i = 0; i < startOffset; i++) {
-                calGrid.appendChild(document.createElement('div'));
-            }
-
+            for (let i = 0; i < startOffset; i++) calGrid.appendChild(document.createElement('div'));
             for (let day = 1; day <= daysInMonth; day++) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'cal-day-wrapper';
-                const dayBtn = document.createElement('div');
-                dayBtn.className = 'cal-day';
-                dayBtn.innerText = day;
-                const timeInput = document.createElement('input');
-                timeInput.type = 'text';
-                timeInput.className = 'time-input';
-                timeInput.placeholder = '--:--';
+                const wrapper = document.createElement('div'); wrapper.className = 'cal-day-wrapper';
+                const dayBtn = document.createElement('div'); dayBtn.className = 'cal-day'; dayBtn.innerText = day;
+                const timeInput = document.createElement('input'); timeInput.type = 'text'; timeInput.className = 'time-input'; timeInput.placeholder = '--:--';
                 timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
                 if (scheduleData[day]) timeInput.value = scheduleData[day];
-
                 if (scheduleData[day] !== undefined) dayBtn.classList.add('selected');
-
                 dayBtn.onclick = () => {
                     if (scheduleData[day] !== undefined) {
-                        delete scheduleData[day];
-                        dayBtn.classList.remove('selected');
-                        timeInput.style.display = 'none';
-                        timeInput.value = '';
+                        delete scheduleData[day]; dayBtn.classList.remove('selected'); timeInput.style.display = 'none'; timeInput.value = '';
                     } else {
-                        scheduleData[day] = '';
-                        dayBtn.classList.add('selected');
-                        timeInput.style.display = 'block';
-                        timeInput.focus();
+                        scheduleData[day] = ''; dayBtn.classList.add('selected'); timeInput.style.display = 'block'; timeInput.focus();
                     }
                     updateScheduleHiddenInput();
                 };
-
-                timeInput.oninput = (e) => {
-                    scheduleData[day] = e.target.value;
-                    updateScheduleHiddenInput();
-                };
-
-                wrapper.appendChild(dayBtn);
-                wrapper.appendChild(timeInput);
-                calGrid.appendChild(wrapper);
+                timeInput.oninput = (e) => { scheduleData[day] = e.target.value; updateScheduleHiddenInput(); };
+                wrapper.appendChild(dayBtn); wrapper.appendChild(timeInput); calGrid.appendChild(wrapper);
             }
         }
 
@@ -241,24 +228,15 @@
             const str = Object.keys(scheduleData).map(day => `${day}=${scheduleData[day] || ''}`).join(',');
             document.getElementById('schedule-days').value = str;
         }
-
         function parseSchedule(str) {
-            const obj = {};
-            if (!str) return obj;
-            str.split(',').forEach(item => {
-                const [day, time] = item.split('=');
-                if (day) obj[day] = time || '';
-            });
+            const obj = {}; if (!str) return obj;
+            str.split(',').forEach(item => { const [day, time] = item.split('='); if (day) obj[day] = time || ''; });
             return obj;
         }
-
-        calMonth.onchange = renderCalendar;
-        calYear.onchange = renderCalendar;
+        calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
 
         function openModal(s = null) {
-            form.reset();
-            scheduleData = {};
-            
+            form.reset(); scheduleData = {};
             if (s) {
                 document.getElementById('id').value = s.id;
                 document.getElementById('login').value = s.login || '';
@@ -272,19 +250,12 @@
                 document.getElementById('levelVal').innerText = s.level || 3;
                 document.getElementById('hourly_rate').value = s.hourly_rate || '';
                 document.getElementById('about_student').value = s.about_student || '';
-                
                 const subs = (s.subjects || '').split(',').map(x=>x.trim());
                 const select = document.getElementById('subjects');
-                for (let i = 0; i < select.options.length; i++) {
-                    select.options[i].selected = subs.includes(select.options[i].value);
-                }
-
+                for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
                 if (s.schedule_month) calMonth.value = s.schedule_month;
                 if (s.schedule_year) calYear.value = s.schedule_year;
-                
-                scheduleData = parseSchedule(s.schedule_days);
-                updateScheduleHiddenInput();
-
+                scheduleData = parseSchedule(s.schedule_days); updateScheduleHiddenInput();
                 document.getElementById('homework').value = s.homework || '';
                 document.getElementById('tests').value = s.tests || '';
                 document.getElementById('topics').value = s.topics || '';
@@ -296,9 +267,7 @@
                 document.getElementById('levelVal').innerText = '3';
                 document.getElementById('deleteBtn').style.display = 'none';
             }
-            
-            renderCalendar();
-            modal.classList.add('active');
+            renderCalendar(); modal.classList.add('active');
         }
 
         document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
@@ -307,10 +276,8 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('id').value;
-            
             const select = document.getElementById('subjects');
             const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
-
             const data = {
                 login: document.getElementById('login').value.trim(),
                 password: document.getElementById('password').value.trim(),
@@ -331,16 +298,9 @@
                 topics: document.getElementById('topics').value,
                 iom: document.getElementById('iom').value
             };
-
             let error;
-            if (id) {
-                const res = await supabaseClient.from('students').update(data).eq('id', id);
-                error = res.error;
-            } else {
-                const res = await supabaseClient.from('students').insert([data]);
-                error = res.error;
-            }
-
+            if (id) { const res = await supabaseClient.from('students').update(data).eq('id', id); error = res.error; } 
+            else { const res = await supabaseClient.from('students').insert([data]); error = res.error; }
             if (error) alert('Ошибка: ' + error.message);
             else { modal.classList.remove('active'); loadStudents(); }
         };
@@ -354,7 +314,27 @@
             }
         };
 
+        // Логика вкладок
+        const tabStudents = document.getElementById('tab-students');
+        const tabBoards = document.getElementById('tab-boards');
+        const sectionStudents = document.getElementById('section-students');
+        const sectionBoards = document.getElementById('section-boards');
+
+        tabStudents.onclick = () => {
+            tabStudents.style.color = 'var(--accent-lime)'; tabStudents.style.borderBottom = '2px solid var(--accent-lime)'; tabStudents.style.opacity = '1';
+            tabBoards.style.color = 'var(--text-main)'; tabBoards.style.borderBottom = 'none'; tabBoards.style.opacity = '0.5';
+            sectionStudents.style.display = 'block'; sectionBoards.style.display = 'none';
+        };
+        tabBoards.onclick = () => {
+            tabBoards.style.color = 'var(--accent-lime)'; tabBoards.style.borderBottom = '2px solid var(--accent-lime)'; tabBoards.style.opacity = '1';
+            tabStudents.style.color = 'var(--text-main)'; tabStudents.style.borderBottom = 'none'; tabStudents.style.opacity = '0.5';
+            sectionStudents.style.display = 'none'; sectionBoards.style.display = 'block';
+            renderBoards();
+        };
+
         document.getElementById('addBtn').onclick = () => openModal();
+        
+        renderBoards();
         loadStudents();
     </script>
 </body>
