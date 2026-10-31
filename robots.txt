@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+Allow: /about.html
+Allow: /payment.html
+Allow: /contacts.html
+Allow: /enroll.html
+Allow: /reviews.html
+Allow: /iom.html
 Disallow: /login.html
 Disallow: /admin.html
 Disallow: /student.html
