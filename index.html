@@ -7,6 +7,8 @@
     <meta name="yandex-verification" content="2991571c7cd82f66" />
     <title>The Curator’s | Прогресс, у которого есть маршрут</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#25283d">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
@@ -201,6 +203,15 @@
                 nav.classList.remove('active');
             });
         });
+    </script>
+<script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/curators-site/service-worker.js")
+                    .then(registration => console.log("Service Worker зарегистрирован"))
+                    .catch(err => console.log("Ошибка регистрации SW:", err));
+            });
+        }
     </script>
 </body>
 </html>
