@@ -99,7 +99,7 @@
             <div class="shape-option" data-shape="triangle">🔺 Треугольник</div>
             <div class="shape-option" data-shape="diamond">🔷 Ромб</div>
             <div class="shape-option" data-shape="star">⭐ Звезда</div>
-            <div class="shape-option" data-shape="xy">📈 График XY</div>
+            <div class="shape-option" data-shape="arrow">➡️ Стрелка</div>
             <button class="shape-modal-close" id="closeShapeModal">Отмена</button>
         </div>
     </div>
@@ -175,9 +175,13 @@
         let lastBroadcastTime = 0; 
         const BROADCAST_THROTTLE = 100; 
 
-        // Для ученика: храним последние созданные объекты по ID
+        // Для ученика
         let studentObjects = {}; 
         let currentStrokeId = null;
+
+        // Для вращения стрелки
+        let activeArrow = null; // Ссылка на стрелку, которую сейчас вращаем
+        let rotateAnchor = null; // Кружок для вращения
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -191,6 +195,8 @@
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
+                // Убираем якорь вращения при смене инструмента
+                removeRotateAnchor();
             });
         });
 
@@ -206,8 +212,79 @@
                 shapeBtn.classList.add('active');
                 currentTool = 'shape';
                 shapeModal.classList.remove('active');
+                removeRotateAnchor();
             };
         });
+
+        // --- ВРАЩЕНИЕ СТРЕЛКИ ---
+        function removeRotateAnchor() {
+            if (rotateAnchor) { rotateAnchor.destroy(); rotateAnchor = null; }
+            if (activeArrow) { activeArrow = null; }
+            uiLayer.batchDraw();
+        }
+
+        function createRotateAnchor(arrowGroup) {
+            removeRotateAnchor();
+            activeArrow = arrowGroup;
+            
+            // Получаем координаты конца стрелки
+            const endX = arrowGroup.x() + arrowGroup.width() * arrowGroup.scaleX();
+            const endY = arrowGroup.y();
+
+            rotateAnchor = new Konva.Circle({
+                x: endX,
+                y: endY,
+                radius: 8,
+                fill: 'rgba(197, 240, 90, 0.5)',
+                stroke: '#c5f05a',
+                strokeWidth: 2,
+                draggable: !isStudent
+            });
+
+            rotateAnchor.on('dragmove', (e) => {
+                const pos = e.target.position();
+                // Вычисляем угол между началом стрелки и якорем
+                const dx = pos.x - arrowGroup.x();
+                const dy = pos.y - arrowGroup.y();
+                const angle = Math.atan2(dy, dx);
+                
+                // Обновляем стрелку
+                arrowGroup.rotation(angle * 180 / Math.PI);
+                arrowGroup.width(Math.sqrt(dx*dx + dy*dy) / arrowGroup.scaleX());
+                
+                // Отправляем обновление
+                broadcastArrowUpdate(arrowGroup);
+                drawLayer.batchDraw();
+            });
+
+            rotateAnchor.on('dragend', () => {
+                broadcastArrowUpdate(arrowGroup, true);
+            });
+
+            uiLayer.add(rotateAnchor);
+            uiLayer.batchDraw();
+        }
+
+        function broadcastArrowUpdate(arrowGroup, isFinal = false) {
+            const obj = {
+                type: 'shape',
+                shapeType: 'arrow',
+                id: arrowGroup.id(),
+                x: arrowGroup.x(),
+                y: arrowGroup.y(),
+                width: arrowGroup.width(),
+                rotation: arrowGroup.rotation(),
+                scaleX: arrowGroup.scaleX(),
+                scaleY: arrowGroup.scaleY(),
+                stroke: arrowGroup.getChildren()[0].stroke(),
+                strokeWidth: arrowGroup.getChildren()[0].strokeWidth(),
+                isFinal
+            };
+            if (isFinal) {
+                saveObjectToDB(obj);
+            }
+            broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
+        }
 
         // --- ТЕКСТ ---
         stage.on('click tap', (e) => {
@@ -248,6 +325,11 @@
             if (e.evt.touches && e.evt.touches.length > 1) return;
             if (e.evt.button === 2) return;
 
+            // Если мы кликнули не на якорь и не на стрелку, убираем якорь
+            if (currentTool !== 'shape' || currentShapeType !== 'arrow') {
+                removeRotateAnchor();
+            }
+
             isDrawing = true;
             const pos = stage.getPointerPosition();
             startX = (pos.x - stage.x()) / stage.scaleX();
@@ -272,12 +354,15 @@
                 else if (currentShapeType === 'triangle') currentShape = new Konva.RegularPolygon({ x: startX, y: startY, sides: 3, radius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 else if (currentShapeType === 'diamond') currentShape = new Konva.RegularPolygon({ x: startX, y: startY, sides: 4, radius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
                 else if (currentShapeType === 'star') currentShape = new Konva.Star({ x: startX, y: startY, numPoints: 5, innerRadius: 0, outerRadius: 0, stroke: color, strokeWidth: width, fill: 'transparent' });
-                else if (currentShapeType === 'xy') {
+                else if (currentShapeType === 'arrow') {
+                    // Стрелка - это группа: линия + наконечник
                     currentShape = new Konva.Group({ x: startX, y: startY });
-                    currentShape.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: color, strokeWidth: width }));
-                    currentShape.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: color, strokeWidth: width }));
-                    currentShape.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: color, strokeWidth: width, fill: color }));
-                    currentShape.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: color, strokeWidth: width, fill: color }));
+                    currentShape.id(currentStrokeId);
+                    currentShape.add(new Konva.Line({ points: [0, 0, 1, 0], stroke: color, strokeWidth: width, lineCap: 'round' }));
+                    // Наконечник стрелки
+                    currentShape.add(new Konva.Line({ points: [0, 0, -15, -8, -15, 8, 0, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
+                    // Важно: линия должна быть первой для удобного обновления ширины
+                    currentShape.getChildren()[0].name('arrow-line');
                 }
                 drawLayer.add(currentShape);
             }
@@ -315,31 +400,27 @@
                     const dist = Math.sqrt(w*w + h*h);
                     if (currentShapeType === 'star') { currentShape.outerRadius(dist); currentShape.innerRadius(dist * 0.4); }
                     else { currentShape.radius(dist); }
-                } else if (currentShapeType === 'xy') {
-                    const scale = Math.sqrt(w*w + h*h) / 100;
-                    currentShape.scale({ x: scale, y: scale });
+                } else if (currentShapeType === 'arrow') {
+                    // Растягиваем стрелку
+                    const angle = Math.atan2(h, w);
+                    const length = Math.sqrt(w*w + h*h);
+                    currentShape.rotation(angle * 180 / Math.PI);
+                    currentShape.getChildren()[0].points([0, 0, length, 0]);
                 }
             }
             drawLayer.batchDraw();
 
-            // Отправляем промежуточное состояние ВСЕГДА
             if (currentLine) {
                 const obj = { type: 'line', id: currentStrokeId, points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
             } else if (currentShape) {
-                const obj = { 
-                    type: 'shape', id: currentStrokeId, shapeType: currentShapeType, 
-                    x: currentShape.x(), y: currentShape.y(), 
-                    width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), 
-                    height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), 
-                    radius: currentShape.radius ? currentShape.radius() : null, 
-                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, 
-                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, 
-                    scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), 
-                    stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), 
-                    strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) 
-                };
-                broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
+                if (currentShapeType === 'arrow') {
+                    const obj = { type: 'shape', shapeType: 'arrow', id: currentStrokeId, x: currentShape.x(), y: currentShape.y(), width: currentShape.getChildren()[0].points()[2], rotation: currentShape.rotation(), stroke: currentShape.getChildren()[0].stroke(), strokeWidth: currentShape.getChildren()[0].strokeWidth() };
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
+                } else {
+                    const obj = { type: 'shape', shapeType: currentShapeType, id: currentStrokeId, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: obj });
+                }
             }
         });
 
@@ -351,18 +432,13 @@
             if (currentLine) {
                 finalObj = { type: 'line', points: currentLine.points(), stroke: currentLine.stroke(), strokeWidth: currentLine.strokeWidth(), globalCompositeOperation: currentLine.globalCompositeOperation() };
             } else if (currentShape) {
-                finalObj = { 
-                    type: 'shape', shapeType: currentShapeType, 
-                    x: currentShape.x(), y: currentShape.y(), 
-                    width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), 
-                    height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), 
-                    radius: currentShape.radius ? currentShape.radius() : null, 
-                    innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, 
-                    outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, 
-                    scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), 
-                    stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), 
-                    strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) 
-                };
+                if (currentShapeType === 'arrow') {
+                    finalObj = { type: 'shape', shapeType: 'arrow', id: currentStrokeId, x: currentShape.x(), y: currentShape.y(), width: currentShape.getChildren()[0].points()[2], rotation: currentShape.rotation(), stroke: currentShape.getChildren()[0].stroke(), strokeWidth: currentShape.getChildren()[0].strokeWidth() };
+                    // После создания стрелки показываем якорь для вращения
+                    createRotateAnchor(currentShape);
+                } else {
+                    finalObj = { type: 'shape', shapeType: currentShapeType, x: currentShape.x(), y: currentShape.y(), width: currentShape.width ? currentShape.width() : (currentShape.radiusX ? currentShape.radiusX() * 2 : 0), height: currentShape.height ? currentShape.height() : (currentShape.radiusY ? currentShape.radiusY() * 2 : 0), radius: currentShape.radius ? currentShape.radius() : null, innerRadius: currentShape.innerRadius ? currentShape.innerRadius() : null, outerRadius: currentShape.outerRadius ? currentShape.outerRadius() : null, scaleX: currentShape.scaleX(), scaleY: currentShape.scaleY(), stroke: currentShape.stroke() || (currentShape.getChildren ? currentShape.getChildren()[0].stroke() : null), strokeWidth: currentShape.strokeWidth() || (currentShape.getChildren ? currentShape.getChildren()[0].strokeWidth() : null) };
+                }
             }
             
             if (finalObj) {
@@ -375,10 +451,9 @@
             drawLayer.batchDraw();
         });
 
-        // --- КАМЕРА (ИСПРАВЛЕНО ДЛЯ MAC) ---
+        // --- КАМЕРА ---
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
-            
             if (e.evt.ctrlKey) {
                 const oldScale = stage.scaleX();
                 const pointer = stage.getPointerPosition();
@@ -387,7 +462,6 @@
                 const scaleBy = 1.05;
                 let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
                 newScale = Math.max(0.1, Math.min(newScale, 5));
-
                 stage.scale({ x: newScale, y: newScale });
                 stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
             } else {
@@ -397,18 +471,11 @@
 
         let isPanning = false;
         let lastPointerPos = null;
-        stage.on('mousedown', (e) => {
-            if (e.evt.button === 2) {
-                isPanning = true;
-                lastPointerPos = stage.getPointerPosition();
-            }
-        });
+        stage.on('mousedown', (e) => { if (e.evt.button === 2) { isPanning = true; lastPointerPos = stage.getPointerPosition(); } });
         stage.on('mousemove', (e) => {
             if (isPanning) {
                 const pos = stage.getPointerPosition();
-                if (lastPointerPos) {
-                    stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
-                }
+                if (lastPointerPos) stage.position({ x: stage.x() + (pos.x - lastPointerPos.x), y: stage.y() + (pos.y - lastPointerPos.y) });
                 lastPointerPos = pos;
             }
         });
@@ -421,6 +488,7 @@
             if (confirm('Очистить доску?')) {
                 drawLayer.destroyChildren(); 
                 drawLayer.draw();
+                removeRotateAnchor();
                 await supabaseClient.from('board_objects').delete().eq('board_id', subject);
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
@@ -432,7 +500,7 @@
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
-        // --- ОТРИСОВКА ОБЪЕКТОВ (ИСПРАВЛЕНО ДЛЯ XY) ---
+        // --- ОТРИСОВКА ОБЪЕКТОВ ---
         function drawObject(obj) {
             let node = null;
             if (obj.type === 'line') {
@@ -443,14 +511,12 @@
                 else if (obj.shapeType === 'triangle') node = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 3, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
                 else if (obj.shapeType === 'diamond') node = new Konva.RegularPolygon({ x: obj.x, y: obj.y, sides: 4, radius: obj.radius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
                 else if (obj.shapeType === 'star') node = new Konva.Star({ x: obj.x, y: obj.y, numPoints: 5, innerRadius: obj.innerRadius, outerRadius: obj.outerRadius, stroke: obj.stroke, strokeWidth: obj.strokeWidth, fill: 'transparent' });
-                else if (obj.shapeType === 'xy') {
-                    node = new Konva.Group({ x: obj.x, y: obj.y, scaleX: obj.scaleX, scaleY: obj.scaleY });
-                    // Важно: добавляем имя, чтобы потом можно было найти
-                    node.name('xy-group');
-                    node.add(new Konva.Line({ points: [0, 0, 100, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    node.add(new Konva.Line({ points: [0, 0, 0, -100], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    node.add(new Konva.Line({ points: [90, -5, 100, 0, 90, 5], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
-                    node.add(new Konva.Line({ points: [-5, -90, 0, -100, 5, -90], stroke: obj.stroke, strokeWidth: obj.strokeWidth }));
+                else if (obj.shapeType === 'arrow') {
+                    node = new Konva.Group({ x: obj.x, y: obj.y, rotation: obj.rotation || 0 });
+                    node.id(obj.id);
+                    node.add(new Konva.Line({ points: [0, 0, obj.width, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round' }));
+                    node.add(new Konva.Line({ points: [0, 0, -15, -8, -15, 8, 0, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
+                    node.getChildren()[0].name('arrow-line');
                 }
             } else if (obj.type === 'text') {
                 node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
@@ -470,7 +536,7 @@
             }
         }
 
-        // --- BROADCAST (ИСПРАВЛЕНО ДЛЯ XY) ---
+        // --- BROADCAST ---
         function setupRealtime() {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
 
@@ -487,9 +553,11 @@
                                 if (data.type === 'line') {
                                     node.points(data.points);
                                 } else if (data.type === 'shape') {
-                                    if (data.shapeType === 'xy') {
-                                        // Для XY группы обновляем только позицию и масштаб
-                                        node.setAttrs({ x: data.x, y: data.y, scaleX: data.scaleX, scaleY: data.scaleY });
+                                    if (data.shapeType === 'arrow') {
+                                        // Обновляем стрелку (только позицию, поворот и длину линии)
+                                        node.x(data.x); node.y(data.y); node.rotation(data.rotation || 0);
+                                        const line = node.getChildren()[0];
+                                        if (line) line.points([0, 0, data.width, 0]);
                                     } else {
                                         node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
                                     }
