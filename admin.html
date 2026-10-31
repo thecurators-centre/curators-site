@@ -17,7 +17,6 @@
         .card { padding: 20px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.1); color: white; position: relative; overflow: hidden; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
         
-        /* Цвет заголовков как у фона */
         .card h3 { 
             margin-bottom: 5px; 
             color: var(--bg-color); 
@@ -190,9 +189,9 @@
                 card.className = 'card';
                 let color = subjectColors[sub] || '#313452';
                 card.style.background = color;
+                // Убрали параграф "Интерактивная доска"
                 card.innerHTML = `
                     <h3>${sub}</h3>
-                    <p>Интерактивная доска</p>
                     <a href="board.html?subject=${sub}" target="_blank" style="display:inline-block; margin-top:15px; background:rgba(0,0,0,0.3); color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold;">Открыть доску</a>
                 `;
                 boardsGrid.appendChild(card);
