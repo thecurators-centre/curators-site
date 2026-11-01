@@ -515,13 +515,13 @@
                 drawLayer.destroyChildren(); 
                 drawLayer.draw();
                 clearTextSelection();
-                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
+                await supabaseClient.from('board_objects').delete().eq('board_id', encodeURIComponent(subject));
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
         });
 
         async function saveObjectToDB(obj) { 
-            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
+            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: encodeURIComponent(subject), object_data: obj }]); 
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
@@ -559,7 +559,7 @@
         }
 
         async function loadBoard() {
-            const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject).order('created_at', { ascending: true });
+            const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', encodeURIComponent(subject)).order('created_at', { ascending: true });
             if (data) {
                 data.forEach(item => drawObject(item.object_data));
             }
