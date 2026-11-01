@@ -210,7 +210,8 @@
         document.getElementById('boardTitle').innerText = `Доска: ${subject}`;
         
         if (isStudent) {
-            document.getElementById('toolbar').style.display = 'none';
+            // Ученику разрешаем рисовать, но скрываем корзину (очистку всей доски)
+            document.getElementById('clearBtn').style.display = 'none';
             document.getElementById('backBtn').href = 'student.html';
             document.getElementById('backBtn').innerText = 'Вернуться в кабинет';
         }
@@ -285,7 +286,6 @@
 
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                if (isStudent) return;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
@@ -348,7 +348,7 @@
             rotateAnchor = new Konva.Circle({
                 x: endX, y: endY, radius: 8,
                 fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2,
-                draggable: !isStudent
+                draggable: true
             });
 
             rotateAnchor.on('dragmove', (e) => {
@@ -437,7 +437,7 @@
                     
                     const text = textarea.value.trim();
                     if (text) {
-                        const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
+                        const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: true });
                         drawLayer.add(textNode); drawLayer.batchDraw();
                         saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value });
                         broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value } });
@@ -448,7 +448,7 @@
         });
 
         stage.on('mousedown touchstart', (e) => {
-            if (isStudent || currentTool === 'text') return;
+            if (currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
             if (e.evt.button === 2) return;
             if (currentTool !== 'shape' || currentShapeType !== 'arrow') removeRotateAnchor();
@@ -491,7 +491,6 @@
         });
 
         stage.on('mousemove touchmove', (e) => {
-            if (isStudent) return;
             const now = Date.now();
             if (now - lastBroadcastTime < BROADCAST_THROTTLE) return; 
             lastBroadcastTime = now;
@@ -545,7 +544,7 @@
         });
 
         stage.on('mouseup touchend', () => {
-            if (!isDrawing || isStudent) return;
+            if (!isDrawing) return;
             isDrawing = false;
             let finalObj = null;
             if (currentLine) {
@@ -636,7 +635,6 @@
         
         // --- ФУНКЦИИ ДЛЯ РАБОТЫ С КАРТИНКАМИ ---
         document.getElementById('imageBtn').addEventListener('click', () => {
-            if (isStudent) return;
             document.getElementById('imageUploadInput').click();
         });
 
@@ -687,7 +685,7 @@
                         y: stageCenterY - h / 2,
                         width: w,
                         height: h,
-                        draggable: !isStudent
+                        draggable: true
                     });
                     
                     drawLayer.add(imageNode);
@@ -765,13 +763,23 @@ async function saveObjectToDB(obj) {
                     updateArrowHead(node);
                 }
             } else if (obj.type === 'text') {
-                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
+                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: true });
+                node.on('dragend', () => {
+                    const d = { type: 'text', x: node.x(), y: node.y(), text: obj.text, fontSize: obj.fontSize, fill: obj.fill };
+                    saveObjectToDB(d, true); // true = обновить, а не создавать дубль
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
+                });
             } else if (obj.type === 'image') {
                 const imgObj = new Image();
                 imgObj.src = obj.src;
                 imgObj.onload = () => {
                     const imageNode = new Konva.Image({
-                        image: imgObj, x: obj.x, y: obj.y, width: obj.width, height: obj.height, draggable: !isStudent
+                        image: imgObj, x: obj.x, y: obj.y, width: obj.width, height: obj.height, draggable: true
+                    });
+                    imageNode.on('dragend', () => {
+                        const d = { type: 'image', x: imageNode.x(), y: imageNode.y(), width: obj.width, height: obj.height, src: obj.src };
+                        saveObjectToDB(d, true);
+                        broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
                     });
                     drawLayer.add(imageNode);
                     drawLayer.batchDraw();
@@ -797,44 +805,47 @@ async function saveObjectToDB(obj) {
             broadcastChannel = supabaseClient.channel(`board_${subject}`, { config: { broadcast: { self: false } } });
             broadcastChannel
                 .on('broadcast', { event: 'draw' }, payload => {
-                    if (isStudent) {
-                        const data = payload.payload;
-                        if (data.type === 'clear') {
-                            drawLayer.destroyChildren(); drawLayer.draw(); studentObjects = {};
-                        } else {
-                            if (data.id && studentObjects[data.id]) {
-                                const node = studentObjects[data.id];
-                                if (data.type === 'line') {
-                                    node.points(data.points);
-                                } else if (data.type === 'shape') {
-                                    if (data.shapeType === 'arrow') {
-                                        node.x(data.x); node.y(data.y); node.rotation(data.rotation || 0);
-                                        const line = node.getChildren()[0];
-                                        const head = node.getChildren()[1];
-                                        if (line) line.points([0, 0, data.width, 0]);
-                                        if (head) updateArrowHead(node);
-                                    } else {
-                                        node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
-                                    }
+                    const data = payload.payload;
+                    if (data.type === 'clear') {
+                        drawLayer.destroyChildren(); drawLayer.draw(); studentObjects = {};
+                    } else {
+                        // Если объект с таким ID уже есть (например, мы сами его только что нарисовали), 
+                        // то обновляем его. Иначе - создаем новый.
+                        if (data.id && studentObjects[data.id]) {
+                            const node = studentObjects[data.id];
+                            if (data.type === 'line') {
+                                node.points(data.points);
+                            } else if (data.type === 'shape') {
+                                if (data.shapeType === 'arrow') {
+                                    node.x(data.x); node.y(data.y); node.rotation(data.rotation || 0);
+                                    const line = node.getChildren()[0];
+                                    const head = node.getChildren()[1];
+                                    if (line) line.points([0, 0, data.width, 0]);
+                                    if (head) updateArrowHead(node);
+                                } else {
+                                    node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
                                 }
-                                drawLayer.batchDraw();
-                            } else {
-                                drawObject(data);
+                            } else if (data.type === 'text') {
+                                // Если текст перетащили, обновляем его координаты
+                                node.x(data.x); node.y(data.y);
+                            } else if (data.type === 'image') {
+                                node.x(data.x); node.y(data.y);
                             }
+                            drawLayer.batchDraw();
+                        } else {
+                            drawObject(data);
                         }
                     }
                 })
                 .on('broadcast', { event: 'cursor' }, payload => {
-                    if (isStudent) {
-                        const pos = payload.payload;
-                        if (!teacherCursor) {
-                            teacherCursor = new Konva.Circle({ x: pos.x, y: pos.y, radius: 8, fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2, listening: false });
-                            uiLayer.add(teacherCursor);
-                        } else {
-                            teacherCursor.position({ x: pos.x, y: pos.y });
-                        }
-                        uiLayer.batchDraw();
+                    const pos = payload.payload;
+                    if (!teacherCursor) {
+                        teacherCursor = new Konva.Circle({ x: pos.x, y: pos.y, radius: 8, fill: 'rgba(197, 240, 90, 0.5)', stroke: '#c5f05a', strokeWidth: 2, listening: false });
+                        uiLayer.add(teacherCursor);
+                    } else {
+                        teacherCursor.position({ x: pos.x, y: pos.y });
                     }
+                    uiLayer.batchDraw();
                 })
                 .subscribe();
         }
