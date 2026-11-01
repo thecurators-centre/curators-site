@@ -121,7 +121,14 @@
                 <div class="messages-area" id="messages-area"></div>
                 <div class="chat-input-area">
                     <div class="emoji-picker" id="emojiPicker"></div>
-                    <button class="btn-emoji" id="btn-emoji">😊</button>
+                    <button class="btn-emoji" id="btn-emoji" style="display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: none; stroke: var(--accent-lime); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </button>
                     <textarea class="chat-input" id="chat-input" placeholder="Напишите сообщение..."></textarea>
                     <button class="btn-send" id="btn-send">Отправить</button>
                 </div>
@@ -310,17 +317,28 @@
                 if (otherParticipants && otherParticipants.length > 0) {
                     const otherUserId = otherParticipants[0].user_id;
                     chat.otherUserId = otherUserId;
-                    // Запрашиваем профиль вместе с avatar_id
+                    // 1. Получаем базовый профиль (имя и роль)
                     const { data: otherProfile } = await supabaseClient
                         .from('profiles')
-                        .select('full_name, role, avatar_id')
+                        .select('full_name, role')
                         .eq('id', otherUserId)
                         .single();
                     
                     if (otherProfile) {
                         chat.displayName = otherProfile.full_name;
                         chat.otherRole = otherProfile.role;
-                        chat.otherAvatar = otherProfile.avatar_id;
+                    }
+
+                    // 2. Если это ученик, получаем его аватарку из таблицы students
+                    if (otherProfile && otherProfile.role === 'student') {
+                        const { data: studentData } = await supabaseClient
+                            .from('students')
+                            .select('avatar_id')
+                            .eq('id', otherUserId)
+                            .single();
+                        if (studentData) {
+                            chat.otherAvatar = studentData.avatar_id;
+                        }
                     }
                 } else {
                     chat.displayName = 'Личный чат';
