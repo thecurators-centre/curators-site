@@ -90,6 +90,7 @@
             <input type="range" id="strokeWidth" min="1" max="100" value="4">
             <span class="slider-label" id="strokeVal">4</span>
         </div>
+        <button class="tool-btn" id="imageBtn" title="Вставить картинку">🖼️</button>
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
@@ -105,6 +106,7 @@
         </div>
     </div>
 
+    <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
     <div id="container"></div>
     <a href="admin.html" class="exit-btn" id="backBtn">Выйти</a>
     <script>
@@ -478,15 +480,145 @@
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
+                // 1. Получаем список всех объектов этой доски
+                const { data: objs } = await supabaseClient.from('board_objects').select('object_data').eq('board_id', subject);
+                
+                // 2. Вытаскиваем имена файлов картинок (если есть)
+                const fileNamesToDelete = [];
+                if (objs) {
+                    objs.forEach(item => {
+                        if (item.object_data.type === 'image' && item.object_data.src) {
+                            // Извлекаем имя файла из URL
+                            const parts = item.object_data.src.split('/');
+                            const fileName = parts[parts.length - 1];
+                            if (fileName) fileNamesToDelete.push(fileName);
+                        }
+                    });
+                }
+
+                // 3. Удаляем объекты из базы
+                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
+                
+                // 4. Удаляем файлы из Storage
+                if (fileNamesToDelete.length > 0) {
+                    await supabaseClient.storage.from('board-images').remove(fileNamesToDelete);
+                }
+
+                // 5. Очищаем экран и синхронизируем
                 drawLayer.destroyChildren(); 
                 drawLayer.draw();
                 removeRotateAnchor();
-                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
         });
 
-        async function saveObjectToDB(obj) { 
+        
+        // --- ФУНКЦИИ ДЛЯ РАБОТЫ С КАРТИНКАМИ ---
+        document.getElementById('imageBtn').addEventListener('click', () => {
+            if (isStudent) return;
+            document.getElementById('imageUploadInput').click();
+        });
+
+        document.getElementById('imageUploadInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Сброс значения, чтобы можно было выбрать тот же файл снова
+            e.target.value = ''; 
+
+            try {
+                // 1. Сжимаем картинку
+                const compressedBlob = await compressImage(file, 1200, 0.8);
+                
+                // 2. Загружаем в Supabase Storage
+                const fileName = `board_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.jpg`;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('board-images')
+                    .upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+
+                if (uploadError) throw uploadError;
+
+                // 3. Получаем публичный URL
+                const { data: urlData } = supabaseClient.storage.from('board-images').getPublicUrl(fileName);
+                const imageUrl = urlData.publicUrl;
+
+                // 4. Создаем Konva.Image
+                const imgObj = new Image();
+                imgObj.src = imageUrl;
+                imgObj.onload = () => {
+                    // Центрируем картинку на экране
+                    const stageCenterX = (window.innerWidth / 2 - stage.x()) / stage.scaleX();
+                    const stageCenterY = (window.innerHeight / 2 - stage.y()) / stage.scaleY();
+                    
+                    // Максимальная ширина/высота 400px
+                    const maxDim = 400;
+                    let w = imgObj.width;
+                    let h = imgObj.height;
+                    if (w > maxDim || h > maxDim) {
+                        const ratio = Math.min(maxDim / w, maxDim / h);
+                        w *= ratio;
+                        h *= ratio;
+                    }
+
+                    const imageNode = new Konva.Image({
+                        image: imgObj,
+                        x: stageCenterX - w / 2,
+                        y: stageCenterY - h / 2,
+                        width: w,
+                        height: h,
+                        draggable: !isStudent
+                    });
+                    
+                    drawLayer.add(imageNode);
+                    drawLayer.batchDraw();
+
+                    // 5. Сохраняем в базу и отправляем ученику
+                    const objData = { type: 'image', x: imageNode.x(), y: imageNode.y(), width: w, height: h, src: imageUrl };
+                    saveObjectToDB(objData);
+                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: objData });
+                };
+            } catch (err) {
+                console.error('Ошибка загрузки картинки:', err);
+                alert('Не удалось загрузить картинку: ' + err.message);
+            }
+        });
+
+        // Функция сжатия картинки через Canvas
+        function compressImage(file, maxDimension, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            const ratio = Math.min(maxDimension / width, maxDimension / height);
+                            width *= ratio;
+                            height *= ratio;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            if (blob) resolve(blob);
+                            else reject(new Error('Ошибка сжатия'));
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = () => reject(new Error('Ошибка чтения файла'));
+                };
+                reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+            });
+        }
+
+async function saveObjectToDB(obj) { 
             const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
@@ -512,6 +644,18 @@
                 }
             } else if (obj.type === 'text') {
                 node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
+            } else if (obj.type === 'image') {
+                const imgObj = new Image();
+                imgObj.src = obj.src;
+                imgObj.onload = () => {
+                    const imageNode = new Konva.Image({
+                        image: imgObj, x: obj.x, y: obj.y, width: obj.width, height: obj.height, draggable: !isStudent
+                    });
+                    drawLayer.add(imageNode);
+                    drawLayer.batchDraw();
+                };
+                // Возвращаем null, так как картинка добавляется асинхронно внутри onload
+                node = null; 
             }
             if (node) {
                 drawLayer.add(node);
