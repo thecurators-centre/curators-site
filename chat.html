@@ -33,9 +33,7 @@
         .chat-item:hover { background: rgba(255,255,255,0.05); }
         .chat-item.active { background: rgba(197, 240, 90, 0.1); border: 1px solid rgba(197, 240, 90, 0.3); }
         
-        /* Базовый аватар (по умолчанию - учитель/фиолетовый) */
-        .chat-avatar { width: 45px; height: 45px; background: var(--accent-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; }
-        /* Если это ученик - зеленый */
+        .chat-avatar { width: 45px; height: 45px; background: var(--accent-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; overflow: hidden; }
         .chat-avatar.avatar-student { background: var(--accent-lime); color: var(--bg-color); }
 
         .chat-info { flex: 1; overflow: hidden; }
@@ -46,7 +44,7 @@
 
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #1a1c29; position: relative; }
         .chat-main-header { padding: 15px 25px; background: var(--card-bg); border-bottom: 1px solid rgba(244, 243, 238, 0.1); display: flex; align-items: center; gap: 15px; }
-        .chat-main-header h3 { font-size: 1.1rem; }
+        .chat-main-header h3 { font-size: 1.1rem; display: flex; align-items: center; }
         .messages-area { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         
         .message { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; word-wrap: break-word; }
@@ -54,12 +52,20 @@
         .message.received { align-self: flex-start; background: var(--card-bg); color: var(--text-main); border-bottom-left-radius: 4px; }
         .message-time { font-size: 0.7rem; opacity: 0.6; margin-top: 5px; text-align: right; }
         
-        .chat-input-area { padding: 20px; background: var(--card-bg); border-top: 1px solid rgba(244, 243, 238, 0.1); display: flex; gap: 15px; align-items: center; }
-        .btn-attach { background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; opacity: 0.7; }
+        .chat-input-area { padding: 20px; background: var(--card-bg); border-top: 1px solid rgba(244, 243, 238, 0.1); display: flex; gap: 10px; align-items: center; position: relative; }
         .chat-input { flex: 1; padding: 15px; border-radius: 12px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--bg-color); color: white; font-family: inherit; resize: none; height: 50px; outline: none; }
         .btn-send { background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 12px; padding: 0 25px; height: 50px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-send:hover { transform: scale(1.05); }
         
+        .btn-emoji { background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; padding: 0 5px; transition: 0.2s; }
+        .btn-emoji:hover { transform: scale(1.2); }
+
+        .emoji-picker { position: absolute; bottom: 80px; left: 20px; background: var(--card-bg); border-radius: 15px; padding: 15px; display: none; grid-template-columns: repeat(4, 1fr); gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+        .emoji-picker.active { display: grid; }
+        .emoji-btn { background: transparent; border: none; cursor: pointer; padding: 5px; border-radius: 10px; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .emoji-btn:hover { background: rgba(255,255,255,0.1); }
+        .emoji-btn svg { width: 35px; height: 35px; }
+
         .empty-state { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; opacity: 0.5; text-align: center; padding: 20px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; padding: 20px; z-index: 10000; }
         .modal.active { display: flex; }
@@ -75,33 +81,11 @@
             .chat-container.show-chat .chat-main { display: flex; }
             .header-right span { display: none; }
         }
-
-        /* Индикатор онлайн */
-        .online-dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: #22c55e; /* зеленый */
-            border-radius: 50%;
-            margin-left: 8px;
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-            vertical-align: middle;
-        }
-
-        .emoji-picker {
-            position: absolute; bottom: 80px; right: 20px; background: var(--card-bg);
-            border-radius: 15px; padding: 15px; display: none; grid-template-columns: repeat(4, 1fr);
-            gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 100;
-        }
-        .emoji-picker.active { display: grid; }
-        .emoji-btn { background: transparent; border: none; cursor: pointer; padding: 5px; border-radius: 10px; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
-        .emoji-btn:hover { background: rgba(255,255,255,0.1); }
-        .emoji-btn svg { width: 35px; height: 35px; }
     </style>
 </head>
 <body>
     <header>
-        <a href="admin.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
+        <a href="admin.html" class="logo-container" id="logo-link"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
             <span id="header-name">Загрузка...</span>
             <a href="#" id="back-btn" class="btn-logout">Вернуться</a>
@@ -131,13 +115,13 @@
             <div id="chat-window" style="display: none; flex-direction: column; height: 100%;">
                 <div class="chat-main-header" id="chat-header">
                     <div class="chat-avatar" id="chat-header-avatar"></div>
-                    <h3 id="chat-header-name" style="display: flex; align-items: center;"></h3>
-                    <span id="chat-online-indicator" class="online-dot" style="display: none;"></span>
+                    <h3 id="chat-header-name"></h3>
+                    <span id="chat-online-indicator" style="display: none; width: 10px; height: 10px; background-color: #22c55e; border-radius: 50%; box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); margin-left: 8px;"></span>
                 </div>
                 <div class="messages-area" id="messages-area"></div>
-                <div class="chat-input-area" style="position: relative;">
+                <div class="chat-input-area">
                     <div class="emoji-picker" id="emojiPicker"></div>
-                    <button class="btn-emoji" id="btn-emoji" style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; padding: 0 10px;">😊</button>
+                    <button class="btn-emoji" id="btn-emoji">😊</button>
                     <textarea class="chat-input" id="chat-input" placeholder="Напишите сообщение..."></textarea>
                     <button class="btn-send" id="btn-send">Отправить</button>
                 </div>
@@ -161,10 +145,7 @@
         const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentUser = null;
-        let currentUserRole = null;
-        let currentChatId = null;
-        
+        // --- АВАТАРКИ ---
         const avatars = {
             'cat': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#c5f05a"/><path d="M30 40 L20 20 L40 30 Z" fill="#25283d"/><path d="M70 40 L80 20 L60 30 Z" fill="#25283d"/><circle cx="50" cy="55" r="30" fill="#25283d"/><circle cx="35" cy="50" r="5" fill="#c5f05a"/><circle cx="65" cy="50" r="5" fill="#c5f05a"/><path d="M45 65 Q50 70 55 65" stroke="#c5f05a" stroke-width="3" fill="none"/></svg>`,
             'dog': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#7455d9"/><ellipse cx="30" cy="40" rx="10" ry="20" fill="#25283d"/><ellipse cx="70" cy="40" rx="10" ry="20" fill="#25283d"/><circle cx="50" cy="55" r="30" fill="#25283d"/><circle cx="40" cy="50" r="5" fill="white"/><circle cx="60" cy="50" r="5" fill="white"/><ellipse cx="50" cy="65" rx="8" ry="5" fill="white"/></svg>`,
@@ -176,31 +157,21 @@
             'hero': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#ff6b6b"/><circle cx="50" cy="40" r="20" fill="#25283d"/><path d="M20 100 Q20 70 50 70 Q80 70 80 100" fill="#25283d"/><path d="M30 40 Q50 20 70 40" stroke="#c5f05a" stroke-width="5" fill="none"/><circle cx="50" cy="40" r="5" fill="white"/></svg>`
         };
 
-        let allChats = [];
-        let realtimeChannel = null;
-
-        // --- КАСТОМНЫЕ СМАЙЛИКИ ---
+        // --- СМАЙЛИКИ ---
         const customEmojis = {
-            'smile_laugh': {
-                code: '[smile_laugh]',
-                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#c5f05a"/><path d="M30 55 Q50 80 70 55" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="#25283d"/><circle cx="65" cy="40" r="5" fill="#25283d"/><path d="M25 35 L40 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/><path d="M75 35 L60 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>`
-            },
-            'smile_cry': {
-                code: '[smile_cry]',
-                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#7455d9"/><path d="M30 65 Q50 45 70 65" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="white"/><circle cx="65" cy="40" r="5" fill="white"/><path d="M35 45 Q30 60 35 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M65 45 Q70 60 65 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`
-            },
-            'smile_angry': {
-                code: '[smile_angry]',
-                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ff6b6b"/><path d="M30 65 Q50 55 70 65" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="5" fill="#25283d"/><circle cx="65" cy="45" r="5" fill="#25283d"/><path d="M25 35 L40 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/><path d="M75 35 L60 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/></svg>`
-            },
-            'smile_shy': {
-                code: '[smile_shy]',
-                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#f4f3ee"/><path d="M40 60 Q50 65 60 60" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="4" fill="#25283d"/><circle cx="65" cy="45" r="4" fill="#25283d"/><ellipse cx="25" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><ellipse cx="75" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><path d="M35 85 Q50 75 65 85" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M45 85 L45 95 M55 85 L55 95" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>`
-            }
+            'smile_laugh': { code: '[smile_laugh]', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#c5f05a"/><path d="M30 55 Q50 80 70 55" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="#25283d"/><circle cx="65" cy="40" r="5" fill="#25283d"/><path d="M25 35 L40 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/><path d="M75 35 L60 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>` },
+            'smile_cry': { code: '[smile_cry]', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#7455d9"/><path d="M30 65 Q50 45 70 65" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="white"/><circle cx="65" cy="40" r="5" fill="white"/><path d="M35 45 Q30 60 35 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M65 45 Q70 60 65 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/></svg>` },
+            'smile_angry': { code: '[smile_angry]', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ff6b6b"/><path d="M30 65 Q50 55 70 65" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="5" fill="#25283d"/><circle cx="65" cy="45" r="5" fill="#25283d"/><path d="M25 35 L40 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/><path d="M75 35 L60 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/></svg>` },
+            'smile_shy': { code: '[smile_shy]', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#f4f3ee"/><path d="M40 60 Q50 65 60 60" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="4" fill="#25283d"/><circle cx="65" cy="45" r="4" fill="#25283d"/><ellipse cx="25" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><ellipse cx="75" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><path d="M35 85 Q50 75 65 85" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M45 85 L45 95 M55 85 L55 95" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>` }
         };
 
+        let currentUser = null;
+        let currentUserRole = null;
+        let currentChatId = null;
+        let allChats = [];
+        let realtimeChannel = null;
         let presenceChannel = null;
-        let onlineUsers = new Set(); // Здесь храним ID тех, кто сейчас онлайн
+        let onlineUsers = new Set();
 
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -214,12 +185,15 @@
             document.getElementById('header-name').innerText = profile.full_name;
 
             const backBtn = document.getElementById('back-btn');
+            const logoLink = document.getElementById('logo-link');
             if (currentUserRole === 'student') {
                 backBtn.href = 'student.html';
                 backBtn.innerText = 'Вернуться в кабинет';
+                logoLink.href = 'student.html';
             } else {
                 backBtn.href = 'admin.html';
                 backBtn.innerText = 'Вернуться в админку';
+                logoLink.href = 'admin.html';
             }
 
             if (currentUserRole === 'admin' || currentUserRole === 'teacher') {
@@ -227,11 +201,55 @@
                 if (btn) btn.style.display = 'flex';
             }
 
+            setupEmojiPicker();
             loadChats();
             setupPresence();
         }
 
-        // --- ЛОГИКА ОНЛАЙН-СТАТУСА ---
+        // --- СМАЙЛИКИ ---
+        function setupEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            const btn = document.getElementById('btn-emoji');
+            const input = document.getElementById('chat-input');
+
+            picker.innerHTML = '';
+            Object.keys(customEmojis).forEach(key => {
+                const emoji = customEmojis[key];
+                const btnEl = document.createElement('button');
+                btnEl.className = 'emoji-btn';
+                btnEl.innerHTML = emoji.svg;
+                btnEl.onclick = (e) => {
+                    e.preventDefault();
+                    input.value += ` ${emoji.code} `;
+                    input.focus();
+                    picker.classList.remove('active');
+                };
+                picker.appendChild(btnEl);
+            });
+
+            btn.onclick = (e) => {
+                e.preventDefault();
+                picker.classList.toggle('active');
+            };
+
+            document.addEventListener('click', (e) => {
+                if (!picker.contains(e.target) && e.target !== btn) {
+                    picker.classList.remove('active');
+                }
+            });
+        }
+
+        function renderMessageContent(text) {
+            let html = text;
+            Object.keys(customEmojis).forEach(key => {
+                const emoji = customEmojis[key];
+                const regex = new RegExp(emoji.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                html = html.replace(regex, `<span style="display:inline-block; width:24px; height:24px; vertical-align:middle; margin:0 2px;">${emoji.svg}</span>`);
+            });
+            return html.replace(/\n/g, '<br>');
+        }
+
+        // --- ОНЛАЙН СТАТУС ---
         function setupPresence() {
             presenceChannel = supabaseClient.channel('online-users', {
                 config: { presence: { key: currentUser.id } }
@@ -241,9 +259,7 @@
                 .on('presence', { event: 'sync' }, () => {
                     const newState = presenceChannel.presenceState();
                     onlineUsers.clear();
-                    for (const id in newState) {
-                        onlineUsers.add(id);
-                    }
+                    for (const id in newState) onlineUsers.add(id);
                     updateOnlineStatus();
                 })
                 .on('presence', { event: 'join' }, ({ key }) => {
@@ -263,39 +279,28 @@
 
         function updateOnlineStatus() {
             const indicator = document.getElementById('chat-online-indicator');
-            // Если чат не открыт, ничего не делаем
-            if (!currentChatId) {
-                indicator.style.display = 'none';
-                return;
-            }
-
-            // Находим текущий чат и ID собеседника
+            if (!currentChatId) { indicator.style.display = 'none'; return; }
             const currentChat = allChats.find(c => c.id === currentChatId);
-            if (currentChat && currentChat.otherUserId) {
-                if (onlineUsers.has(currentChat.otherUserId)) {
-                    indicator.style.display = 'inline-block';
-                } else {
-                    indicator.style.display = 'none';
-                }
+            if (currentChat && currentChat.otherUserId && onlineUsers.has(currentChat.otherUserId)) {
+                indicator.style.display = 'inline-block';
+            } else {
+                indicator.style.display = 'none';
             }
         }
 
+        // --- СПИСОК ЧАТОВ ---
         async function loadChats() {
             const chatList = document.getElementById('chat-list');
-            
             const { data: myChats, error } = await supabaseClient
                 .from('chat_participants')
                 .select(`chat_id, chats (id, type, name)`)
                 .eq('user_id', currentUser.id);
 
             if (error || !myChats) { chatList.innerHTML = '<p style="padding:20px;color:red;">Ошибка загрузки</p>'; return; }
-
             allChats = myChats.map(item => item.chats);
 
             for (let i = 0; i < allChats.length; i++) {
                 const chat = allChats[i];
-
-                // Получаем второго участника
                 const { data: otherParticipants } = await supabaseClient
                     .from('chat_participants')
                     .select('user_id')
@@ -304,8 +309,8 @@
 
                 if (otherParticipants && otherParticipants.length > 0) {
                     const otherUserId = otherParticipants[0].user_id;
-                    chat.otherUserId = otherUserId; // СОХРАНЯЕМ ID ДЛЯ ОНЛАЙН-СТАТУСА
-                    // Получаем его профиль (имя и РОЛЬ)
+                    chat.otherUserId = otherUserId;
+                    // Запрашиваем профиль вместе с avatar_id
                     const { data: otherProfile } = await supabaseClient
                         .from('profiles')
                         .select('full_name, role, avatar_id')
@@ -314,14 +319,14 @@
                     
                     if (otherProfile) {
                         chat.displayName = otherProfile.full_name;
-                        chat.otherRole = otherProfile.role; // Сохраняем роль собеседника
+                        chat.otherRole = otherProfile.role;
+                        chat.otherAvatar = otherProfile.avatar_id;
                     }
                 } else {
                     chat.displayName = 'Личный чат';
-                    chat.otherRole = 'teacher'; // По умолчанию
+                    chat.otherRole = 'teacher';
                 }
 
-                // Непрочитанные
                 const { count } = await supabaseClient
                     .from('messages')
                     .select('*', { count: 'exact', head: true })
@@ -331,7 +336,6 @@
                 
                 chat.unreadCount = count || 0;
             }
-
             renderChatList();
         }
 
@@ -350,19 +354,14 @@
                 if (chat.id === currentChatId) div.classList.add('active');
                 
                 const displayName = chat.displayName || 'Личный чат';
-                const avatarLetter = displayName.charAt(0).toUpperCase();
-                
-                // Проверяем, есть ли у собеседника аватарка
-                let avatarHtml = displayName.charAt(0).toUpperCase();
                 const avatarClass = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
                 
+                let avatarHtml = displayName.charAt(0).toUpperCase();
                 if (chat.otherAvatar && avatars[chat.otherAvatar]) {
                     avatarHtml = `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 4px;">${avatars[chat.otherAvatar]}</div>`;
                 }
 
-                const badge = chat.unreadCount > 0 
-                    ? `<div class="unread-badge">${chat.unreadCount}</div>` 
-                    : '';
+                const badge = chat.unreadCount > 0 ? `<div class="unread-badge">${chat.unreadCount}</div>` : '';
 
                 div.innerHTML = `
                     <div class="${avatarClass}">${avatarHtml}</div>
@@ -379,7 +378,7 @@
 
         async function openChat(chat) {
             currentChatId = chat.id;
-            updateOnlineStatus(); // Проверяем онлайн при открытии чата
+            updateOnlineStatus();
             document.getElementById('empty-chat-state').style.display = 'none';
             document.getElementById('chat-window').style.display = 'flex';
             document.getElementById('chat-container').classList.add('show-chat');
@@ -387,9 +386,13 @@
             const displayName = chat.displayName || 'Личный чат';
             const headerAvatar = document.getElementById('chat-header-avatar');
             
-            // Красим аватар в шапке чата тоже
             headerAvatar.className = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
-            headerAvatar.innerText = displayName.charAt(0).toUpperCase();
+            if (chat.otherAvatar && avatars[chat.otherAvatar]) {
+                headerAvatar.innerHTML = `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 4px;">${avatars[chat.otherAvatar]}</div>`;
+            } else {
+                headerAvatar.innerText = displayName.charAt(0).toUpperCase();
+            }
+
             document.getElementById('chat-header-name').innerText = displayName;
 
             await supabaseClient
@@ -409,7 +412,6 @@
         async function loadMessages(chatId) {
             const area = document.getElementById('messages-area');
             area.innerHTML = '<p style="text-align:center;opacity:0.5;">Загрузка...</p>';
-
             const { data: messages, error } = await supabaseClient
                 .from('messages')
                 .select('*')
@@ -417,57 +419,9 @@
                 .order('created_at', { ascending: true });
 
             if (error) { area.innerHTML = '<p style="color:red;">Ошибка загрузки</p>'; return; }
-
             area.innerHTML = '';
             messages.forEach(msg => appendMessage(msg));
             scrollToBottom();
-        }
-
-        function setupEmojiPicker() {
-            const picker = document.getElementById('emojiPicker');
-            const btn = document.getElementById('btn-emoji');
-            const input = document.getElementById('chat-input');
-
-            // Заполняем панель
-            Object.keys(customEmojis).forEach(key => {
-                const emoji = customEmojis[key];
-                const btnEl = document.createElement('button');
-                btnEl.className = 'emoji-btn';
-                btnEl.innerHTML = emoji.svg;
-                btnEl.onclick = (e) => {
-                    e.preventDefault();
-                    input.value += ` ${emoji.code} `;
-                    input.focus();
-                    picker.classList.remove('active');
-                };
-                picker.appendChild(btnEl);
-            });
-
-            // Открытие/закрытие
-            btn.onclick = (e) => {
-                e.preventDefault();
-                picker.classList.toggle('active');
-            };
-
-            // Закрытие при клике вне панели
-            document.addEventListener('click', (e) => {
-                if (!picker.contains(e.target) && e.target !== btn) {
-                    picker.classList.remove('active');
-                }
-            });
-        }
-
-        // Функция для замены текстовых кодов на SVG в сообщении
-        function renderMessageContent(text) {
-            let html = text;
-            Object.keys(customEmojis).forEach(key => {
-                const emoji = customEmojis[key];
-                // Заменяем все вхождения кода на SVG (с небольшим стилем для размера)
-                const regex = new RegExp(emoji.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-                html = html.replace(regex, `<span style="display:inline-block; width:24px; height:24px; vertical-align:middle; margin:0 2px;">${emoji.svg}</span>`);
-            });
-            // Заменяем переносы строк на <br>
-            return html.replace(/\n/g, '<br>');
         }
 
         function appendMessage(msg) {
@@ -534,7 +488,7 @@
             
             const { data: users, error } = await supabaseClient
                 .from('profiles')
-                .select('id, full_name, role')
+                .select('id, full_name, role, avatar_id')
                 .neq('id', currentUser.id);
 
             if (error) { list.innerHTML = 'Ошибка загрузки'; return; }
@@ -543,9 +497,14 @@
             users.forEach(u => {
                 const div = document.createElement('div');
                 div.className = 'user-list-item';
-                // В модалке тоже красим аватарки
                 const avatarClass = u.role === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
-                div.innerHTML = `<div class="${avatarClass}" style="width:35px;height:35px;font-size:0.8rem;">${u.full_name.charAt(0)}</div><div><b>${u.full_name}</b><br><small style="opacity:0.6;">${u.role}</small></div>`;
+                
+                let avatarHtml = u.full_name.charAt(0);
+                if (u.avatar_id && avatars[u.avatar_id]) {
+                    avatarHtml = `<div style="width: 100%; height: 100%; padding: 2px;">${avatars[u.avatar_id]}</div>`;
+                }
+
+                div.innerHTML = `<div class="${avatarClass}" style="width:35px;height:35px;font-size:0.8rem;">${avatarHtml}</div><div><b>${u.full_name}</b><br><small style="opacity:0.6;">${u.role}</small></div>`;
                 div.onclick = () => createDirectChat(u.id);
                 list.appendChild(div);
             });
@@ -564,7 +523,6 @@
 
             modal.classList.remove('active');
             loadChats();
-            setupPresence();
         }
 
         init();
