@@ -155,6 +155,27 @@
         let currentChatId = null;
         let allChats = [];
         let realtimeChannel = null;
+
+        // --- КАСТОМНЫЕ СМАЙЛИКИ ---
+        const customEmojis = {
+            'smile_laugh': {
+                code: '[smile_laugh]',
+                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#c5f05a"/><path d="M30 55 Q50 80 70 55" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="#25283d"/><circle cx="65" cy="40" r="5" fill="#25283d"/><path d="M25 35 L40 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/><path d="M75 35 L60 30" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>`
+            },
+            'smile_cry': {
+                code: '[smile_cry]',
+                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#7455d9"/><path d="M30 65 Q50 45 70 65" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="40" r="5" fill="white"/><circle cx="65" cy="40" r="5" fill="white"/><path d="M35 45 Q30 60 35 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M65 45 Q70 60 65 70" stroke="#0ea5e9" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`
+            },
+            'smile_angry': {
+                code: '[smile_angry]',
+                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ff6b6b"/><path d="M30 65 Q50 55 70 65" stroke="#25283d" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="5" fill="#25283d"/><circle cx="65" cy="45" r="5" fill="#25283d"/><path d="M25 35 L40 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/><path d="M75 35 L60 45" stroke="#25283d" stroke-width="5" stroke-linecap="round"/></svg>`
+            },
+            'smile_shy': {
+                code: '[smile_shy]',
+                svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#f4f3ee"/><path d="M40 60 Q50 65 60 60" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="35" cy="45" r="4" fill="#25283d"/><circle cx="65" cy="45" r="4" fill="#25283d"/><ellipse cx="25" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><ellipse cx="75" cy="55" rx="8" ry="4" fill="#ff6b6b" opacity="0.5"/><path d="M35 85 Q50 75 65 85" stroke="#25283d" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M45 85 L45 95 M55 85 L55 95" stroke="#25283d" stroke-width="4" stroke-linecap="round"/></svg>`
+            }
+        };
+
         let presenceChannel = null;
         let onlineUsers = new Set(); // Здесь храним ID тех, кто сейчас онлайн
 
@@ -374,6 +395,53 @@
             scrollToBottom();
         }
 
+        function setupEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            const btn = document.getElementById('btn-emoji');
+            const input = document.getElementById('chat-input');
+
+            // Заполняем панель
+            Object.keys(customEmojis).forEach(key => {
+                const emoji = customEmojis[key];
+                const btnEl = document.createElement('button');
+                btnEl.className = 'emoji-btn';
+                btnEl.innerHTML = emoji.svg;
+                btnEl.onclick = (e) => {
+                    e.preventDefault();
+                    input.value += ` ${emoji.code} `;
+                    input.focus();
+                    picker.classList.remove('active');
+                };
+                picker.appendChild(btnEl);
+            });
+
+            // Открытие/закрытие
+            btn.onclick = (e) => {
+                e.preventDefault();
+                picker.classList.toggle('active');
+            };
+
+            // Закрытие при клике вне панели
+            document.addEventListener('click', (e) => {
+                if (!picker.contains(e.target) && e.target !== btn) {
+                    picker.classList.remove('active');
+                }
+            });
+        }
+
+        // Функция для замены текстовых кодов на SVG в сообщении
+        function renderMessageContent(text) {
+            let html = text;
+            Object.keys(customEmojis).forEach(key => {
+                const emoji = customEmojis[key];
+                // Заменяем все вхождения кода на SVG (с небольшим стилем для размера)
+                const regex = new RegExp(emoji.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                html = html.replace(regex, `<span style="display:inline-block; width:24px; height:24px; vertical-align:middle; margin:0 2px;">${emoji.svg}</span>`);
+            });
+            // Заменяем переносы строк на <br>
+            return html.replace(/\n/g, '<br>');
+        }
+
         function appendMessage(msg) {
             const area = document.getElementById('messages-area');
             const isSent = msg.sender_id === currentUser.id;
@@ -381,7 +449,7 @@
             
             const div = document.createElement('div');
             div.className = `message ${isSent ? 'sent' : 'received'}`;
-            div.innerHTML = `<div>${msg.content}</div><div class="message-time">${time}</div>`;
+            div.innerHTML = `<div>${renderMessageContent(msg.content)}</div><div class="message-time">${time}</div>`;
             area.appendChild(div);
         }
 
