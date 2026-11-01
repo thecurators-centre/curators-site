@@ -230,8 +230,7 @@
         };
 
         let books = [];
-        let spawnTimer = 0;
-        let spawnInterval = 90;
+        let distanceSinceLastBook = 0; // дистанция с момента последнего спавна
 
         // Адаптация под размер экрана
         function resizeCanvas() {
@@ -245,32 +244,60 @@
 
         function drawDino() {
             ctx.fillStyle = dino.color;
-            // Тело
-            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+            const x = dino.x;
+            const y = dino.y;
+            const w = dino.width;
+            const h = dino.height;
+
+            // 1. Хвост (сзади)
+            ctx.fillRect(x - 10, y + h - 20, 15, 12);
+            ctx.fillRect(x - 18, y + h - 16, 10, 8);
+
+            // 2. Тело
+            ctx.fillRect(x, y, w, h);
+
+            // 3. Шея и голова (вытянуты вперед и вверх)
+            // Шея
+            ctx.fillRect(x + w - 10, y - 10, 10, 20);
             // Голова
-            ctx.fillRect(dino.x + 10, dino.y - 15, 30, 20);
-            // Глаз (вырезаем фоном)
+            ctx.fillRect(x + w, y - 18, 22, 18);
+            // Пасть (вырез)
             ctx.fillStyle = COLOR_BG;
-            ctx.fillRect(dino.x + 30, dino.y - 10, 5, 5);
-            // Хвост
+            ctx.fillRect(x + w + 8, y - 6, 14, 4);
+            // Глаз
+            ctx.fillRect(x + w + 12, y - 14, 4, 4);
+            
+            // Возвращаем цвет
             ctx.fillStyle = dino.color;
-            ctx.fillRect(dino.x - 10, dino.y + 20, 15, 15);
-            // Ноги (анимация бега)
-            let legOffset = isPlaying ? (Math.floor(Date.now() / 100) % 2 === 0 ? 0 : 10) : 0;
-            ctx.fillRect(dino.x + 5, dino.y + dino.height, 8, 15 - legOffset);
-            ctx.fillRect(dino.x + 25, dino.y + dino.height, 8, 5 + legOffset);
+
+            // 4. Лапы (анимация)
+            let legOffset = isPlaying ? (Math.floor(Date.now() / 100) % 2 === 0 ? 0 : 8) : 0;
+            // Задняя лапа
+            ctx.fillRect(x + 2, y + h, 8, 12 - legOffset);
+            ctx.fillRect(x + 2, y + h + 12 - legOffset, 10, 4); // стопа
+            // Передняя лапа
+            ctx.fillRect(x + 22, y + h, 8, 4 + legOffset);
+            ctx.fillRect(x + 22, y + h + 4 + legOffset, 10, 4); // стопа
+            
+            // Маленькая ручка (для узнаваемости)
+            ctx.fillRect(x + w - 8, y + 10, 6, 4);
         }
 
         function drawBook(book) {
-            ctx.fillStyle = COLOR_PURPLE;
+            // Чередуем цвета для разнообразия
+            const isAlt = (book.x % 2 === 0); 
+            ctx.fillStyle = isAlt ? COLOR_PURPLE : '#8c6df0'; // фиолетовый и светло-фиолетовый
             // Обложка книги
             ctx.fillRect(book.x, book.y, book.width, book.height);
             // Корешок
             ctx.fillStyle = COLOR_LIME;
             ctx.fillRect(book.x, book.y, 4, book.height);
-            // Страницы (белая полоска)
+            // Страницы
             ctx.fillStyle = '#f4f3ee';
             ctx.fillRect(book.x + book.width - 4, book.y + 2, 2, book.height - 4);
+            // Полоска на обложке для "корешка"
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(book.x + 8, book.y + 5, 2, book.height - 10);
         }
 
         function drawGround() {
@@ -303,19 +330,42 @@
                 }
             }
 
-            // Спавн книг
-            spawnTimer++;
-            if (spawnTimer > spawnInterval) {
-                spawnTimer = 0;
-                let bookHeight = 30 + Math.random() * 30;
-                books.push({
-                    x: canvas.width,
-                    y: canvas.height - 20 - bookHeight,
-                    width: 25,
-                    height: bookHeight
-                });
-                // Постепенное усложнение
-                if (spawnInterval > 40) spawnInterval -= 1;
+            // --- НОВАЯ ЛОГИКА СПАВНА (по дистанции) ---
+            distanceSinceLastBook += speed;
+
+            // Минимальный зазор зависит от текущей скорости и ширины книги
+            // Базовая ширина книги 25. Зазор = (ширина * 3) + скорость*20 + рандом
+            const baseGap = 25 * 3; 
+            const speedFactor = speed * 20;
+            const randomExtra = Math.random() * 150;
+            const requiredGap = baseGap + speedFactor + randomExtra;
+
+            if (distanceSinceLastBook > requiredGap) {
+                distanceSinceLastBook = 0;
+
+                // Решаем, сколько книг спавнить (1, 2 или 3) с вероятностями
+                let count = 1;
+                const rand = Math.random();
+                if (rand > 0.7) count = 2;
+                if (rand > 0.9) count = 3;
+
+                // Спавним пачку книг
+                let startX = canvas.width;
+                for (let i = 0; i < count; i++) {
+                    // Высота книги от 30 до 60
+                    let bookHeight = 30 + Math.random() * 30;
+                    // Ширина книги
+                    let bookWidth = 25; 
+                    
+                    books.push({
+                        x: startX + (i * (bookWidth + 5)), // небольшая щель между книгами
+                        y: canvas.height - 20 - bookHeight,
+                        width: bookWidth,
+                        height: bookHeight
+                    });
+                }
+
+                // Постепенное усложнение (скорость растет)
                 if (speed < 15) speed += 0.05;
             }
 
@@ -367,7 +417,7 @@
             speed = 6;
             spawnInterval = 90;
             books = [];
-            spawnTimer = 0;
+            distanceSinceLastBook = 0;
             dino.y = canvas.height - dino.height - 20;
             dino.isJumping = false;
             
