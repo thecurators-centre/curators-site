@@ -87,6 +87,16 @@
             box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
             vertical-align: middle;
         }
+
+        .emoji-picker {
+            position: absolute; bottom: 80px; right: 20px; background: var(--card-bg);
+            border-radius: 15px; padding: 15px; display: none; grid-template-columns: repeat(4, 1fr);
+            gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+        }
+        .emoji-picker.active { display: grid; }
+        .emoji-btn { background: transparent; border: none; cursor: pointer; padding: 5px; border-radius: 10px; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .emoji-btn:hover { background: rgba(255,255,255,0.1); }
+        .emoji-btn svg { width: 35px; height: 35px; }
     </style>
 </head>
 <body>
@@ -125,8 +135,9 @@
                     <span id="chat-online-indicator" class="online-dot" style="display: none;"></span>
                 </div>
                 <div class="messages-area" id="messages-area"></div>
-                <div class="chat-input-area">
-                    
+                <div class="chat-input-area" style="position: relative;">
+                    <div class="emoji-picker" id="emojiPicker"></div>
+                    <button class="btn-emoji" id="btn-emoji" style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; padding: 0 10px;">😊</button>
                     <textarea class="chat-input" id="chat-input" placeholder="Напишите сообщение..."></textarea>
                     <button class="btn-send" id="btn-send">Отправить</button>
                 </div>
@@ -153,6 +164,18 @@
         let currentUser = null;
         let currentUserRole = null;
         let currentChatId = null;
+        
+        const avatars = {
+            'cat': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#c5f05a"/><path d="M30 40 L20 20 L40 30 Z" fill="#25283d"/><path d="M70 40 L80 20 L60 30 Z" fill="#25283d"/><circle cx="50" cy="55" r="30" fill="#25283d"/><circle cx="35" cy="50" r="5" fill="#c5f05a"/><circle cx="65" cy="50" r="5" fill="#c5f05a"/><path d="M45 65 Q50 70 55 65" stroke="#c5f05a" stroke-width="3" fill="none"/></svg>`,
+            'dog': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#7455d9"/><ellipse cx="30" cy="40" rx="10" ry="20" fill="#25283d"/><ellipse cx="70" cy="40" rx="10" ry="20" fill="#25283d"/><circle cx="50" cy="55" r="30" fill="#25283d"/><circle cx="40" cy="50" r="5" fill="white"/><circle cx="60" cy="50" r="5" fill="white"/><ellipse cx="50" cy="65" rx="8" ry="5" fill="white"/></svg>`,
+            'fox': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#ff6b6b"/><path d="M20 50 L10 15 L35 35 Z" fill="#25283d"/><path d="M80 50 L90 15 L65 35 Z" fill="#25283d"/><circle cx="50" cy="55" r="30" fill="#25283d"/><path d="M40 60 L50 70 L60 60" stroke="white" stroke-width="3" fill="none"/></svg>`,
+            'robot': `<svg viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" fill="#313452"/><rect x="25" y="30" width="50" height="40" rx="10" fill="#c5f05a"/><circle cx="40" cy="45" r="5" fill="#25283d"/><circle cx="60" cy="45" r="5" fill="#25283d"/><rect x="40" y="55" width="20" height="5" fill="#25283d"/><line x1="50" y1="15" x2="50" y2="30" stroke="white" stroke-width="3"/><circle cx="50" cy="12" r="4" fill="white"/></svg>`,
+            'alien': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#c5f05a"/><ellipse cx="50" cy="50" rx="30" ry="40" fill="#25283d"/><ellipse cx="35" cy="45" rx="8" ry="15" fill="white" transform="rotate(-20 35 45)"/><ellipse cx="65" cy="45" rx="8" ry="15" fill="white" transform="rotate(20 65 45)"/></svg>`,
+            'bear': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#7455d9"/><circle cx="25" cy="25" r="15" fill="#25283d"/><circle cx="75" cy="25" r="15" fill="#25283d"/><circle cx="50" cy="55" r="35" fill="#25283d"/><circle cx="40" cy="50" r="5" fill="white"/><circle cx="60" cy="50" r="5" fill="white"/><circle cx="50" cy="65" r="10" fill="white"/><circle cx="50" cy="65" r="5" fill="#25283d"/></svg>`,
+            'owl': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#f4f3ee"/><circle cx="50" cy="55" r="35" fill="#25283d"/><circle cx="35" cy="45" r="12" fill="white"/><circle cx="65" cy="45" r="12" fill="white"/><circle cx="35" cy="45" r="5" fill="#25283d"/><circle cx="65" cy="45" r="5" fill="#25283d"/><path d="M45 65 L50 75 L55 65 Z" fill="#c5f05a"/></svg>`,
+            'hero': `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#ff6b6b"/><circle cx="50" cy="40" r="20" fill="#25283d"/><path d="M20 100 Q20 70 50 70 Q80 70 80 100" fill="#25283d"/><path d="M30 40 Q50 20 70 40" stroke="#c5f05a" stroke-width="5" fill="none"/><circle cx="50" cy="40" r="5" fill="white"/></svg>`
+        };
+
         let allChats = [];
         let realtimeChannel = null;
 
@@ -285,7 +308,7 @@
                     // Получаем его профиль (имя и РОЛЬ)
                     const { data: otherProfile } = await supabaseClient
                         .from('profiles')
-                        .select('full_name, role')
+                        .select('full_name, role, avatar_id')
                         .eq('id', otherUserId)
                         .single();
                     
@@ -329,15 +352,20 @@
                 const displayName = chat.displayName || 'Личный чат';
                 const avatarLetter = displayName.charAt(0).toUpperCase();
                 
-                // Если собеседник - ученик, добавляем класс .avatar-student (зеленый)
+                // Проверяем, есть ли у собеседника аватарка
+                let avatarHtml = displayName.charAt(0).toUpperCase();
                 const avatarClass = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+                
+                if (chat.otherAvatar && avatars[chat.otherAvatar]) {
+                    avatarHtml = `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 4px;">${avatars[chat.otherAvatar]}</div>`;
+                }
 
                 const badge = chat.unreadCount > 0 
                     ? `<div class="unread-badge">${chat.unreadCount}</div>` 
                     : '';
 
                 div.innerHTML = `
-                    <div class="${avatarClass}">${avatarLetter}</div>
+                    <div class="${avatarClass}">${avatarHtml}</div>
                     <div class="chat-info">
                         <h4>${displayName}</h4>
                         <p>Нажмите, чтобы открыть</p>
