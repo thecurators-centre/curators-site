@@ -53,23 +53,6 @@
             font-size: 1rem; cursor: pointer; margin-top: 10px; padding: 10px;
         }
 
-        /* Всплывающая панель форматирования текста */
-        .text-toolbar {
-            position: absolute; display: none; z-index: 2000;
-            background: var(--card-bg); border-radius: 10px; padding: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); border: 1px solid var(--accent-lime);
-            gap: 10px; align-items: center;
-        }
-        .text-toolbar select, .text-toolbar input {
-            background: var(--bg-color); color: white; border: 1px solid #555;
-            padding: 5px; border-radius: 5px; font-family: inherit; outline: none;
-        }
-        .text-toolbar button {
-            background: transparent; border: none; color: white; cursor: pointer;
-            font-size: 1rem; padding: 5px; transition: 0.2s;
-        }
-        .text-toolbar button:hover { color: var(--accent-lime); }
-
         .board-title {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
             background: var(--card-bg); padding: 10px 20px; border-radius: 10px;
@@ -112,18 +95,6 @@
         <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
     </div>
 
-    <!-- Панель форматирования текста -->
-    <div class="text-toolbar" id="textToolbar">
-        <select id="fontFamily">
-            <option value="Inter">Inter</option>
-            <option value="Arial">Arial</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-        </select>
-        <input type="number" id="textSize" min="10" max="120" value="24" style="width: 60px;">
-        <button id="deleteTextBtn" title="Удалить">🗑️</button>
-    </div>
-
     <div class="shape-modal" id="shapeModal">
         <div class="shape-modal-content">
             <div class="shape-option" data-shape="rect">⬛ Прямоугольник</div>
@@ -144,8 +115,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const subjectRaw = urlParams.get('subject') || 'Общая доска';
-        const subject = decodeURIComponent(subjectRaw); // ИСПРАВЛЕНО: раскодируем имя
+        const subject = urlParams.get('subject') || 'Общая доска';
         const isStudent = urlParams.get('role') === 'student';
         
         document.getElementById('boardTitle').innerText = `Доска: ${subject}`;
@@ -198,7 +168,6 @@
         let currentLine = null;
         let currentShape = null;
         let startX, startY;
-        let activeTextInput = null;
         let broadcastChannel = null;
         let teacherCursor = null;
         let lastBroadcastTime = 0; 
@@ -206,8 +175,6 @@
 
         let studentObjects = {}; 
         let currentStrokeId = null;
-        let selectedTextNode = null;
-        let textToolbar = document.getElementById('textToolbar');
 
         const colorPicker = document.getElementById('colorPicker');
         const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -221,7 +188,6 @@
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
-                clearTextSelection();
             });
         });
 
@@ -237,130 +203,34 @@
                 shapeBtn.classList.add('active');
                 currentTool = 'shape';
                 shapeModal.classList.remove('active');
-                clearTextSelection();
             };
         });
 
-        // --- ЛОГИКА ТЕКСТА ---
-        function clearTextSelection() {
-            if (selectedTextNode) {
-                selectedTextNode.draggable(false);
-                selectedTextNode = null;
-                textToolbar.style.display = 'none';
-            }
-        }
-
-        stage.on('click tap', (e) => {
-            if (e.target === stage) {
-                clearTextSelection();
-            }
-        });
-
+        // --- БАЗОВЫЙ ВВОД ТЕКСТА ---
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool !== 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
 
-            clearTextSelection();
             const pos = stage.getPointerPosition();
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
-            const textarea = document.createElement('textarea');
-            textarea.className = 'text-input-overlay';
-            textarea.style.left = `${pos.x}px`; 
-            textarea.style.top = `${pos.y}px`;
-            textarea.style.fontSize = `${24 * stage.scaleX()}px`;
-            textarea.style.color = colorPicker.value;
-            textarea.style.width = '200px'; 
-            textarea.style.height = '40px';
-            textarea.style.fontFamily = 'Inter';
-            
-            document.getElementById('container').appendChild(textarea);
-            textarea.focus();
-            activeTextInput = textarea;
-
-            textarea.onblur = () => {
-                const text = textarea.value.trim();
-                if (text) {
-                    const fontSize = 24;
-                    const textNode = new Konva.Text({ 
-                        x: localX, y: localY, text: text, fontSize: fontSize, 
-                        fill: colorPicker.value, fontFamily: 'Inter', 
-                        draggable: !isStudent,
-                        name: 'text-node'
-                    });
-                    
-                    textNode.on('click tap', (evt) => {
-                        if (isStudent) return;
-                        evt.cancelBubble = true;
-                        selectText(textNode);
-                    });
-
-                    textNode.on('dragmove', () => {
-                        updateTextToolbarPosition(textNode);
-                    });
-
-                    drawLayer.add(textNode); 
-                    drawLayer.batchDraw();
-                    saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter' });
-                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter' } });
-                }
-                textarea.remove(); 
-                activeTextInput = null;
-            };
+            const text = prompt('Введите текст:');
+            if (text) {
+                const fontSize = 24;
+                const textNode = new Konva.Text({ 
+                    x: localX, y: localY, text: text, fontSize: fontSize, 
+                    fill: colorPicker.value, fontFamily: 'Inter', 
+                    draggable: !isStudent 
+                });
+                drawLayer.add(textNode); 
+                drawLayer.batchDraw();
+                saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter' });
+                broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter' } });
+            }
         });
 
-        function selectText(node) {
-            clearTextSelection();
-            selectedTextNode = node;
-            node.draggable(true);
-            
-            textToolbar.style.display = 'flex';
-            document.getElementById('fontFamily').value = node.fontFamily();
-            document.getElementById('textSize').value = node.fontSize();
-            updateTextToolbarPosition(node);
-        }
-
-        function updateTextToolbarPosition(node) {
-            const stageBox = stage.container().getBoundingClientRect();
-            const nodeBox = node.getClientRect();
-            const top = stageBox.top + nodeBox.y - 50;
-            const left = stageBox.left + nodeBox.x;
-            textToolbar.style.top = `${top}px`;
-            textToolbar.style.left = `${left}px`;
-        }
-
-        document.getElementById('fontFamily').onchange = (e) => {
-            if (selectedTextNode) {
-                selectedTextNode.fontFamily(e.target.value);
-                drawLayer.batchDraw();
-                saveTextUpdate(selectedTextNode);
-            }
-        };
-        document.getElementById('textSize').onchange = (e) => {
-            if (selectedTextNode) {
-                selectedTextNode.fontSize(parseInt(e.target.value));
-                drawLayer.batchDraw();
-                updateTextToolbarPosition(selectedTextNode);
-                saveTextUpdate(selectedTextNode);
-            }
-        };
-
-        function saveTextUpdate(node) {
-            // В реальном проекте тут нужно обновлять запись в БД, а не создавать новую.
-            // Но для простоты пока оставим так (или можно добавить id и делать update).
-            console.log('Текст обновлен', node.text());
-        }
-
-        document.getElementById('deleteTextBtn').onclick = () => {
-            if (selectedTextNode) {
-                selectedTextNode.destroy();
-                drawLayer.batchDraw();
-                clearTextSelection();
-            }
-        };
-
-        // --- ОСТАЛЬНОЕ РИСОВАНИЕ (ПЕН, ЛАСТИК, ФИГУРЫ) ---
+        // --- РИСОВАНИЕ (ПЕН, ЛАСТИК, ФИГУРЫ) ---
         stage.on('mousedown touchstart', (e) => {
             if (isStudent || currentTool === 'text') return;
             if (e.evt.touches && e.evt.touches.length > 1) return;
@@ -379,7 +249,7 @@
                 currentLine = new Konva.Line({ 
                     stroke: color, strokeWidth: width, lineCap: 'round', lineJoin: 'round', 
                     points: [startX, startY], globalCompositeOperation: 'source-over',
-                    tension: 0.5, bezier: true 
+                    tension: 0.5, bezier: true // СГЛАЖИВАНИЕ ЛИНИИ
                 });
                 drawLayer.add(currentLine);
             } 
@@ -514,14 +384,13 @@
             if (confirm('Очистить доску?')) {
                 drawLayer.destroyChildren(); 
                 drawLayer.draw();
-                clearTextSelection();
-                await supabaseClient.from('board_objects').delete().eq('board_id', encodeURIComponent(subject));
+                await supabaseClient.from('board_objects').delete().eq('board_id', subject);
                 broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'clear' } });
             }
         });
 
         async function saveObjectToDB(obj) { 
-            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: encodeURIComponent(subject), object_data: obj }]); 
+            const { error } = await supabaseClient.from('board_objects').insert([{ board_id: subject, object_data: obj }]); 
             if (error) console.error('Ошибка сохранения в базу:', error);
         }
 
@@ -542,14 +411,7 @@
                     node.add(new Konva.Line({ points: [obj.width, 0, obj.width - 15, -8, obj.width - 15, 8, obj.width, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
                 }
             } else if (obj.type === 'text') {
-                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: obj.fontFamily || 'Inter', draggable: !isStudent, name: 'text-node' });
-                if (!isStudent) {
-                    node.on('click tap', (evt) => {
-                        evt.cancelBubble = true;
-                        selectText(node);
-                    });
-                    node.on('dragmove', () => updateTextToolbarPosition(node));
-                }
+                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: obj.fontFamily || 'Inter', draggable: !isStudent });
             }
             if (node) {
                 drawLayer.add(node);
@@ -559,7 +421,7 @@
         }
 
         async function loadBoard() {
-            const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', encodeURIComponent(subject)).order('created_at', { ascending: true });
+            const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject).order('created_at', { ascending: true });
             if (data) {
                 data.forEach(item => drawObject(item.object_data));
             }
@@ -573,12 +435,6 @@
                         const data = payload.payload;
                         if (data.type === 'clear') {
                             drawLayer.destroyChildren(); drawLayer.draw(); studentObjects = {};
-                        } else if (data.type === 'text' && data.id && studentObjects[data.id]) {
-                            const node = studentObjects[data.id];
-                            node.text(data.text);
-                            node.fontSize(data.fontSize);
-                            node.fontFamily(data.fontFamily);
-                            drawLayer.batchDraw();
                         } else {
                             drawObject(data);
                         }
