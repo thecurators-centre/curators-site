@@ -442,9 +442,19 @@
             }
         }
 
-        // Обработчики
-        document.getElementById('startBtn').addEventListener('click', startGame);
-        document.getElementById('restartBtn').addEventListener('click', startGame);
+        // Обработчики кнопок (pointerdown работает и на клик, и на тап в Safari PWA)
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        startBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault(); // предотвращаем возможные баги с фокусом в Safari
+            startGame();
+        });
+
+        restartBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            startGame();
+        });
         
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
@@ -453,8 +463,9 @@
             }
         });
 
-        container.addEventListener('mousedown', jump);
-        container.addEventListener('touchstart', (e) => {
+        // Обработчики прыжка вешаем ТОЛЬКО на канвас, чтобы они не мешали кнопкам
+        canvas.addEventListener('mousedown', jump);
+        canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             jump();
         }, { passive: false });
