@@ -129,6 +129,73 @@
         .shape-option:hover svg {
             stroke: var(--bg-color);
         }
+
+        /* --- Плавающая панель голосового чата --- */
+        .voice-panel {
+            position: absolute;
+            top: 80px; /* Под заголовком доски */
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .voice-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .voice-btn:hover { border-color: var(--accent-lime); }
+        .voice-btn.active {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+            animation: pulse-red 2s infinite;
+        }
+
+        .voice-status {
+            background: rgba(49, 52, 82, 0.9);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .voice-pulse {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+            animation: pulse-green 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
     </style>
 </head>
 <body>
@@ -854,6 +921,69 @@ async function saveObjectToDB(obj) {
 
         loadBoard();
         setupRealtime();
+
+        // --- ЛОГИКА ГОЛОСОВОГО ЧАТА (ЭТАП 1: ДОСТУП К МИКРОФОНУ) ---
+        let localStream = null;
+        let isVoiceConnected = false;
+
+        const voiceToggleBtn = document.getElementById('voiceToggleBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const voiceText = document.getElementById('voiceText');
+        const voiceIcon = document.getElementById('voiceIcon');
+
+        voiceToggleBtn.addEventListener('click', async () => {
+            if (!isVoiceConnected) {
+                // Включаем
+                try {
+                    voiceText.innerText = 'Подключение...';
+                    voiceToggleBtn.disabled = true;
+
+                    // Запрашиваем доступ к микрофону
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    
+                    isVoiceConnected = true;
+                    voiceToggleBtn.classList.add('active');
+                    voiceToggleBtn.disabled = false;
+                    voiceText.innerText = 'Отключиться';
+                    voiceIcon.innerText = '🔴';
+                    voiceStatus.style.display = 'flex';
+
+                    console.log('Микрофон подключен. Аудио-трек:', localStream.getAudioTracks()[0].label);
+
+                } catch (err) {
+                    console.error('Ошибка доступа к микрофону:', err);
+                    alert('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
+                    voiceText.innerText = 'Войти в голосовой чат';
+                    voiceToggleBtn.disabled = false;
+                }
+            } else {
+                // Выключаем
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                isVoiceConnected = false;
+                voiceToggleBtn.classList.remove('active');
+                voiceText.innerText = 'Войти в голосовой чат';
+                voiceIcon.innerText = '🎙️';
+                voiceStatus.style.display = 'none';
+                console.log('Микрофон отключен.');
+            }
+        });
+
     </script>
+
+    <!-- Плавающая панель голосового чата -->
+    <div class="voice-panel" id="voicePanel">
+        <button class="voice-btn" id="voiceToggleBtn">
+            <span id="voiceIcon">🎙️</span>
+            <span id="voiceText">Войти в голосовой чат</span>
+        </button>
+        <div class="voice-status" id="voiceStatus" style="display: none;">
+            <div class="voice-pulse"></div>
+            <span>В сети</span>
+        </div>
+    </div>
+
 </body>
 </html>
