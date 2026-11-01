@@ -79,6 +79,37 @@
         
         /* Скрываем страницу до проверки авторизации */
         #page-content { display: none; }
+
+        /* Исправление кнопки "Выйти" для PWA/мобильных */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+                padding-top: calc(15px + env(safe-area-inset-top)) !important;
+            }
+            .header-right {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            #user-info {
+                font-size: 1rem;
+                font-weight: 600;
+                color: var(--accent-lime);
+                max-width: 60%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* Делаем кнопку "Выйти" аккуратной */
+            .btn-logout {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                flex-shrink: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -96,6 +127,10 @@
         <div class="page-header">
             <h1>Хранилище <span>знаний</span></h1>
             <p>Конспекты, презентации и методические материалы платформы.</p>
+            <input type="file" id="fileUploadInput" style="display: none;">
+            <button class="download-btn" id="uploadBtn" style="display: none; width: auto; margin-top: 20px; background: var(--accent-lime); color: var(--bg-color); border: none;">
+                + Загрузить файл
+            </button>
         </div>
 
         <div class="materials-grid" id="materials-grid">
@@ -127,7 +162,50 @@
             document.getElementById('user-info').innerText = profile.full_name;
             document.getElementById('page-content').style.display = 'block';
 
+            // Показываем кнопку только админу
+            if (profile.role === 'admin') {
+                document.getElementById('uploadBtn').style.display = 'inline-block';
+            }
+
             loadMaterials();
+
+            // --- ЛОГИКА ЗАГРУЗКИ ---
+            const fileInput = document.getElementById('fileUploadInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            uploadBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                e.target.value = ''; // сброс
+
+                // Ограничение на размер (20MB, как в бакете)
+                if (file.size > 20 * 1024 * 1024) {
+                    alert('Файл слишком большой. Максимум 20 МБ.');
+                    return;
+                }
+
+                const originalText = uploadBtn.innerText;
+                uploadBtn.innerText = 'Загрузка...';
+                uploadBtn.disabled = true;
+
+                // Загружаем файл
+                const { data, error } = await supabaseClient.storage
+                    .from('materials')
+                    .upload(file.name, file, { upsert: true }); // upsert: true перезапишет файл, если имя совпадает
+
+                if (error) {
+                    console.error('Ошибка загрузки:', error);
+                    alert('Ошибка загрузки: ' + error.message);
+                } else {
+                    // Перезагружаем список файлов
+                    loadMaterials();
+                }
+
+                uploadBtn.innerText = originalText;
+                uploadBtn.disabled = false;
+            });
         }
 
         async function loadMaterials() {
