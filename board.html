@@ -25,7 +25,25 @@
         }
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-lime); color: var(--bg-color); }
-        .color-picker { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; padding: 0; }
+        /* Обертка для кастомной палитры */
+        .color-picker-wrapper {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--bg-color); border: 2px solid rgba(255,255,255,0.2);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; position: relative; overflow: hidden; transition: 0.2s;
+        }
+        .color-picker-wrapper:hover { border-color: var(--text-main); transform: scale(1.05); }
+        
+        .color-picker-indicator {
+            width: 20px; height: 20px; border-radius: 50%;
+            pointer-events: none; transition: 0.3s;
+        }
+
+        /* Делаем сам инпут невидимым, но кликабельным поверх обертки */
+        .color-picker {
+            position: absolute; top: -10px; left: -10px;
+            width: 50px; height: 50px; opacity: 0; cursor: pointer; border: none; padding: 0;
+        }
         
         .slider-container { display: flex; align-items: center; gap: 8px; }
         .slider-container input[type="range"] { width: 80px; accent-color: var(--accent-lime); cursor: pointer; }
@@ -130,7 +148,10 @@
         <button class="tool-btn" data-tool="text" title="Текст">
             <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
         </button>
-        <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
+        <div class="color-picker-wrapper" title="Цвет" id="colorWrapper">
+            <div class="color-picker-indicator" id="colorIndicator" style="background: #c5f05a;"></div>
+            <input type="color" id="colorPicker" class="color-picker" value="#c5f05a">
+        </div>
         <div class="slider-container">
             <span style="font-size: 1rem;">🔹</span>
             <input type="range" id="strokeWidth" min="1" max="100" value="4">
@@ -251,6 +272,12 @@
         let rotateAnchor = null;
 
         const colorPicker = document.getElementById('colorPicker');
+        const colorIndicator = document.getElementById('colorIndicator');
+        
+        // Синхронизируем цвет кружка при изменении
+        colorPicker.addEventListener('input', (e) => {
+            colorIndicator.style.background = e.target.value;
+        });
         const strokeWidthSlider = document.getElementById('strokeWidth');
         const strokeVal = document.getElementById('strokeVal');
 
