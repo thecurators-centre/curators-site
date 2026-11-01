@@ -922,8 +922,9 @@ async function saveObjectToDB(obj) {
         loadBoard();
         setupRealtime();
 
-        // --- ЛОГИКА ГОЛОСОВОГО ЧАТА (ЭТАП 1: ДОСТУП К МИКРОФОНУ) ---
+        // --- ПОЛНОЦЕННЫЙ ГОЛОСОВОЙ ЧАТ (WEBRTC) ---
         let localStream = null;
+        let peerConnection = null;
         let isVoiceConnected = false;
 
         const voiceToggleBtn = document.getElementById('voiceToggleBtn');
@@ -931,14 +932,26 @@ async function saveObjectToDB(obj) {
         const voiceText = document.getElementById('voiceText');
         const voiceIcon = document.getElementById('voiceIcon');
 
+        // Создаем невидимый аудио-элемент для воспроизведения звука собеседника
+        const remoteAudio = document.createElement('audio');
+        remoteAudio.autoplay = true;
+        document.body.appendChild(remoteAudio);
+
+        // Конфигурация STUN-серверов (бесплатные, помогают пробить NAT)
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
         voiceToggleBtn.addEventListener('click', async () => {
             if (!isVoiceConnected) {
-                // Включаем
                 try {
                     voiceText.innerText = 'Подключение...';
                     voiceToggleBtn.disabled = true;
 
-                    // Запрашиваем доступ к микрофону
+                    // Получаем микрофон
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     
                     isVoiceConnected = true;
@@ -948,27 +961,126 @@ async function saveObjectToDB(obj) {
                     voiceIcon.innerText = '🔴';
                     voiceStatus.style.display = 'flex';
 
-                    console.log('Микрофон подключен. Аудио-трек:', localStream.getAudioTracks()[0].label);
+                    // Сообщаем всем, что мы подключились к голосу
+                    broadcastChannel.send({ type: 'broadcast', event: 'voice_ready' });
 
                 } catch (err) {
                     console.error('Ошибка доступа к микрофону:', err);
-                    alert('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
-                    voiceText.innerText = 'Войти в голосовой чат';
-                    voiceToggleBtn.disabled = false;
+                    alert('Не удалось получить доступ к микрофону.');
+                    disconnectVoice();
                 }
             } else {
-                // Выключаем
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                    localStream = null;
-                }
-                isVoiceConnected = false;
-                voiceToggleBtn.classList.remove('active');
-                voiceText.innerText = 'Войти в голосовой чат';
-                voiceIcon.innerText = '🎙️';
-                voiceStatus.style.display = 'none';
-                console.log('Микрофон отключен.');
+                disconnectVoice();
             }
+        });
+
+        function disconnectVoice() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            remoteAudio.srcObject = null;
+            
+            isVoiceConnected = false;
+            voiceToggleBtn.classList.remove('active');
+            voiceText.innerText = 'Войти в голосовой чат';
+            voiceIcon.innerText = '🎙️';
+            voiceStatus.style.display = 'none';
+            
+            broadcastChannel.send({ type: 'broadcast', event: 'voice_disconnected' });
+        }
+
+        // Функция создания P2P соединения
+        function createPeerConnection() {
+            const pc = new RTCPeerConnection(rtcConfig);
+
+            // Добавляем свои аудио-треки
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
+
+            // Когда находим ICE-кандидата, отправляем его собеседнику
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    broadcastChannel.send({ 
+                        type: 'broadcast', event: 'voice_ice', 
+                        payload: { candidate: event.candidate } 
+                    });
+                }
+            };
+
+            // Когда получаем аудио от собеседника, включаем его
+            pc.ontrack = (event) => {
+                console.log('Получен аудио-трек от собеседника');
+                remoteAudio.srcObject = event.streams[0];
+            };
+
+            return pc;
+        }
+
+        // Обработка входящих WebRTC сигналов
+        broadcastChannel
+            .on('broadcast', { event: 'voice_ready' }, async () => {
+                // Кто-то зашел в голосовой чат. 
+                // Если мы в чате, и соединения еще нет, и МЫ не инициатор (ждем оффер) - ничего не делаем, ждем.
+                // Но если у нас нет соединения, а собеседник готов - мы можем создать оффер (если мы "второй").
+                // Для простоты: если мы в чате, создаем предложение (Offer).
+                if (isVoiceConnected && !peerConnection) {
+                    console.log('Создаем Offer...');
+                    peerConnection = createPeerConnection();
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    
+                    broadcastChannel.send({ 
+                        type: 'broadcast', event: 'voice_offer', 
+                        payload: { sdp: offer } 
+                    });
+                }
+            })
+            .on('broadcast', { event: 'voice_offer' }, async (payload) => {
+                // Получили предложение от собеседника
+                if (!isVoiceConnected) return;
+                
+                console.log('Получен Offer, создаем Answer...');
+                if (!peerConnection) peerConnection = createPeerConnection();
+                
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                broadcastChannel.send({ 
+                    type: 'broadcast', event: 'voice_answer', 
+                    payload: { sdp: answer } 
+                });
+            })
+            .on('broadcast', { event: 'voice_answer' }, async (payload) => {
+                // Получили ответ на наше предложение
+                if (!isVoiceConnected || !peerConnection) return;
+                console.log('Получен Answer, устанавливаем соединение...');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+            })
+            .on('broadcast', { event: 'voice_ice' }, async (payload) => {
+                // Получили сетевые данные (ICE-кандидат)
+                if (!isVoiceConnected || !peerConnection) return;
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(payload.payload.candidate));
+                } catch (e) {
+                    console.error('Ошибка добавления ICE:', e);
+                }
+            })
+            .on('broadcast', { event: 'voice_disconnected' }, () => {
+                // Собеседник отключился
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                remoteAudio.srcObject = null;
+                console.log('Собеседник отключил голосовой чат.');
+            });
         });
 
     </script>
