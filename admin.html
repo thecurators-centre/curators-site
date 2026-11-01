@@ -19,10 +19,10 @@
                 <h1 id="tab-teachers" onclick="switchTab('teachers')" style="display: none;">Учителя</h1>
             </div>
             <div class="header-right">
-                <span id="user-info">Загрузка...</span>
-                <a href="materials.html" style="color: var(--accent-lime); font-weight: 600; margin-right: 15px; text-decoration: none;">📚 Хранилище</a>
-                <a href="chat.html" style="color: var(--accent-lime); font-weight: 600; position: relative; margin-right: 15px; text-decoration: none;">💬 Мессенджер</a>
-                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: var(--text-main);">Выйти</a>
+                <span id="user-info" style="margin-right: 10px;">Загрузка...</span>
+                <a href="materials.html" class="btn-header-link btn-purple">Библиотека</a>
+                <a href="chat.html" class="btn-header-link btn-lime">Мессенджер</a>
+                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: var(--text-main); margin-left: 10px; text-decoration: none;">Выйти</a>
             </div>
         </header>
         
