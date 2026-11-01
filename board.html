@@ -147,22 +147,26 @@
             color: var(--text-main);
             border: 1px solid rgba(255,255,255,0.1);
             padding: 10px 16px;
-            border-radius: 12px;
+            border-radius: 10px; /* Как у кнопок тулбара */
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: 0.3s;
+            transition: 0.2s;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .voice-btn:hover { border-color: var(--accent-lime); }
+        .voice-btn:hover { 
+            background: rgba(255,255,255,0.1); 
+        }
         .voice-btn.active {
-            background: var(--danger);
-            color: white;
-            border-color: var(--danger);
-            animation: pulse-red 2s infinite;
+            background: var(--accent-lime); /* Лаймовый фон как у активных инструментов */
+            color: var(--bg-color);
+            border-color: var(--accent-lime);
+        }
+        .voice-btn.active svg {
+            stroke: var(--bg-color); /* Темная иконка на лаймовом фоне */
         }
 
         .voice-status {
@@ -958,7 +962,8 @@ async function saveObjectToDB(obj) {
                     voiceToggleBtn.classList.add('active');
                     voiceToggleBtn.disabled = false;
                     voiceText.innerText = 'Отключиться';
-                    voiceIcon.innerText = '🔴';
+                    // Меняем иконку на "перечеркнутый микрофон" или красную точку (используем SVG)
+                    voiceIcon.innerHTML = `<svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
                     voiceStatus.style.display = 'flex';
 
                     // Сообщаем всем, что мы подключились к голосу
@@ -988,7 +993,8 @@ async function saveObjectToDB(obj) {
             isVoiceConnected = false;
             voiceToggleBtn.classList.remove('active');
             voiceText.innerText = 'Войти в голосовой чат';
-            voiceIcon.innerText = '🎙️';
+            // Возвращаем обычную иконку
+            voiceIcon.innerHTML = `<svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>`;
             voiceStatus.style.display = 'none';
             
             broadcastChannel.send({ type: 'broadcast', event: 'voice_disconnected' });
@@ -1087,7 +1093,14 @@ async function saveObjectToDB(obj) {
     <!-- Плавающая панель голосового чата -->
     <div class="voice-panel" id="voicePanel">
         <button class="voice-btn" id="voiceToggleBtn">
-            <span id="voiceIcon">🎙️</span>
+            <span id="voiceIcon">
+                <!-- Иконка микрофона (по умолчанию) -->
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                </svg>
+            </span>
             <span id="voiceText">Войти в голосовой чат</span>
         </button>
         <div class="voice-status" id="voiceStatus" style="display: none;">
