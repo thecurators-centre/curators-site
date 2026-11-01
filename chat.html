@@ -75,6 +75,18 @@
             .chat-container.show-chat .chat-main { display: flex; }
             .header-right span { display: none; }
         }
+
+        /* Индикатор онлайн */
+        .online-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #22c55e; /* зеленый */
+            border-radius: 50%;
+            margin-left: 8px;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -109,7 +121,8 @@
             <div id="chat-window" style="display: none; flex-direction: column; height: 100%;">
                 <div class="chat-main-header" id="chat-header">
                     <div class="chat-avatar" id="chat-header-avatar"></div>
-                    <h3 id="chat-header-name"></h3>
+                    <h3 id="chat-header-name" style="display: flex; align-items: center;"></h3>
+                    <span id="chat-online-indicator" class="online-dot" style="display: none;"></span>
                 </div>
                 <div class="messages-area" id="messages-area"></div>
                 <div class="chat-input-area">
@@ -142,6 +155,8 @@
         let currentChatId = null;
         let allChats = [];
         let realtimeChannel = null;
+        let presenceChannel = null;
+        let onlineUsers = new Set(); // Здесь храним ID тех, кто сейчас онлайн
 
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -169,6 +184,56 @@
             }
 
             loadChats();
+            setupPresence();
+        }
+
+        // --- ЛОГИКА ОНЛАЙН-СТАТУСА ---
+        function setupPresence() {
+            presenceChannel = supabaseClient.channel('online-users', {
+                config: { presence: { key: currentUser.id } }
+            });
+
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const newState = presenceChannel.presenceState();
+                    onlineUsers.clear();
+                    for (const id in newState) {
+                        onlineUsers.add(id);
+                    }
+                    updateOnlineStatus();
+                })
+                .on('presence', { event: 'join' }, ({ key }) => {
+                    onlineUsers.add(key);
+                    updateOnlineStatus();
+                })
+                .on('presence', { event: 'leave' }, ({ key }) => {
+                    onlineUsers.delete(key);
+                    updateOnlineStatus();
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await presenceChannel.track({ online_at: new Date().toISOString() });
+                    }
+                });
+        }
+
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('chat-online-indicator');
+            // Если чат не открыт, ничего не делаем
+            if (!currentChatId) {
+                indicator.style.display = 'none';
+                return;
+            }
+
+            // Находим текущий чат и ID собеседника
+            const currentChat = allChats.find(c => c.id === currentChatId);
+            if (currentChat && currentChat.otherUserId) {
+                if (onlineUsers.has(currentChat.otherUserId)) {
+                    indicator.style.display = 'inline-block';
+                } else {
+                    indicator.style.display = 'none';
+                }
+            }
         }
 
         async function loadChats() {
@@ -195,6 +260,7 @@
 
                 if (otherParticipants && otherParticipants.length > 0) {
                     const otherUserId = otherParticipants[0].user_id;
+                    chat.otherUserId = otherUserId; // СОХРАНЯЕМ ID ДЛЯ ОНЛАЙН-СТАТУСА
                     // Получаем его профиль (имя и РОЛЬ)
                     const { data: otherProfile } = await supabaseClient
                         .from('profiles')
@@ -264,6 +330,7 @@
 
         async function openChat(chat) {
             currentChatId = chat.id;
+            updateOnlineStatus(); // Проверяем онлайн при открытии чата
             document.getElementById('empty-chat-state').style.display = 'none';
             document.getElementById('chat-window').style.display = 'flex';
             document.getElementById('chat-container').classList.add('show-chat');
@@ -401,6 +468,7 @@
 
             modal.classList.remove('active');
             loadChats();
+            setupPresence();
         }
 
         init();
