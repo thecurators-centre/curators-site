@@ -333,11 +333,10 @@
             // --- НОВАЯ ЛОГИКА СПАВНА (по дистанции) ---
             distanceSinceLastBook += speed;
 
-            // Минимальный зазор зависит от текущей скорости и ширины книги
-            // Базовая ширина книги 25. Зазор = (ширина * 3) + скорость*20 + рандом
-            const baseGap = 25 * 3; 
-            const speedFactor = speed * 20;
-            const randomExtra = Math.random() * 150;
+            // Увеличенный базовый зазор, чтобы на старте было комфортно играть
+            const baseGap = 25 * 6; // было 25*3
+            const speedFactor = speed * 30; // было *20
+            const randomExtra = Math.random() * 200; // было 150
             const requiredGap = baseGap + speedFactor + randomExtra;
 
             if (distanceSinceLastBook > requiredGap) {
