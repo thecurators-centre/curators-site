@@ -243,3 +243,45 @@ header {
         font-size: 0.85rem;
     }
 }
+
+/* --- ИСПРАВЛЕНИЕ ВЕРСТКИ ДЛЯ МОБИЛЬНЫХ (PWA) --- */
+@media (max-width: 768px) {
+    /* Собираем правую часть шапки обратно в колонку */
+    .header-right {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    /* Имя пользователя идет первым */
+    #user-info {
+        order: 1 !important;
+        margin-bottom: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Кнопки (Библиотека и Мессенджер) ставим в один ряд под именем */
+    .header-right a.btn-header-link {
+        order: 2 !important;
+        display: inline-flex !important;
+        width: auto !important;
+        margin: 0 !important;
+    }
+    
+    /* Обертка для кнопок, чтобы они не растягивались */
+    .header-right a.btn-header-link {
+        margin-right: 5px !important;
+    }
+
+    /* Кнопку "Выйти" отодвигаем вправо или ставим в тот же ряд */
+    .header-right a[onclick*="signOut"] {
+        order: 3 !important;
+        margin-left: auto !important; /* Прижимаем вправо */
+        width: auto !important;
+        display: inline-block !important;
+        padding: 8px 12px !important;
+        font-size: 0.9rem !important;
+    }
+}
