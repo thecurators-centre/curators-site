@@ -927,6 +927,7 @@ async function saveObjectToDB(obj) {
         setupRealtime();
 
         // --- ПОЛНОЦЕННЫЙ ГОЛОСОВОЙ ЧАТ (WEBRTC) ---
+        document.addEventListener('DOMContentLoaded', () => {
         let localStream = null;
         let peerConnection = null;
         let isVoiceConnected = false;
@@ -1087,6 +1088,7 @@ async function saveObjectToDB(obj) {
                 remoteAudio.srcObject = null;
                 console.log('Собеседник отключил голосовой чат.');
             });
+        }); // Закрываем DOMContentLoaded
 
     </script>
 
