@@ -200,6 +200,41 @@
             70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
         }
+
+        /* --- Адаптация голосовой панели для мобильных --- */
+        @media (max-width: 768px) {
+            .voice-panel {
+                top: auto !important;
+                bottom: 80px !important; /* Поднимаем над нижним краем (там кнопка Выйти) */
+                right: 15px !important;
+            }
+            .voice-btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5); /* Тень посильнее, чтобы выделялась на фоне */
+            }
+            /* Если подключен - делаем кнопку круглой и компактной, чтобы не мешала рисовать */
+            .voice-btn.active {
+                width: 44px;
+                height: 44px;
+                padding: 0;
+                border-radius: 50%;
+                justify-content: center;
+            }
+            .voice-btn.active #voiceText {
+                display: none; /* Скрываем текст "Отключиться", оставляем только иконку */
+            }
+            .voice-btn.active #voiceIcon {
+                margin: 0;
+            }
+            .voice-status {
+                position: absolute;
+                bottom: -30px;
+                right: 0;
+                white-space: nowrap;
+            }
+        }
     </style>
 </head>
 <body>
