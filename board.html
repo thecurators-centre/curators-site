@@ -73,6 +73,21 @@
             z-index: 1000; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
         }
         .exit-btn:hover { background: #ff6b6b; color: white; }
+
+        /* Стили для SVG-иконок в тулбаре */
+        .tool-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: 0.2s;
+        }
+        .tool-btn.active svg {
+            stroke: var(--bg-color);
+        }
     </style>
 </head>
 <body>
@@ -80,18 +95,30 @@
     <div class="board-title" id="boardTitle">Загрузка...</div>
 
     <div class="toolbar" id="toolbar">
-        <button class="tool-btn active" data-tool="pen" title="Карандаш">✏️</button>
-        <button class="tool-btn" data-tool="eraser" title="Ластик">🧽</button>
-        <button class="tool-btn" id="shapeBtn" title="Фигуры">⬛</button>
-        <button class="tool-btn" data-tool="text" title="Текст">📝</button>
+        <button class="tool-btn active" data-tool="pen" title="Карандаш">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button class="tool-btn" data-tool="eraser" title="Ластик">
+            <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l11-11 6 6-7 7"/><path d="M9 12l3 3"/></svg>
+        </button>
+        <button class="tool-btn" id="shapeBtn" title="Фигуры">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="12" height="12" rx="2"/><circle cx="16" cy="16" r="5"/></svg>
+        </button>
+        <button class="tool-btn" data-tool="text" title="Текст">
+            <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+        </button>
         <input type="color" id="colorPicker" class="color-picker" value="#c5f05a" title="Цвет">
         <div class="slider-container">
             <span style="font-size: 1rem;">🔹</span>
             <input type="range" id="strokeWidth" min="1" max="100" value="4">
             <span class="slider-label" id="strokeVal">4</span>
         </div>
-        <button class="tool-btn" id="imageBtn" title="Вставить картинку">🖼️</button>
-        <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">🗑️</button>
+        <button class="tool-btn" id="imageBtn" title="Вставить картинку">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </button>
+        <button class="tool-btn" id="clearBtn" title="Очистить" style="color: #ff6b6b;">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
     </div>
 
     <div class="shape-modal" id="shapeModal">
