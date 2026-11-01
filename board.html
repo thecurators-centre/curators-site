@@ -62,6 +62,7 @@
         #container { width: 100vw; height: 100vh; background-color: #1a1c29; cursor: crosshair; position: relative; }
         
         .text-input-overlay {
+            display: flex; flex-direction: column; border-radius: 6px; overflow: hidden; background: rgba(37, 40, 61, 0.95);
             position: absolute; z-index: 1000; background: transparent; border: 1px dashed var(--accent-lime);
             color: white; font-family: 'Inter', sans-serif; outline: none; resize: none; overflow: hidden;
         }
@@ -270,27 +271,57 @@
             const localX = (pos.x - stage.x()) / stage.scaleX();
             const localY = (pos.y - stage.y()) / stage.scaleY();
 
-            const textarea = document.createElement('textarea');
-            textarea.className = 'text-input-overlay';
-            textarea.style.left = `${pos.x}px`; textarea.style.top = `${pos.y}px`;
-            textarea.style.fontSize = `${parseInt(strokeWidthSlider.value) * 4 * stage.scaleX()}px`;
-            textarea.style.color = colorPicker.value;
-            textarea.style.width = '200px'; textarea.style.height = '50px';
+            // Создаем контейнер для оверлея
+            const overlayWrapper = document.createElement('div');
+            overlayWrapper.className = 'text-input-overlay';
+            overlayWrapper.style.left = `${pos.x}px`; 
+            overlayWrapper.style.top = `${pos.y}px`;
             
-            document.getElementById('container').appendChild(textarea);
+            // Создаем шапку с кнопками A- и A+
+            const header = document.createElement('div');
+            header.className = 'text-overlay-header';
+            
+            let currentFontSize = parseInt(strokeWidthSlider.value) * 4;
+            
+            const btnMinus = document.createElement('button');
+            btnMinus.className = 'text-size-btn';
+            btnMinus.innerText = 'A-';
+            btnMinus.onmousedown = (e) => { e.preventDefault(); currentFontSize = Math.max(10, currentFontSize - 4); textarea.style.fontSize = `${currentFontSize}px`; };
+            
+            const btnPlus = document.createElement('button');
+            btnPlus.className = 'text-size-btn';
+            btnPlus.innerText = 'A+';
+            btnPlus.onmousedown = (e) => { e.preventDefault(); currentFontSize += 4; textarea.style.fontSize = `${currentFontSize}px`; };
+            
+            header.appendChild(btnMinus);
+            header.appendChild(btnPlus);
+            
+            // Создаем само поле ввода
+            const textarea = document.createElement('textarea');
+            textarea.className = 'text-overlay-area';
+            textarea.style.fontSize = `${currentFontSize}px`;
+            textarea.style.color = colorPicker.value;
+            
+            overlayWrapper.appendChild(header);
+            overlayWrapper.appendChild(textarea);
+            
+            document.getElementById('container').appendChild(overlayWrapper);
             textarea.focus();
-            activeTextInput = textarea;
+            activeTextInput = overlayWrapper;
 
             textarea.onblur = () => {
-                const text = textarea.value.trim();
-                if (text) {
-                    const fontSize = parseInt(strokeWidthSlider.value) * 4;
-                    const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
-                    drawLayer.add(textNode); drawLayer.batchDraw();
-                    saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value });
-                    broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: fontSize, fill: colorPicker.value } });
-                }
-                textarea.remove(); activeTextInput = null;
+                setTimeout(() => {
+                    if (document.activeElement === btnMinus || document.activeElement === btnPlus) return;
+                    
+                    const text = textarea.value.trim();
+                    if (text) {
+                        const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: !isStudent });
+                        drawLayer.add(textNode); drawLayer.batchDraw();
+                        saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value });
+                        broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value } });
+                    }
+                    overlayWrapper.remove(); activeTextInput = null;
+                }, 100);
             };
         });
 
