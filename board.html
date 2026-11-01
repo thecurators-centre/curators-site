@@ -286,6 +286,31 @@
             if (activeArrow) { activeArrow = null; }
             uiLayer.batchDraw();
         }
+        function updateArrowHead(arrowGroup) {
+            const line = arrowGroup.getChildren()[0];
+            const head = arrowGroup.getChildren()[1];
+            if (!line || !head) return;
+            
+            const width = line.points()[2]; // Длина
+            const sw = line.strokeWidth();  // Толщина
+            
+            // Размер наконечника зависит от толщины.
+            // Базовая толщина 4px дает наконечник 15px.
+            // При увеличении толщины наконечник тоже растет.
+            const headSize = Math.max(15, sw * 3.5);
+            
+            // Не даем наконечнику быть длиннее самой стрелки
+            const actualHeadSize = Math.min(headSize, width);
+            const actualHeadWidth = actualHeadSize * 0.66; // Угол раствора
+
+            head.points([
+                width, 0, 
+                width - actualHeadSize, -actualHeadWidth, 
+                width - actualHeadSize, actualHeadWidth, 
+                width, 0
+            ]);
+        }
+
         function createRotateAnchor(arrowGroup) {
             removeRotateAnchor();
             activeArrow = arrowGroup;
@@ -308,7 +333,7 @@
                 
                 arrowGroup.rotation(angle * 180 / Math.PI);
                 arrowGroup.getChildren()[0].points([0, 0, length, 0]);
-                arrowGroup.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
+                updateArrowHead(arrowGroup);
                 
                 broadcastArrowUpdate(arrowGroup);
                 drawLayer.batchDraw();
@@ -429,8 +454,9 @@
                     currentShape = new Konva.Group({ x: startX, y: startY });
                     currentShape.id(currentStrokeId);
                     currentShape.add(new Konva.Line({ points: [0, 0, 1, 0], stroke: color, strokeWidth: width, lineCap: 'round' }));
-                    currentShape.add(new Konva.Line({ points: [1, 0, 1 - 15, -8, 1 - 15, 8, 1, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
+                    currentShape.add(new Konva.Line({ points: [0, 0], fill: color, stroke: color, closed: true, strokeWidth: 1 }));
                     currentShape.getChildren()[0].name('arrow-line');
+                    updateArrowHead(currentShape);
                 }
                 drawLayer.add(currentShape);
             }
@@ -472,7 +498,7 @@
                     const length = Math.sqrt(w*w + h*h);
                     currentShape.rotation(angle * 180 / Math.PI);
                     currentShape.getChildren()[0].points([0, 0, length, 0]);
-                    currentShape.getChildren()[1].points([length, 0, length - 15, -8, length - 15, 8, length, 0]);
+                    updateArrowHead(currentShape);
                 }
             }
             drawLayer.batchDraw();
@@ -707,8 +733,9 @@ async function saveObjectToDB(obj) {
                     node = new Konva.Group({ x: obj.x, y: obj.y, rotation: obj.rotation || 0 });
                     node.id(obj.id);
                     node.add(new Konva.Line({ points: [0, 0, obj.width, 0], stroke: obj.stroke, strokeWidth: obj.strokeWidth, lineCap: 'round' }));
-                    node.add(new Konva.Line({ points: [obj.width, 0, obj.width - 15, -8, obj.width - 15, 8, obj.width, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
+                    node.add(new Konva.Line({ points: [0, 0], fill: obj.stroke, stroke: obj.stroke, closed: true, strokeWidth: 1 }));
                     node.getChildren()[0].name('arrow-line');
+                    updateArrowHead(node);
                 }
             } else if (obj.type === 'text') {
                 node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: !isStudent });
@@ -758,7 +785,7 @@ async function saveObjectToDB(obj) {
                                         const line = node.getChildren()[0];
                                         const head = node.getChildren()[1];
                                         if (line) line.points([0, 0, data.width, 0]);
-                                        if (head) head.points([data.width, 0, data.width - 15, -8, data.width - 15, 8, data.width, 0]);
+                                        if (head) updateArrowHead(node);
                                     } else {
                                         node.setAttrs({ x: data.x, y: data.y, width: data.width, height: data.height, radius: data.radius, scaleX: data.scaleX, scaleY: data.scaleY });
                                     }
