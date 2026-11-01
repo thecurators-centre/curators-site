@@ -59,6 +59,16 @@ async function init() {
 
 // --- НЕПРОЧИТАННЫЕ ---
 async function loadUnreadCount(userId) {
+    // Принудительно добавляем кнопку Хранилище перед Мессенджером
+    const chatBtn = document.querySelector('a[href="chat.html"]');
+    if (chatBtn && !document.querySelector('a[href="materials.html"]')) {
+        const storageBtn = document.createElement('a');
+        storageBtn.href = 'materials.html';
+        storageBtn.innerText = '📚 Хранилище';
+        storageBtn.style.cssText = 'color: var(--accent-lime); font-weight: 600; margin-right: 15px; text-decoration: none;';
+        chatBtn.parentNode.insertBefore(storageBtn, chatBtn);
+    }
+
     const { data: myChats } = await supabaseClient.from('chat_participants').select('chat_id').eq('user_id', userId);
     if (!myChats || myChats.length === 0) return;
     const chatIds = myChats.map(c => c.chat_id);

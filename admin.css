@@ -32,7 +32,7 @@ header {
     border-bottom: 2px solid var(--accent-lime); 
     opacity: 1;
 }
-.header-right { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+.header-right { display: flex; align-items: center; gap: 15px; }
 .header-right span { font-size: 0.9rem; opacity: 0.7; }
 .header-right a { text-decoration: none; }
 .chat-badge { position: absolute; top: -5px; right: -10px; background: var(--danger); color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid var(--card-bg); display: none; }
@@ -103,6 +103,7 @@ header {
     }
     .header-right a[href="chat.html"] {
         border-color: var(--accent-lime);
+        margin-right: auto; /* Прижимаем мессенджер влево */
     }
 
     /* Ряд 3: Вкладки (Ученики, Доски, Учителя) */
