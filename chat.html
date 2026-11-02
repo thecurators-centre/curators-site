@@ -519,7 +519,7 @@
             
             const { data: users, error } = await supabaseClient
                 .from('profiles')
-                .select('id, full_name, role, avatar_id')
+                .select('id, full_name, role')
                 .neq('id', currentUser.id);
 
             if (error) { list.innerHTML = 'Ошибка загрузки'; return; }
