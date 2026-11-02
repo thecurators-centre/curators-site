@@ -13,6 +13,8 @@ let students = [];
 let teachers = [];
 let currentUser = null;
 let currentRole = null;
+let scheduleDate = new Date(); // Текущий месяц для календаря
+let scheduleRecords = []; // Записи из базы
 
 const grid = document.getElementById('grid');
 const modal = document.getElementById('modal');
@@ -379,5 +381,133 @@ calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
 
 document.getElementById('addBtn').onclick = () => openStudentModal();
 document.getElementById('addTeacherBtn').onclick = () => openTeacherModal();
+
+
+// --- ЛОГИКА РАСПИСАНИЯ ---
+async function loadScheduleData() {
+    const { data, error } = await supabaseClient.from('teacher_schedule').select('*');
+    if (error) { console.error('Ошибка загрузки расписания:', error); return; }
+    scheduleRecords = data || [];
+    
+    // Заполняем список учеников в модалке
+    const studentSelect = document.getElementById('sched_student');
+    studentSelect.innerHTML = '<option value="">Выберите ученика</option>';
+    students.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = `${s.surname} ${s.name}`;
+        opt.innerText = `${s.surname} ${s.name}`;
+        studentSelect.appendChild(opt);
+    });
+
+    renderTeacherCalendar();
+}
+
+function renderTeacherCalendar() {
+    const grid = document.getElementById('teacher-calendar');
+    const title = document.getElementById('schedule-month-title');
+    
+    const year = scheduleDate.getFullYear();
+    const month = scheduleDate.getMonth();
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    
+    title.innerText = `${months[month]} ${year}`;
+
+    let html = '<div class="teacher-cal-grid">';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+        html += `<div class="teacher-cal-header">${d}</div>`;
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    for (let i = 0; i < startOffset; i++) {
+        html += '<div></div>';
+    }
+
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = isCurrentMonth && today.getDate() === day;
+        
+        // Ищем записи на этот день
+        const dayRecords = scheduleRecords.filter(r => r.date_string === dateStr);
+        
+        let lessonsHtml = '';
+        dayRecords.forEach(rec => {
+            const color = subjectColors[rec.subject] || '#313452';
+            lessonsHtml += `<div class="teacher-cal-lesson" style="background: ${color};" title="${rec.student_name} в ${rec.time} (${rec.note || ''})">${rec.time} ${rec.student_name}</div>`;
+        });
+
+        html += `
+            <div class="teacher-cal-day ${isToday ? 'today' : ''}" onclick="openScheduleModal('${dateStr}')">
+                <div class="teacher-cal-num">${day}</div>
+                <div style="flex:1; overflow-y: auto; font-size:0.7rem;">${lessonsHtml}</div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    grid.innerHTML = html;
+}
+
+window.openScheduleModal = function(dateStr) {
+    document.getElementById('sched_date').value = dateStr;
+    document.getElementById('schedule-modal-date').innerText = `Запись на ${dateStr}`;
+    document.getElementById('scheduleForm').reset();
+    document.getElementById('deleteScheduleBtn').style.display = 'none';
+    
+    // Проверяем, есть ли уже запись на этот день (упрощенно - берем первую)
+    const existing = scheduleRecords.find(r => r.date_string === dateStr);
+    if (existing) {
+        document.getElementById('sched_student').value = existing.student_name || '';
+        document.getElementById('sched_subject').value = existing.subject;
+        document.getElementById('sched_time').value = existing.time || '';
+        document.getElementById('sched_note').value = existing.note || '';
+        document.getElementById('deleteScheduleBtn').style.display = 'block';
+        document.getElementById('deleteScheduleBtn').onclick = () => deleteScheduleRecord(existing.id);
+    }
+    
+    document.getElementById('scheduleModal').classList.add('active');
+};
+
+document.getElementById('closeScheduleModal').onclick = () => document.getElementById('scheduleModal').classList.remove('active');
+document.getElementById('scheduleModal').onclick = (e) => { if (e.target === document.getElementById('scheduleModal')) document.getElementById('scheduleModal').classList.remove('active'); };
+
+document.getElementById('scheduleForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const dateStr = document.getElementById('sched_date').value;
+    const student_name = document.getElementById('sched_student').value;
+    const subject = document.getElementById('sched_subject').value;
+    const time = document.getElementById('sched_time').value;
+    const note = document.getElementById('sched_note').value;
+    
+    // Если запись уже была - обновляем её
+    const existing = scheduleRecords.find(r => r.date_string === dateStr);
+    
+    if (existing) {
+        const { error } = await supabaseClient.from('teacher_schedule').update({ student_name, subject, time, note }).eq('id', existing.id);
+        if (error) alert('Ошибка: ' + error.message);
+        else { document.getElementById('scheduleModal').classList.remove('active'); loadScheduleData(); }
+    } else {
+        const { error } = await supabaseClient.from('teacher_schedule').insert([{ teacher_id: currentUser.id, date_string: dateStr, student_name, subject, time, note }]);
+        if (error) alert('Ошибка: ' + error.message);
+        else { document.getElementById('scheduleModal').classList.remove('active'); loadScheduleData(); }
+    }
+};
+
+async function deleteScheduleRecord(id) {
+    if (confirm('Удалить запись?')) {
+        await supabaseClient.from('teacher_schedule').delete().eq('id', id);
+        document.getElementById('scheduleModal').classList.remove('active');
+        loadScheduleData();
+    }
+}
+
+document.getElementById('prevMonthBtn').onclick = () => { scheduleDate.setMonth(scheduleDate.getMonth() - 1); renderTeacherCalendar(); };
+document.getElementById('nextMonthBtn').onclick = () => { scheduleDate.setMonth(scheduleDate.getMonth() + 1); renderTeacherCalendar(); };
+
 
 init();

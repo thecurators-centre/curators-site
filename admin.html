@@ -16,6 +16,7 @@
             <div class="header-tabs">
                 <h1 id="tab-students" class="active" onclick="switchTab('students')">Ученики</h1>
                 <h1 id="tab-boards" onclick="switchTab('boards')">Доски</h1>
+                <h1 id="tab-schedule" onclick="switchTab('schedule')">Расписание</h1>
                 <h1 id="tab-teachers" onclick="switchTab('teachers')" style="display: none;">Учителя</h1>
             </div>
             <div class="header-right">
@@ -36,6 +37,20 @@
         <!-- Вкладка Доски -->
         <div id="section-boards" style="display: none;">
             <div class="grid" id="boards-grid"></div>
+        </div>
+
+        <!-- Вкладка Расписание -->
+        <div id="section-schedule" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="schedule-month-title" style="font-size: 1.5rem; margin: 0;">Месяц</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" id="prevMonthBtn" style="margin: 0; padding: 8px 15px;">←</button>
+                    <button class="btn" id="nextMonthBtn" style="margin: 0; padding: 8px 15px;">→</button>
+                </div>
+            </div>
+            <div class="calendar-grid" id="teacher-calendar" style="background: var(--card-bg); padding: 20px; border-radius: 20px;">
+                <!-- Календарь будет отрисован через JS -->
+            </div>
         </div>
 
         <!-- Вкладка Учителя -->
@@ -111,6 +126,51 @@
                 <button type="submit" class="btn-save">Сохранить</button>
                 <a href="#" id="notebookLink" class="btn-notebook" target="_blank" style="display: none;">📓 Открыть тетрадь ученика</a>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none; background: var(--danger); color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer;">Удалить</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка расписания -->
+    <div class="modal" id="scheduleModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <button class="close-btn" id="closeScheduleModal">&times;</button>
+            <h2 style="margin-bottom: 20px;" id="schedule-modal-date">Добавить запись</h2>
+            <form id="scheduleForm">
+                <input type="hidden" id="sched_date">
+                
+                <div class="form-group">
+                    <label>Ученик</label>
+                    <select id="sched_student" required>
+                        <option value="">Выберите ученика</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Предмет (влияет на цвет)</label>
+                    <select id="sched_subject" required>
+                        <option value="Русский язык">Русский язык</option>
+                        <option value="Японский язык">Японский язык</option>
+                        <option value="Английский язык">Английский язык</option>
+                        <option value="Литература">Литература</option>
+                        <option value="Обществознание">Обществознание</option>
+                        <option value="История">История</option>
+                        <option value="Физика">Физика</option>
+                        <option value="Подготовка к школе">Подготовка к школе</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Время</label>
+                    <input type="text" id="sched_time" placeholder="Например: 15:00">
+                </div>
+
+                <div class="form-group">
+                    <label>Заметка (до 20 символов)</label>
+                    <input type="text" id="sched_note" maxlength="20" placeholder="Домашка, перенос...">
+                </div>
+
+                <button type="submit" class="btn-save" id="saveScheduleBtn">Сохранить</button>
+                <button type="button" class="btn" id="deleteScheduleBtn" style="width: 100%; margin-top: 10px; background: var(--danger); display: none;">Удалить запись</button>
             </form>
         </div>
     </div>
