@@ -220,30 +220,23 @@ document.getElementById('addBtn').onclick = () => openStudentModal();
 // ==========================================
 // ВКЛАДКА ДОСКИ
 // ==========================================
-async function loadBoards() {
+// --- ДОСКИ (Старая система по предметам) ---
+function loadBoards() {
     const boardsGrid = document.getElementById('boards-grid');
-    boardsGrid.innerHTML = '<div class="loading">Загрузка...</div>';
-    
-    let query = supabaseClient.from('boards').select('*').order('created_at', { ascending: false });
-    if (currentRole === 'teacher') query = query.eq('teacher_id', currentUser.id);
-    
-    const { data, error } = await query;
-    if (error) { boardsGrid.innerHTML = '<div style="color:red;">Ошибка загрузки досок</div>'; return; }
-    
     boardsGrid.innerHTML = '';
-    if (!data || data.length === 0) { boardsGrid.innerHTML = '<p style="opacity:0.5;">У вас пока нет досок. Создайте первую!</p>'; return; }
-
-    data.forEach(board => {
+    
+    // Список предметов
+    const subjectsList = ['Русский язык', 'Японский язык', 'Английский язык', 'Литература', 'Обществознание', 'История', 'Физика', 'Подготовка к школе'];
+    
+    subjectsList.forEach(sub => {
         const card = document.createElement('div');
         card.className = 'card';
-        let color = subjectColors[board.subject] || '#313452';
+        let color = subjectColors[sub] || '#313452';
         card.style.background = color;
-        const activeBadge = board.is_active ? `<span style="display:inline-block; width:10px; height:10px; background:#22c55e; border-radius:50%; margin-right:5px;"></span>Активна` : `Не активна`;
         card.innerHTML = `
-            <h3>${board.title}</h3>
-            <p style="font-size:0.8rem; margin-bottom: 10px; color: rgba(255,255,255,0.7);">${activeBadge}</p>
-            <div style="display: flex; gap: 10px; margin-top: auto;">
-                <a href="board.html?id=${board.id}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem; flex:1; text-align:center;">Войти</a>
+            <h3>${sub}</h3>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <a href="board.html?subject=${encodeURIComponent(sub)}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Доска</a>
             </div>
         `;
         boardsGrid.appendChild(card);
@@ -252,7 +245,7 @@ async function loadBoards() {
 
 // Модалка создания доски
 const boardModal = document.getElementById('boardModal');
-document.getElementById('addBoardBtn').onclick = () => boardModal.classList.add('active');
+document.getElementById('addBoardBtn').style.display = 'none'; // Скрываем кнопку создания новой доски
 document.getElementById('closeBoardModal').onclick = () => boardModal.classList.remove('active');
 boardModal.onclick = (e) => { if (e.target === boardModal) boardModal.classList.remove('active'); };
 
