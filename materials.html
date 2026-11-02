@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Хранилище знаний | The Curator’s</title>
+    <title>Библиотека | The Curator’s</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -23,120 +23,141 @@
 
         .container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
         
-        .page-header { margin-bottom: 40px; }
+        .page-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
         .page-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; margin-bottom: 10px; }
         .page-header h1 span { color: var(--accent-lime); }
         .page-header p { opacity: 0.7; font-size: 1.1rem; }
 
-        .materials-grid {
+        /* Сетка папок */
+        .folders-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 20px;
         }
 
-        .material-card {
+        .folder-card {
             background: var(--card-bg);
             border-radius: 20px;
             padding: 25px;
-            border: 1px solid rgba(244, 243, 238, 0.05);
+            cursor: pointer;
             transition: all 0.3s ease;
+            border: 1px solid rgba(244, 243, 238, 0.05);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            min-height: 180px;
+            align-items: center;
+            text-align: center;
         }
-        .material-card:hover {
+        .folder-card:hover {
             transform: translateY(-5px);
             border-color: var(--accent-lime);
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
+        .folder-icon { font-size: 3rem; margin-bottom: 15px; }
+        .folder-name { font-size: 1.1rem; font-weight: 600; }
 
-        .file-icon {
-            width: 48px; height: 48px; border-radius: 12px; background: rgba(197, 240, 90, 0.1);
-            display: flex; justify-content: center; align-items: center; font-size: 1.5rem;
-            color: var(--accent-lime); margin-bottom: 15px;
-        }
+        /* Просмотр папки */
+        .folder-view { display: none; }
+        .folder-view.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .file-name {
-            font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;
-            word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
+        .folder-header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; }
+        .btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-size: 1rem; }
+        .btn-back:hover { background: rgba(255,255,255,0.1); }
 
-        .file-meta {
-            font-size: 0.85rem; opacity: 0.6; margin-bottom: 20px;
-        }
+        .search-box { width: 100%; padding: 15px 20px; border-radius: 15px; border: 1px solid rgba(244, 243, 238, 0.15); background: var(--card-bg); color: white; font-family: inherit; font-size: 1rem; margin-bottom: 30px; }
+        .search-box:focus { outline: none; border-color: var(--accent-lime); }
 
-        .download-btn {
-            background: var(--bg-color); color: var(--text-main); border: 1px solid rgba(244, 243, 238, 0.2);
-            padding: 10px 15px; border-radius: 10px; font-weight: 600; cursor: pointer;
-            text-align: center; text-decoration: none; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px;
+        /* Список файлов */
+        .files-list { display: flex; flex-direction: column; gap: 10px; }
+        .file-item {
+            background: var(--card-bg); padding: 15px 20px; border-radius: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.2s;
         }
-        .download-btn:hover {
-            background: var(--accent-lime); color: var(--bg-color); border-color: var(--accent-lime);
-        }
+        .file-item:hover { border-color: var(--accent-purple); }
+        .file-info { display: flex; align-items: center; gap: 15px; }
+        .file-ext { font-size: 1.5rem; }
+        .file-details h4 { font-size: 1rem; margin-bottom: 3px; }
+        .file-details p { font-size: 0.8rem; opacity: 0.5; }
+        .btn-download { background: var(--accent-lime); color: var(--bg-color); border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; text-decoration: none; font-size: 0.9rem; }
+        .btn-download:hover { opacity: 0.8; }
 
         .loading-state { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
-        
-        /* Скрываем страницу до проверки авторизации */
-        #page-content { display: none; }
 
-        /* Исправление кнопки "Выйти" для PWA/мобильных */
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-                padding-top: calc(15px + env(safe-area-inset-top)) !important;
-            }
-            .header-right {
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            #user-info {
-                font-size: 1rem;
-                font-weight: 600;
-                color: var(--accent-lime);
-                max-width: 60%;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            /* Делаем кнопку "Выйти" аккуратной */
-            .btn-logout {
-                padding: 8px 16px;
-                font-size: 0.9rem;
-                flex-shrink: 0;
-            }
-        }
+        /* Модалка создания папки */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 2000; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-color); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #555; background: var(--card-bg); color: white; }
+        .btn-save { width: 100%; padding: 15px; background: var(--accent-lime); color: var(--bg-color); border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
+        .close-modal { position: absolute; top: 10px; right: 15px; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+
+        /* Скрываем страницу до проверки */
+        #page-content { display: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <a href="admin.html" class="logo-container"><img src="logo.png" alt="Logo"></a>
+        <a href="admin.html" class="logo-container" id="backLogo"><img src="logo.png" alt="Logo"></a>
         <div class="header-right">
             <span id="user-info">Загрузка...</span>
-            <a href="admin.html" class="btn-logout">Вернуться</a>
+            <a href="admin.html" class="btn-logout" id="backBtn">Вернуться</a>
         </div>
     </header>
 
-    <!-- Контент страницы -->
     <div class="container" id="page-content">
-        <div class="page-header">
-            <h1>Хранилище <span>знаний</span></h1>
-            <p>Конспекты, презентации и методические материалы платформы.</p>
-            <input type="file" id="fileUploadInput" style="display: none;">
-            <button class="download-btn" id="uploadBtn" style="display: none; width: auto; margin-top: 20px; background: var(--accent-lime); color: var(--bg-color); border: none;">
-                + Загрузить файл
-            </button>
+        
+        <!-- Экран со списком папок -->
+        <div id="folders-screen">
+            <div class="page-header">
+                <div>
+                    <h1>Библиотека <span>материалов</span></h1>
+                    <p>Выберите категорию для просмотра файлов.</p>
+                </div>
+                <button class="btn-download" id="createFolderBtn" style="display: none; padding: 12px 20px; font-size: 1rem;">+ Создать папку</button>
+            </div>
+            <div class="folders-grid" id="folders-grid">
+                <div class="loading-state">Загрузка папок...</div>
+            </div>
         </div>
 
-        <div class="materials-grid" id="materials-grid">
-            <div class="loading-state">Загрузка материалов...</div>
+        <!-- Экран просмотра внутри папки -->
+        <div id="folder-view" class="folder-view">
+            <div class="folder-header">
+                <button class="btn-back" onclick="closeFolder()">← Назад</button>
+                <h1 id="folder-title" style="font-size: 2rem; margin: 0;">Название папки</h1>
+                <button class="btn-download" id="uploadFileBtn" style="display: none; margin-left: auto; padding: 10px 15px;">+ Загрузить файл</button>
+            </div>
+            
+            <input type="text" class="search-box" id="search-input" placeholder="Поиск файла по названию...">
+            
+            <div class="files-list" id="files-list">
+                <!-- Список файлов -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Модалка создания папки -->
+    <div class="modal" id="folderModal">
+        <div class="modal-content" style="position: relative;">
+            <button class="close-modal" id="closeFolderModal">&times;</button>
+            <h2 style="margin-bottom: 20px;">Новая папка</h2>
+            <form id="folderForm">
+                <div class="form-group">
+                    <label>Название категории (предмет)</label>
+                    <input type="text" id="folder-name-input" placeholder="Например: Физика" required>
+                </div>
+                <button type="submit" class="btn-save">Создать</button>
+            </form>
         </div>
     </div>
+
+    <!-- Скрытые инпуты -->
+    <input type="file" id="fileUploadInput" style="display: none;">
 
     <script>
         const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
@@ -144,172 +165,209 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentUser = null;
+        let isAdmin = false;
+        let currentFolder = null; // Текущая открытая папка
+        let allFolders = [];
+        let allFiles = []; // Файлы текущей папки
 
         async function init() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) { window.location.href = 'login.html'; return; }
-            
             currentUser = user;
 
             const { data: profile } = await supabaseClient.from('profiles').select('role, full_name').eq('id', user.id).single();
             
-            // Проверка безопасности: если не админ/учитель - выкидываем
+            // Проверка безопасности
             if (!profile || (profile.role !== 'admin' && profile.role !== 'teacher')) {
                 window.location.href = profile && profile.role === 'student' ? 'student.html' : 'login.html';
                 return;
             }
 
+            isAdmin = profile.role === 'admin';
             document.getElementById('user-info').innerText = profile.full_name;
             document.getElementById('page-content').style.display = 'block';
 
-            // Показываем кнопку только админу
-            if (profile.role === 'admin') {
-                document.getElementById('uploadBtn').style.display = 'inline-block';
+            if (isAdmin) {
+                document.getElementById('createFolderBtn').style.display = 'block';
+                document.getElementById('uploadFileBtn').style.display = 'block';
             }
 
-            loadMaterials();
-
-            // --- ЛОГИКА ЗАГРУЗКИ ---
-            const fileInput = document.getElementById('fileUploadInput');
-            const uploadBtn = document.getElementById('uploadBtn');
-
-            uploadBtn.addEventListener('click', () => fileInput.click());
-
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                e.target.value = ''; // сброс
-
-                // Ограничение на размер (20MB, как в бакете)
-                if (file.size > 20 * 1024 * 1024) {
-                    alert('Файл слишком большой. Максимум 20 МБ.');
-                    return;
-                }
-
-                const originalText = uploadBtn.innerText;
-                uploadBtn.innerText = 'Загрузка...';
-                uploadBtn.disabled = true;
-
-                // Загружаем файл
-                const { data, error } = await supabaseClient.storage
-                    .from('materials')
-                    .upload(file.name, file, { upsert: true }); // upsert: true перезапишет файл, если имя совпадает
-
-                if (error) {
-                    console.error('Ошибка загрузки:', error);
-                    alert('Ошибка загрузки: ' + error.message);
-                } else {
-                    // Перезагружаем список файлов
-                    loadMaterials();
-                }
-
-                uploadBtn.innerText = originalText;
-                uploadBtn.disabled = false;
-            });
+            loadFolders();
         }
 
-        async function loadMaterials() {
-            const grid = document.getElementById('materials-grid');
+        // --- ЗАГРУЗКА ПАПОК ---
+        async function loadFolders() {
+            const grid = document.getElementById('folders-grid');
+            const { data, error } = await supabaseClient.from('materials_categories').select('*').order('name');
             
-            // Получаем список файлов из бакета materials
-            const { data: files, error } = await supabaseClient
-                .storage
-                .from('materials')
-                .list('', {
-                    limit: 100,
-                    offset: 0,
-                    sortBy: { column: 'name', order: 'asc' },
-                });
-
-            if (error) {
-                console.error('Ошибка загрузки:', error);
-                grid.innerHTML = '<div class="loading-state" style="color: #ff6b6b;">Ошибка загрузки материалов</div>';
-                return;
-            }
-
-            if (!files || files.length === 0) {
-                grid.innerHTML = '<div class="loading-state">В хранилище пока нет файлов.</div>';
-                return;
-            }
-
+            if (error) { grid.innerHTML = '<div class="loading-state" style="color:red;">Ошибка загрузки папок</div>'; return; }
+            
+            allFolders = data || [];
             grid.innerHTML = '';
 
-            files.forEach(file => {
-                // Пропускаем служебные файлы Supabase (начинаются с точки)
-                if (file.name.startsWith('.')) return;
+            if (allFolders.length === 0) {
+                grid.innerHTML = '<div class="loading-state">Папок пока нет. Создайте первую!</div>';
+                return;
+            }
 
+            allFolders.forEach(folder => {
                 const card = document.createElement('div');
-                card.className = 'material-card';
-
-                // Определяем иконку и тип по расширению
-                const ext = file.name.split('.').pop().toLowerCase();
-                let icon = '📄';
-                if (ext === 'pdf') icon = '📕';
-                if (ext === 'html' || ext === 'htm') icon = '🌐';
-                if (ext === 'ppt' || ext === 'pptx') icon = '📊';
-                if (ext === 'txt') icon = '📝';
-
-                // Форматируем размер файла
-                const sizeKB = (file.metadata.size / 1024).toFixed(1);
-                const sizeText = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} МБ` : `${sizeKB} КБ`;
-                
-                // Форматируем дату
-                const date = new Date(file.created_at).toLocaleDateString('ru-RU');
-
+                card.className = 'folder-card';
                 card.innerHTML = `
-                    <div>
-                        <div class="file-icon">${icon}</div>
-                        <div class="file-name">${file.name}</div>
-                        <div class="file-meta">${sizeText} • ${date}</div>
-                    </div>
-                    <button class="download-btn" onclick="downloadFile('${file.name}', this)">
-                        <span>⬇️</span> Скачать
-                    </button>
+                    <div class="folder-icon">📁</div>
+                    <div class="folder-name">${folder.name}</div>
                 `;
-
+                card.onclick = () => openFolder(folder);
                 grid.appendChild(card);
             });
         }
 
-        // Функция генерации временной ссылки и скачивания
-        window.downloadFile = async function(fileName, btnElement) {
-            const originalText = btnElement.innerHTML;
-            btnElement.innerHTML = 'Генерация ссылки...';
-            btnElement.disabled = true;
+        // --- ОТКРЫТИЕ ПАПКИ ---
+        function openFolder(folder) {
+            currentFolder = folder;
+            document.getElementById('folders-screen').style.display = 'none';
+            document.getElementById('folder-view').classList.add('active');
+            document.getElementById('folder-title').innerText = folder.name;
+            document.getElementById('search-input').value = '';
+            
+            loadFiles(folder.id);
+        }
 
-            // Генерируем ссылку на 60 секунд (хватит, чтобы начать скачивание)
-            // Параметр download: true заставит браузер скачать HTML-файл, а не открывать его
-            const { data, error } = await supabaseClient
-                .storage
-                .from('materials')
-                .createSignedUrl(fileName, 60, { download: fileName });
+        function closeFolder() {
+            currentFolder = null;
+            document.getElementById('folder-view').classList.remove('active');
+            document.getElementById('folders-screen').style.display = 'block';
+            loadFolders(); // Обновляем список папок на случай изменений
+        }
 
-            if (error) {
-                console.error('Ошибка генерации ссылки:', error);
-                alert('Не удалось получить ссылку на файл. Проверьте права доступа.');
-                btnElement.innerHTML = originalText;
-                btnElement.disabled = false;
+        // --- ЗАГРУЗКА ФАЙЛОВ ВНУТРИ ПАПКИ ---
+        async function loadFiles(folderId) {
+            const list = document.getElementById('files-list');
+            list.innerHTML = '<div class="loading-state">Загрузка файлов...</div>';
+
+            const { data, error } = await supabaseClient.from('materials_files').select('*').eq('category_id', folderId).order('created_at', { ascending: false });
+            
+            if (error) { list.innerHTML = '<div class="loading-state" style="color:red;">Ошибка загрузки файлов</div>'; return; }
+            
+            allFiles = data || [];
+            renderFiles(allFiles);
+        }
+
+        function renderFiles(filesToRender) {
+            const list = document.getElementById('files-list');
+            list.innerHTML = '';
+
+            if (filesToRender.length === 0) {
+                list.innerHTML = '<div class="loading-state">В этой папке пока нет файлов.</div>';
                 return;
             }
 
-            // Создаем временную ссылку для скачивания
+            filesToRender.forEach(file => {
+                const ext = file.file_name.split('.').pop().toLowerCase();
+                let icon = '📄';
+                if (ext === 'pdf') icon = '📕';
+                if (ext === 'html' || ext === 'htm') icon = '🌐';
+                if (ext === 'ppt' || ext === 'pptx') icon = '📊';
+                
+                const sizeMB = file.file_size ? (file.file_size / 1024 / 1024).toFixed(2) + ' МБ' : '—';
+                const displayName = file.display_name || file.file_name;
+
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-ext">${icon}</div>
+                        <div class="file-details">
+                            <h4>${displayName}</h4>
+                            <p>${sizeMB}</p>
+                        </div>
+                    </div>
+                    <button class="btn-download" onclick="downloadFile('${file.file_name}')">Скачать</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // --- СКАЧИВАНИЕ ФАЙЛА ---
+        window.downloadFile = async function(fileName) {
+            const { data, error } = await supabaseClient.storage.from('materials').createSignedUrl(fileName, 60, { download: fileName });
+            if (error) { alert('Ошибка получения ссылки: ' + error.message); return; }
+            
             const a = document.createElement('a');
             a.href = data.signedUrl;
-            // Имя файла для сохранения
-            a.download = fileName; 
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-
-            // Возвращаем кнопку в исходное состояние
-            setTimeout(() => {
-                btnElement.innerHTML = originalText;
-                btnElement.disabled = false;
-            }, 2000);
         };
+
+        // --- ПОИСК ПО ФАЙЛАМ ---
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allFiles.filter(f => {
+                const name = (f.display_name || f.file_name).toLowerCase();
+                return name.includes(query);
+            });
+            renderFiles(filtered);
+        });
+
+        // --- СОЗДАНИЕ ПАПКИ (АДМИН) ---
+        const folderModal = document.getElementById('folderModal');
+        document.getElementById('createFolderBtn').onclick = () => folderModal.classList.add('active');
+        document.getElementById('closeFolderModal').onclick = () => folderModal.classList.remove('active');
+        folderModal.onclick = (e) => { if (e.target === folderModal) folderModal.classList.remove('active'); };
+
+        document.getElementById('folderForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('folder-name-input').value.trim();
+            const btn = e.target.querySelector('button');
+            btn.innerText = 'Создание...'; btn.disabled = true;
+
+            const { error } = await supabaseClient.from('materials_categories').insert([{ name }]);
+            
+            btn.innerText = 'Создать'; btn.disabled = false;
+            if (error) alert('Ошибка: ' + error.message);
+            else { folderModal.classList.remove('active'); document.getElementById('folderForm').reset(); loadFolders(); }
+        };
+
+        // --- ЗАГРУЗКА ФАЙЛА В ПАПКУ (АДМИН) ---
+        const fileInput = document.getElementById('fileUploadInput');
+        document.getElementById('uploadFileBtn').onclick = () => fileInput.click();
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !currentFolder) return;
+            e.target.value = '';
+
+            const btn = document.getElementById('uploadFileBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Загрузка...'; btn.disabled = true;
+
+            // 1. Загружаем в Storage
+            const fileName = `folder_${currentFolder.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const { error: uploadError } = await supabaseClient.storage.from('materials').upload(fileName, file);
+
+            if (uploadError) {
+                alert('Ошибка загрузки файла: ' + uploadError.message);
+                btn.innerText = originalText; btn.disabled = false;
+                return;
+            }
+
+            // 2. Сохраняем в базу
+            const { error: dbError } = await supabaseClient.from('materials_files').insert([{
+                category_id: currentFolder.id,
+                file_name: fileName,
+                display_name: file.name,
+                file_size: file.size
+            }]);
+
+            if (dbError) alert('Ошибка сохранения метаданных: ' + dbError.message);
+            else loadFiles(currentFolder.id);
+
+            btn.innerText = originalText; btn.disabled = false;
+        });
 
         init();
     </script>
-
 </body>
 </html>
