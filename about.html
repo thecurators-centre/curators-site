@@ -137,6 +137,91 @@
         @media (max-width: 768px) {
             .about-mascot { width: 150px; }
         }
+
+        /* --- Сетка преподавателей --- */
+        .team-grid-new {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .teacher-tile {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .teacher-tile:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-lime);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .tile-photo {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .tile-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .tile-role {
+            font-size: 0.9rem;
+            color: var(--accent-lime);
+            font-weight: 600;
+        }
+
+        /* --- Модалка для карточки --- */
+        .teacher-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .teacher-modal.active { display: flex; }
+        
+        .teacher-modal-content {
+            width: 100%;
+            max-width: 1000px;
+            position: relative;
+            margin: auto;
+        }
+
+        .close-teacher-modal {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .close-teacher-modal:hover { color: var(--accent-lime); transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -174,21 +259,38 @@
 
     <section class="section">
         <h2 class="section-title">Наши <span>специалисты</span></h2>
-        <div class="team-grid">
-            <div class="team-card">
-                <h3>Классические педагоги</h3>
-                <p>Опытные учителя со стажем, которые умеют объяснять сложное простыми словами и находить подход к каждому ученику.</p>
+        <div class="team-grid-new">
+            
+            <!-- Плитка 1 -->
+            <div class="teacher-tile" onclick="openTeacherCard(1)">
+                <div class="tile-photo">
+                    <!-- Сюда фото -->
+                </div>
+                <div class="tile-name">Туманова Татьяна</div>
+                <div class="tile-role">Русский, литература, обществознание, биология, РКИ</div>
             </div>
-            <div class="team-card">
-                <h3>Выпускники зарубежных вузов</h3>
-                <p>Специалисты с международным опытом, носители языка, которые помогут освоить предмет на уровне лучших мировых программ.</p>
+
+            <!-- Плитка 2 -->
+            <div class="teacher-tile" onclick="openTeacherCard(2)">
+                <div class="tile-photo">
+                    <!-- Сюда фото -->
+                </div>
+                <div class="tile-name">Туманов Дмитрий</div>
+                <div class="tile-role">Физика, история, японский язык, литература</div>
             </div>
-            <div class="team-card">
-                <h3>Ученые и практики</h3>
-                <p>Эксперты в области физики и химии — те, кто не только знает теорию, но и умеет показать науку в действии.</p>
-            </div>
+
         </div>
     </section>
+
+    <!-- Модалка преподавателя -->
+    <div class="teacher-modal" id="teacherModal">
+        <div class="teacher-modal-content">
+            <button class="close-teacher-modal" onclick="closeTeacherCard()">&times;</button>
+            <div id="teacher-card-container">
+                <!-- Сюда будет загружаться HTML-код карточки -->
+            </div>
+        </div>
+    </div>
 
     <section class="section">
         <h2 class="section-title">Как мы <span>работаем</span></h2>
@@ -231,5 +333,51 @@
             });
         });
     </script>
+
+    <script>
+        // --- ЛОГИКА ЗАГРУЗКИ КАРТОЧЕК ---
+        async function openTeacherCard(id) {
+            const modal = document.getElementById('teacherModal');
+            const container = document.getElementById('teacher-card-container');
+            
+            modal.classList.add('active');
+            container.innerHTML = '<div style="color:white; text-align:center; padding: 50px;">Загрузка карточки...</div>';
+
+            try {
+                // Загружаем нужный файл (teacher-card.html или teacher-card-2.html)
+                const fileName = id === 1 ? 'teacher-card.html' : 'teacher-card-2.html';
+                const response = await fetch(fileName);
+                
+                if (!response.ok) throw new Error('Ошибка сети');
+                const text = await response.text();
+
+                // Парсим текст, чтобы вытащить только нужный блок <div class="teacher-profile-card">
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const cardHtml = doc.querySelector('.teacher-profile-card').outerHTML;
+
+                // Вставляем в модалку
+                container.innerHTML = cardHtml;
+                
+                // Убираем фиксированную высоту у правой части, чтобы она не скроллилась внутри модалки
+                const infoSide = container.querySelector('.profile-info-side');
+                if(infoSide) infoSide.style.maxHeight = 'none';
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div style="color:red; text-align:center; padding: 50px;">Не удалось загрузить карточку</div>';
+            }
+        }
+
+        function closeTeacherCard() {
+            document.getElementById('teacherModal').classList.remove('active');
+        }
+
+        // Закрытие по клику вне контента
+        document.getElementById('teacherModal').addEventListener('click', function(e) {
+            if (e.target === this) closeTeacherCard();
+        });
+    </script>
+
 </body>
 </html>
