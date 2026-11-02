@@ -141,15 +141,16 @@
         /* --- Сетка преподавателей --- */
         .team-grid-new {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 280px)); /* Фиксируем максимальную ширину */
+            gap: 25px;
             margin-top: 30px;
+            justify-content: center; /* Центрируем плитки */
         }
 
         .teacher-tile {
             background: var(--card-bg);
-            border-radius: 24px;
-            padding: 30px;
+            border-radius: 20px;
+            padding: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
             border: 1px solid rgba(255,255,255,0.05);
@@ -160,17 +161,18 @@
         }
 
         .teacher-tile:hover {
-            transform: translateY(-10px);
+            transform: translateY(-5px);
             border-color: var(--accent-lime);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
 
         .tile-photo {
             width: 100%;
-            aspect-ratio: 1 / 1;
-            border-radius: 50%;
-            border: 4px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
+            max-width: 180px; /* Ограничиваем размер */
+            aspect-ratio: 3 / 4; /* Прямоугольная, как на большой карточке */
+            border-radius: 15px; /* Скругленные углы, а не круг */
+            border: 3px solid rgba(255,255,255,0.15);
+            margin-bottom: 15px;
             background: transparent;
             overflow: hidden;
         }
@@ -284,11 +286,9 @@
 
     <!-- Модалка преподавателя -->
     <div class="teacher-modal" id="teacherModal">
-        <div class="teacher-modal-content">
-            <button class="close-teacher-modal" onclick="closeTeacherCard()">&times;</button>
-            <div id="teacher-card-container">
-                <!-- Сюда будет загружаться HTML-код карточки -->
-            </div>
+        <div class="teacher-modal-content" style="background: var(--bg-color); border-radius: 20px; overflow: hidden; padding: 0;">
+            <button class="close-teacher-modal" onclick="closeTeacherCard()" style="top: 10px; right: 15px; z-index: 10; color: var(--text-main); background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center;">&times;</button>
+            <iframe id="teacher-iframe" src="" style="width: 100%; height: 85vh; border: none; background: var(--bg-color); display: block;"></iframe>
         </div>
     </div>
 
@@ -336,41 +336,22 @@
 
     <script>
         // --- ЛОГИКА ЗАГРУЗКИ КАРТОЧЕК ---
-        async function openTeacherCard(id) {
+        function openTeacherCard(id) {
             const modal = document.getElementById('teacherModal');
-            const container = document.getElementById('teacher-card-container');
+            const iframe = document.getElementById('teacher-iframe');
+            
+            // Просто меняем ссылку в iframe
+            const fileName = id === 1 ? 'teacher-card.html' : 'teacher-card-2.html';
+            iframe.src = fileName;
             
             modal.classList.add('active');
-            container.innerHTML = '<div style="color:white; text-align:center; padding: 50px;">Загрузка карточки...</div>';
-
-            try {
-                // Загружаем нужный файл (teacher-card.html или teacher-card-2.html)
-                const fileName = id === 1 ? 'teacher-card.html' : 'teacher-card-2.html';
-                const response = await fetch(fileName);
-                
-                if (!response.ok) throw new Error('Ошибка сети');
-                const text = await response.text();
-
-                // Парсим текст, чтобы вытащить только нужный блок <div class="teacher-profile-card">
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                const cardHtml = doc.querySelector('.teacher-profile-card').outerHTML;
-
-                // Вставляем в модалку
-                container.innerHTML = cardHtml;
-                
-                // Убираем фиксированную высоту у правой части, чтобы она не скроллилась внутри модалки
-                const infoSide = container.querySelector('.profile-info-side');
-                if(infoSide) infoSide.style.maxHeight = 'none';
-
-            } catch (err) {
-                console.error(err);
-                container.innerHTML = '<div style="color:red; text-align:center; padding: 50px;">Не удалось загрузить карточку</div>';
-            }
         }
 
         function closeTeacherCard() {
-            document.getElementById('teacherModal').classList.remove('active');
+            const modal = document.getElementById('teacherModal');
+            const iframe = document.getElementById('teacher-iframe');
+            modal.classList.remove('active');
+            iframe.src = ''; // Очищаем, чтобы не грузилось в фоне
         }
 
         // Закрытие по клику вне контента
