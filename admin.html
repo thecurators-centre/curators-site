@@ -9,22 +9,36 @@
     <link rel="stylesheet" href="admin.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin.js" defer></script>
+    <style>
+        /* Дополнительные стили для календаря, чтобы не раздувать admin.css */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: var(--card-bg); padding: 20px; border-radius: 20px; }
+        .cal-header { font-weight: bold; text-align: center; font-size: 0.8rem; opacity: 0.5; padding-bottom: 10px; }
+        .cal-day { background: var(--bg-color); border-radius: 12px; min-height: 90px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; cursor: pointer; transition: 0.2s; position: relative; }
+        .cal-day:hover { border-color: var(--accent-lime); }
+        .cal-day.today { border: 2px solid var(--accent-purple); }
+        .cal-num { font-weight: bold; margin-bottom: 5px; }
+        .cal-event { font-size: 0.7rem; padding: 3px 6px; border-radius: 4px; margin-bottom: 3px; color: var(--bg-color); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Модалка календаря */
+        #calModal .modal-content { max-width: 400px; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="header-tabs">
+        <header style="flex-direction: column; align-items: flex-start; gap: 15px; padding-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span id="user-info" style="font-size: 1rem; font-weight: 600; color: var(--accent-lime);">Загрузка...</span>
+                <div class="header-right">
+                    <a href="materials.html" class="btn-header-link btn-purple" style="text-decoration:none; padding:8px 15px; border-radius:10px; font-weight:bold;">Библиотека</a>
+                    <a href="chat.html" class="btn-header-link btn-lime" style="text-decoration:none; padding:8px 15px; border-radius:10px; font-weight:bold; margin: 0 10px;">Мессенджер</a>
+                    <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: var(--text-main); text-decoration: none;">Выйти</a>
+                </div>
+            </div>
+            <div class="header-tabs" style="width: 100%; display:flex; gap:10px;">
                 <h1 id="tab-students" class="active" onclick="switchTab('students')">Ученики</h1>
                 <h1 id="tab-boards" onclick="switchTab('boards')">Доски</h1>
                 <h1 id="tab-schedule" onclick="switchTab('schedule')">Расписание</h1>
                 <h1 id="tab-teachers" onclick="switchTab('teachers')" style="display: none;">Учителя</h1>
-            </div>
-            <div class="header-right">
-                <span id="user-info" style="margin-right: 10px;">Загрузка...</span>
-                <a href="game.html" class="btn-header-link" style="background: #f4f3ee; color: var(--bg-color);">Играть</a>
-                <a href="materials.html" class="btn-header-link btn-purple">Библиотека</a>
-                <a href="chat.html" class="btn-header-link btn-lime">Мессенджер</a>
-                <a href="#" onclick="supabaseClient.auth.signOut().then(() => window.location.href = 'login.html')" style="color: var(--text-main); margin-left: 10px; text-decoration: none;">Выйти</a>
             </div>
         </header>
         
@@ -36,22 +50,23 @@
 
         <!-- Вкладка Доски -->
         <div id="section-boards" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.5rem; margin: 0;">Мои доски</h2>
+                <button class="btn" id="addBoardBtn" style="margin-bottom: 0;">+ Создать доску</button>
+            </div>
             <div class="grid" id="boards-grid"></div>
         </div>
 
         <!-- Вкладка Расписание -->
         <div id="section-schedule" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 id="schedule-month-title" style="font-size: 1.5rem; margin: 0;">Месяц</h2>
+                <h2 id="cal-month-title" style="font-size: 1.5rem; margin: 0;">Месяц</h2>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn" id="prevMonthBtn" style="margin: 0; padding: 8px 15px;">←</button>
-                    <button class="btn" id="nextMonthBtn" style="margin: 0; padding: 8px 15px;">→</button>
+                    <button class="btn" id="cal-prev" style="margin: 0; padding: 8px 15px;">←</button>
+                    <button class="btn" id="cal-next" style="margin: 0; padding: 8px 15px;">→</button>
                 </div>
             </div>
-            
-            <div id="simple-calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: var(--card-bg); padding: 20px; border-radius: 20px;">
-                <!-- Сюда JS вставит дни -->
-            </div>
+            <div class="cal-grid" id="calendar-grid"></div>
         </div>
 
         <!-- Вкладка Учителя -->
@@ -82,8 +97,8 @@
                     <div class="form-group"><label>Класс</label><input type="text" id="grade"></div>
                 </div>
                 <div class="form-group">
-                    <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
-                    <select id="subjects" multiple size="5">
+                    <label>Предметы</label>
+                    <select id="subjects" multiple size="4">
                         <option value="Русский язык">Русский язык</option>
                         <option value="Японский язык">Японский язык</option>
                         <option value="Английский язык">Английский язык</option>
@@ -95,7 +110,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Уровень знаний (1-5)</label>
+                    <label>Уровень (1-5)</label>
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
                     <span id="levelVal" style="color: var(--accent-lime); font-weight: bold;">3</span>
                 </div>
@@ -104,29 +119,66 @@
                 </div>
                 <div class="form-group"><label>Об ученике</label><textarea id="about_student"></textarea></div>
                 <hr style="border-color: #444; margin: 20px 0;">
-                <h3 style="margin-bottom: 10px; color: var(--accent-lime);">Расписание занятий</h3>
-                <div class="calendar-controls">
-                    <select id="cal-month">
-                        <option value="0">Январь</option><option value="1">Февраль</option><option value="2">Март</option>
-                        <option value="3">Апрель</option><option value="4">Май</option><option value="5">Июнь</option>
-                        <option value="6">Июль</option><option value="7">Август</option><option value="8">Сентябрь</option>
-                        <option value="9">Октябрь</option><option value="10">Ноябрь</option><option value="11">Декабрь</option>
-                    </select>
-                    <select id="cal-year">
-                        <option value="2025">2025</option>
-                        <option value="2026" selected>2026</option>
-                        <option value="2027">2027</option>
-                    </select>
-                </div>
-                <div class="calendar-grid" id="calendar-admin"></div>
-                <input type="hidden" id="schedule-days" value="">
-                <hr style="border-color: #444; margin: 20px 0;">
                 <div class="form-group"><label>Результаты тестирований</label><textarea id="tests"></textarea></div>
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group"><label>ИОМ</label><textarea id="iom"></textarea></div>
                 <button type="submit" class="btn-save">Сохранить</button>
-                <a href="#" id="notebookLink" class="btn-notebook" target="_blank" style="display: none;">📓 Открыть тетрадь ученика</a>
+                <a href="#" id="notebookLink" class="btn-notebook" target="_blank" style="display: none; margin-top:10px; text-align:center; text-decoration:none; color:white; background:var(--accent-purple); padding:15px; border-radius:8px;">📓 Открыть тетрадь</a>
                 <button type="button" class="btn-delete" id="deleteBtn" style="display: none; background: var(--danger); color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer;">Удалить</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка создания доски -->
+    <div class="modal" id="boardModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="close-btn" id="closeBoardModal">&times;</button>
+            <h2 style="margin-bottom: 20px;">Новая доска</h2>
+            <form id="boardForm">
+                <div class="form-group"><label>Название</label><input type="text" id="board_title" placeholder="Например: Миша - Физика" required></div>
+                <div class="form-group">
+                    <label>Предмет (влияет на цвет)</label>
+                    <select id="board_subject" required>
+                        <option value="Русский язык">Русский язык</option>
+                        <option value="Японский язык">Японский язык</option>
+                        <option value="Английский язык">Английский язык</option>
+                        <option value="Литература">Литература</option>
+                        <option value="Обществознание">Обществознание</option>
+                        <option value="История">История</option>
+                        <option value="Физика">Физика</option>
+                        <option value="Подготовка к школе">Подготовка к школе</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-save">Создать</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка календаря -->
+    <div class="modal" id="calModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="close-btn" id="closeCalModal">&times;</button>
+            <h2 style="margin-bottom: 20px;" id="cal-modal-title">Запись</h2>
+            <form id="calForm">
+                <input type="hidden" id="cal_date">
+                <div class="form-group"><label>Ученик</label><input type="text" id="cal_student" placeholder="Имя" required></div>
+                <div class="form-group">
+                    <label>Предмет</label>
+                    <select id="cal_subject" required>
+                        <option value="Русский язык">Русский язык</option>
+                        <option value="Японский язык">Японский язык</option>
+                        <option value="Английский язык">Английский язык</option>
+                        <option value="Литература">Литература</option>
+                        <option value="Обществознание">Обществознание</option>
+                        <option value="История">История</option>
+                        <option value="Физика">Физика</option>
+                        <option value="Подготовка к школе">Подготовка к школе</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Время</label><input type="text" id="cal_time" placeholder="15:00"></div>
+                <div class="form-group"><label>Заметка (до 20 символов)</label><input type="text" id="cal_note" maxlength="20"></div>
+                <button type="submit" class="btn-save">Сохранить</button>
+                <button type="button" class="btn" id="cal_delete_btn" style="width: 100%; margin-top: 10px; background: var(--danger); display: none;">Удалить</button>
             </form>
         </div>
     </div>
@@ -144,15 +196,15 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Email (логин)</label><input type="email" id="teacher_email" required></div>
-                    <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password" required></div>
+                    <div class="form-group"><label>Пароль</label><input type="text" id="teacher_password"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Ставка (%)</label><input type="number" id="teacher_rate"></div>
                     <div class="form-group"><label>Телефон</label><input type="tel" id="teacher_phone"></div>
                 </div>
                 <div class="form-group">
-                    <label>Предметы (зажми Cmd/Ctrl для выбора нескольких)</label>
-                    <select id="teacher_subjects" multiple size="5">
+                    <label>Предметы</label>
+                    <select id="teacher_subjects" multiple size="4">
                         <option value="Русский язык">Русский язык</option>
                         <option value="Японский язык">Японский язык</option>
                         <option value="Английский язык">Английский язык</option>

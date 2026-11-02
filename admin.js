@@ -1,71 +1,3 @@
-
-// --- ПРОСТОЙ КАЛЕНДАРЬ ---
-let calDate = new Date();
-
-function renderSimpleCalendar() {
-    const grid = document.getElementById('simple-calendar-grid');
-    const title = document.getElementById('schedule-month-title');
-    if (!grid) return; // Если вкладка не загружена
-
-    const year = calDate.getFullYear();
-    const month = calDate.getMonth();
-    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    
-    title.innerText = `${months[month]} ${year}`;
-    
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let startOffset = firstDay === 0 ? 6 : firstDay - 1; // Пн - 0, Вс - 6
-
-    let html = '';
-    
-    // Заголовки дней недели
-    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
-        html += `<div style="text-align:center; font-weight:bold; opacity:0.5; font-size:0.8rem; padding-bottom:10px;">${d}</div>`;
-    });
-
-    // Пустые клетки до начала месяца
-    for (let i = 0; i < startOffset; i++) {
-        html += `<div></div>`;
-    }
-
-    // Дни месяца
-    const today = new Date();
-    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        const isToday = isCurrentMonth && today.getDate() === day;
-        html += `
-            <div style="background: var(--bg-color); border-radius: 12px; min-height: 80px; padding: 10px; border: 1px solid ${isToday ? 'var(--accent-purple)' : 'rgba(255,255,255,0.05)'}; display: flex; flex-direction: column; transition: 0.2s; cursor: pointer;" onmouseover="this.style.borderColor='var(--accent-lime)'" onmouseout="this.style.borderColor='${isToday ? 'var(--accent-purple)' : 'rgba(255,255,255,0.05)'}'">
-                <span style="font-weight: bold; color: ${isToday ? 'var(--accent-lime)' : 'var(--text-main)'};">${day}</span>
-                <!-- Здесь в будущем будут записи -->
-            </div>
-        `;
-    }
-
-    grid.innerHTML = html;
-}
-
-// Кнопки переключения
-document.getElementById('prevMonthBtn').addEventListener('click', () => {
-    calDate.setMonth(calDate.getMonth() - 1);
-    renderSimpleCalendar();
-});
-
-document.getElementById('nextMonthBtn').addEventListener('click', () => {
-    calDate.setMonth(calDate.getMonth() + 1);
-    renderSimpleCalendar();
-});
-
-// При переключении вкладки - рисуем
-const originalSwitch = window.switchTab;
-window.switchTab = function(tab) {
-    originalSwitch(tab);
-    if (tab === 'schedule') {
-        renderSimpleCalendar();
-    }
-};
-
 const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
 const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -75,36 +7,17 @@ const subjectColors = {
     'Литература': '#d97706', 'Обществознание': '#4f46e5', 'История': '#84cc16',
     'Физика': '#2dd4bf', 'Подготовка к школе': '#ec4899'
 };
-const subjectsList = ['Русский язык', 'Японский язык', 'Английский язык', 'Литература', 'Обществознание', 'История', 'Физика', 'Подготовка к школе'];
 
 let students = [];
 let teachers = [];
 let currentUser = null;
 let currentRole = null;
-let scheduleDate = new Date(); // Текущий месяц для календаря
-let scheduleRecords = []; // Записи из базы
+let scheduleData = []; // Записи календаря
+let currentCalDate = new Date(); // Текущий месяц календаря
 
 const grid = document.getElementById('grid');
 const modal = document.getElementById('modal');
 const form = document.getElementById('form');
-const calGrid = document.getElementById('calendar-admin');
-const calMonth = document.getElementById('cal-month');
-const calYear = document.getElementById('cal-year');
-const teacherModal = document.getElementById('teacherModal');
-let scheduleData = {};
-
-// --- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ---
-window.switchTab = function(tabName) {
-    ['students', 'boards', 'teachers'].forEach(t => {
-        document.getElementById('tab-' + t).classList.remove('active');
-        document.getElementById('section-' + t).style.display = 'none';
-    });
-    document.getElementById('tab-' + tabName).classList.add('active');
-    document.getElementById('section-' + tabName).style.display = 'block';
-
-    if (tabName === 'boards') renderBoards();
-    if (tabName === 'teachers') loadTeachers();
-};
 
 // --- ИНИЦИАЛИЗАЦИЯ ---
 async function init() {
@@ -118,10 +31,7 @@ async function init() {
 
     currentRole = profile.role;
     document.getElementById('user-info').innerText = profile.full_name;
-
-    if (currentRole === 'admin') {
-        document.getElementById('tab-teachers').style.display = 'block';
-    }
+    if (currentRole === 'admin') document.getElementById('tab-teachers').style.display = 'block';
 
     loadStudents();
     loadUnreadCount(user.id);
@@ -141,6 +51,7 @@ async function loadUnreadCount(userId) {
                 badge = document.createElement('span');
                 badge.className = 'chat-badge';
                 badge.style.cssText = 'position:absolute; top:-5px; right:-10px; background:var(--danger); color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px;';
+                btn.style.position = 'relative';
                 btn.appendChild(badge);
             }
             badge.innerText = count;
@@ -149,7 +60,25 @@ async function loadUnreadCount(userId) {
     }
 }
 
-// --- УЧЕНИКИ ---
+// --- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ---
+window.switchTab = function(tabName) {
+    ['students', 'boards', 'schedule', 'teachers'].forEach(t => {
+        const tab = document.getElementById('tab-' + t);
+        const section = document.getElementById('section-' + t);
+        if (tab) tab.classList.remove('active');
+        if (section) section.style.display = 'none';
+    });
+    document.getElementById('tab-' + tabName).classList.add('active');
+    document.getElementById('section-' + tabName).style.display = 'block';
+
+    if (tabName === 'boards') loadBoards();
+    if (tabName === 'teachers') loadTeachers();
+    if (tabName === 'schedule') renderCalendar();
+};
+
+// ==========================================
+// ВКЛАДКА УЧЕНИКИ
+// ==========================================
 async function loadStudents() {
     grid.innerHTML = '<div class="loading">Загрузка...</div>';
     let query = supabaseClient.from('students').select('*').order('id', { ascending: true });
@@ -176,37 +105,307 @@ function renderStudents() {
     });
 }
 
-// --- ДОСКИ ---
-function renderBoards() {
+window.openStudentModal = function(s = null) {
+    form.reset();
+    if (s) {
+        document.getElementById('id').value = s.id;
+        document.getElementById('login').value = s.login || '';
+        document.getElementById('password').value = s.password || '';
+        document.getElementById('surname').value = s.surname || '';
+        document.getElementById('name').value = s.name || '';
+        document.getElementById('patronymic').value = s.patronymic || '';
+        document.getElementById('age').value = s.age || '';
+        document.getElementById('grade').value = s.grade || '';
+        document.getElementById('level').value = s.level || 3;
+        document.getElementById('levelVal').innerText = s.level || 3;
+        document.getElementById('hourly_rate').value = s.hourly_rate || '';
+        document.getElementById('about_student').value = s.about_student || '';
+        const subs = (s.subjects || '').split(',').map(x=>x.trim());
+        const select = document.getElementById('subjects');
+        for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
+        document.getElementById('tests').value = s.tests || '';
+        document.getElementById('topics').value = s.topics || '';
+        document.getElementById('iom').value = s.iom || '';
+        document.getElementById('deleteBtn').style.display = 'block';
+        const notebookLink = document.getElementById('notebookLink');
+        notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
+        notebookLink.style.display = 'block';
+    } else {
+        document.getElementById('id').value = '';
+        document.getElementById('level').value = 3;
+        document.getElementById('levelVal').innerText = '3';
+        document.getElementById('deleteBtn').style.display = 'none';
+        document.getElementById('notebookLink').style.display = 'none';
+    }
+    modal.classList.add('active');
+};
+
+document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
+modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+
+form.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('id').value;
+    if (!id) {
+        // Создание
+        const login = document.getElementById('login').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const surname = document.getElementById('surname').value.trim();
+        const name = document.getElementById('name').value.trim();
+        const patronymic = document.getElementById('patronymic').value.trim();
+        const age = document.getElementById('age').value;
+        const grade = document.getElementById('grade').value;
+        const select = document.getElementById('subjects');
+        const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+        const level = document.getElementById('level').value;
+        const hourly_rate = document.getElementById('hourly_rate').value;
+        const about_student = document.getElementById('about_student').value;
+        const tests = document.getElementById('tests').value;
+        const topics = document.getElementById('topics').value;
+        const iom = document.getElementById('iom').value;
+        
+        const btn = form.querySelector('button[type="submit"]');
+        btn.innerText = 'Создание...'; btn.disabled = true;
+
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
+                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, iom, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
+            });
+            if (error) throw error;
+            if (data && data.error) throw new Error(data.error);
+            alert('Ученик создан!');
+            modal.classList.remove('active');
+            loadStudents();
+        } catch (err) { alert('ОШИБКА: ' + err.message); }
+        finally { btn.innerText = 'Сохранить'; btn.disabled = false; }
+        return;
+    }
+
+    // Обновление
+    const select = document.getElementById('subjects');
+    const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+    const data = {
+        login: document.getElementById('login').value.trim(),
+        password: document.getElementById('password').value.trim(),
+        surname: document.getElementById('surname').value,
+        name: document.getElementById('name').value,
+        patronymic: document.getElementById('patronymic').value,
+        age: parseInt(document.getElementById('age').value) || null,
+        grade: document.getElementById('grade').value,
+        subjects: selectedSubjects,
+        level: parseInt(document.getElementById('level').value),
+        hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
+        about_student: document.getElementById('about_student').value,
+        tests: document.getElementById('tests').value,
+        topics: document.getElementById('topics').value,
+        iom: document.getElementById('iom').value
+    };
+    const { error } = await supabaseClient.from('students').update(data).eq('id', id);
+    if (error) alert('Ошибка: ' + error.message);
+    else { modal.classList.remove('active'); loadStudents(); }
+};
+
+document.getElementById('deleteBtn').onclick = async () => {
+    if (currentRole !== 'admin') { alert('Удалять учеников может только администратор.'); return; }
+    const id = document.getElementById('id').value;
+    if (confirm('Удалить?')) {
+        const { error } = await supabaseClient.from('students').delete().eq('id', id);
+        if (error) alert('Ошибка: ' + error.message);
+        else { modal.classList.remove('active'); loadStudents(); }
+    }
+};
+
+document.getElementById('addBtn').onclick = () => openStudentModal();
+
+// ==========================================
+// ВКЛАДКА ДОСКИ
+// ==========================================
+async function loadBoards() {
     const boardsGrid = document.getElementById('boards-grid');
+    boardsGrid.innerHTML = '<div class="loading">Загрузка...</div>';
+    
+    let query = supabaseClient.from('boards').select('*').order('created_at', { ascending: false });
+    if (currentRole === 'teacher') query = query.eq('teacher_id', currentUser.id);
+    
+    const { data, error } = await query;
+    if (error) { boardsGrid.innerHTML = '<div style="color:red;">Ошибка загрузки досок</div>'; return; }
+    
     boardsGrid.innerHTML = '';
-    subjectsList.forEach(sub => {
+    if (!data || data.length === 0) { boardsGrid.innerHTML = '<p style="opacity:0.5;">У вас пока нет досок. Создайте первую!</p>'; return; }
+
+    data.forEach(board => {
         const card = document.createElement('div');
         card.className = 'card';
-        let color = subjectColors[sub] || '#313452';
+        let color = subjectColors[board.subject] || '#313452';
         card.style.background = color;
+        const activeBadge = board.is_active ? `<span style="display:inline-block; width:10px; height:10px; background:#22c55e; border-radius:50%; margin-right:5px;"></span>Активна` : `Не активна`;
         card.innerHTML = `
-            <h3>${sub}</h3>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <a href="board.html?subject=${sub}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem;">Доска</a>
+            <h3>${board.title}</h3>
+            <p style="font-size:0.8rem; margin-bottom: 10px; color: rgba(255,255,255,0.7);">${activeBadge}</p>
+            <div style="display: flex; gap: 10px; margin-top: auto;">
+                <a href="board.html?id=${board.id}" target="_blank" style="background:var(--accent-lime); color:var(--bg-color); padding:8px 15px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:0.9rem; flex:1; text-align:center;">Войти</a>
             </div>
         `;
         boardsGrid.appendChild(card);
     });
 }
 
-// --- УЧИТЕЛЯ ---
+// Модалка создания доски
+const boardModal = document.getElementById('boardModal');
+document.getElementById('addBoardBtn').onclick = () => boardModal.classList.add('active');
+document.getElementById('closeBoardModal').onclick = () => boardModal.classList.remove('active');
+boardModal.onclick = (e) => { if (e.target === boardModal) boardModal.classList.remove('active'); };
+
+document.getElementById('boardForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('board_title').value.trim();
+    const subject = document.getElementById('board_subject').value;
+    const btn = e.target.querySelector('button');
+    btn.innerText = 'Создание...'; btn.disabled = true;
+    
+    const { error } = await supabaseClient.from('boards').insert([{
+        teacher_id: currentUser.id,
+        subject: subject,
+        title: title,
+        is_active: false
+    }]);
+    
+    btn.innerText = 'Создать'; btn.disabled = false;
+    if (error) alert('Ошибка: ' + error.message);
+    else { boardModal.classList.remove('active'); document.getElementById('boardForm').reset(); loadBoards(); }
+};
+
+// ==========================================
+// ВКЛАДКА РАСПИСАНИЕ (КАЛЕНДАРЬ)
+// ==========================================
+async function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    const title = document.getElementById('cal-month-title');
+    
+    // Загружаем данные, если еще не загружены
+    if (!scheduleData || scheduleData.length === 0) {
+        const { data } = await supabaseClient.from('teacher_schedule').select('*');
+        scheduleData = data || [];
+    }
+
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    
+    title.innerText = `${months[month]} ${year}`;
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+
+    let html = '';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+        html += `<div class="cal-header">${d}</div>`;
+    });
+
+    for (let i = 0; i < startOffset; i++) html += `<div></div>`;
+
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = isCurrentMonth && today.getDate() === day;
+        const dayEvents = scheduleData.filter(e => e.date_string === dateStr);
+
+        let eventsHtml = '';
+        dayEvents.forEach(ev => {
+            const color = subjectColors[ev.subject] || '#313131';
+            eventsHtml += `<div class="cal-event" style="background: ${color};">${ev.time || ''} ${ev.student_name}</div>`;
+        });
+
+        html += `
+            <div class="cal-day ${isToday ? 'today' : ''}" onclick="openCalModal('${dateStr}')">
+                <div class="cal-num" style="${isToday ? 'color: var(--accent-lime);' : ''}">${day}</div>
+                <div style="flex:1; overflow-y:auto;">${eventsHtml}</div>
+            </div>
+        `;
+    }
+    grid.innerHTML = html;
+}
+
+// Кнопки переключения месяцев
+document.getElementById('cal-prev').onclick = () => {
+    currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+    renderCalendar();
+};
+document.getElementById('cal-next').onclick = () => {
+    currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+    renderCalendar();
+};
+
+// Модалка календаря
+const calModal = document.getElementById('calModal');
+window.openCalModal = function(dateStr) {
+    document.getElementById('cal_date').value = dateStr;
+    document.getElementById('cal-modal-title').innerText = `Запись на ${dateStr}`;
+    document.getElementById('calForm').reset();
+    
+    // Ищем, есть ли уже запись на этот день
+    const existing = scheduleData.find(e => e.date_string === dateStr);
+    if (existing) {
+        document.getElementById('cal_student').value = existing.student_name || '';
+        document.getElementById('cal_subject').value = existing.subject;
+        document.getElementById('cal_time').value = existing.time || '';
+        document.getElementById('cal_note').value = existing.note || '';
+        document.getElementById('cal_delete_btn').style.display = 'block';
+        document.getElementById('cal_delete_btn').onclick = () => deleteCalEvent(existing.id);
+    } else {
+        document.getElementById('cal_delete_btn').style.display = 'none';
+    }
+    
+    calModal.classList.add('active');
+};
+
+document.getElementById('closeCalModal').onclick = () => calModal.classList.remove('active');
+calModal.onclick = (e) => { if (e.target === calModal) calModal.classList.remove('active'); };
+
+document.getElementById('calForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const dateStr = document.getElementById('cal_date').value;
+    const student_name = document.getElementById('cal_student').value;
+    const subject = document.getElementById('cal_subject').value;
+    const time = document.getElementById('cal_time').value;
+    const note = document.getElementById('cal_note').value;
+    
+    const existing = scheduleData.find(e => e.date_string === dateStr);
+    
+    if (existing) {
+        await supabaseClient.from('teacher_schedule').update({ student_name, subject, time, note }).eq('id', existing.id);
+    } else {
+        await supabaseClient.from('teacher_schedule').insert([{ teacher_id: currentUser.id, date_string: dateStr, student_name, subject, time, note }]);
+    }
+    
+    // Сбрасываем кэш и перерисовываем
+    scheduleData = [];
+    calModal.classList.remove('active');
+    renderCalendar();
+};
+
+async function deleteCalEvent(id) {
+    if (confirm('Удалить запись?')) {
+        await supabaseClient.from('teacher_schedule').delete().eq('id', id);
+        scheduleData = [];
+        calModal.classList.remove('active');
+        renderCalendar();
+    }
+}
+
+// ==========================================
+// ВКЛАДКА УЧИТЕЛЯ
+// ==========================================
 async function loadTeachers() {
     const teachersGrid = document.getElementById('teachers-grid');
     teachersGrid.innerHTML = '<div class="loading">Загрузка...</div>';
     const { data, error } = await supabaseClient.from('profiles').select('*').eq('role', 'teacher');
     if (error) { teachersGrid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
     teachers = data || [];
-    renderTeachers();
-}
-
-function renderTeachers() {
-    const teachersGrid = document.getElementById('teachers-grid');
+    
     teachersGrid.innerHTML = '';
     if (teachers.length === 0) { teachersGrid.innerHTML = '<p style="opacity:0.5;">Учителей пока нет.</p>'; return; }
     teachers.forEach(t => {
@@ -229,7 +428,6 @@ window.openTeacherModal = function(t = null) {
         document.getElementById('teacher_surname').value = t.surname || '';
         document.getElementById('teacher_name').value = t.name || '';
         document.getElementById('teacher_email').value = t.login || '';
-        document.getElementById('teacher_password').value = '';
         document.getElementById('teacher_rate').value = t.rate || '';
         document.getElementById('teacher_phone').value = t.phone || '';
         const subs = (t.subject || '').split(',').map(x=>x.trim());
@@ -237,18 +435,15 @@ window.openTeacherModal = function(t = null) {
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         document.getElementById('teacherSaveBtn').innerText = 'Сохранить изменения';
         document.getElementById('teacher_email').disabled = true;
-        document.getElementById('teacher_password').disabled = false;
     } else {
         document.getElementById('teacher_id').value = '';
         document.getElementById('teacherSaveBtn').innerText = 'Создать аккаунт';
         document.getElementById('teacher_email').disabled = false;
-        document.getElementById('teacher_password').disabled = false;
     }
-    teacherModal.classList.add('active');
+    document.getElementById('teacherModal').classList.add('active');
 };
 
-document.getElementById('closeTeacherModal').onclick = () => teacherModal.classList.remove('active');
-teacherModal.onclick = (e) => { if (e.target === teacherModal) teacherModal.classList.remove('active'); };
+document.getElementById('closeTeacherModal').onclick = () => document.getElementById('teacherModal').classList.remove('active');
 
 document.getElementById('teacherForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -273,7 +468,7 @@ document.getElementById('teacherForm').onsubmit = async (e) => {
             rate: rate ? parseInt(rate) : null, phone: phone, subject: subjects
         }).eq('id', id);
         if (error) alert('Ошибка: ' + error.message);
-        else { teacherModal.classList.remove('active'); loadTeachers(); }
+        else { document.getElementById('teacherModal').classList.remove('active'); loadTeachers(); }
         btn.innerText = 'Сохранить изменения'; btn.disabled = false;
     } else {
         btn.innerText = 'Создание...'; btn.disabled = true;
@@ -283,172 +478,15 @@ document.getElementById('teacherForm').onsubmit = async (e) => {
             });
             if (error) throw error;
             if (data && data.error) throw new Error(data.error);
-            alert('Учитель успешно создан!');
-            teacherModal.classList.remove('active');
+            alert('Учитель создан!');
+            document.getElementById('teacherModal').classList.remove('active');
             loadTeachers();
         } catch (err) { alert('ОШИБКА: ' + err.message); }
         finally { btn.innerText = 'Создать аккаунт'; btn.disabled = false; }
     }
 };
 
-// --- УЧЕНИКИ (МОДАЛКА) ---
-window.openStudentModal = function(s = null) {
-    form.reset(); scheduleData = {};
-    if (s) {
-        document.getElementById('id').value = s.id;
-        document.getElementById('login').value = s.login || '';
-        document.getElementById('password').value = s.password || '';
-        document.getElementById('surname').value = s.surname || '';
-        document.getElementById('name').value = s.name || '';
-        document.getElementById('patronymic').value = s.patronymic || '';
-        document.getElementById('age').value = s.age || '';
-        document.getElementById('grade').value = s.grade || '';
-        document.getElementById('level').value = s.level || 3;
-        document.getElementById('levelVal').innerText = s.level || 3;
-        document.getElementById('hourly_rate').value = s.hourly_rate || '';
-        document.getElementById('about_student').value = s.about_student || '';
-        const subs = (s.subjects || '').split(',').map(x=>x.trim());
-        const select = document.getElementById('subjects');
-        for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
-        if (s.schedule_month) calMonth.value = s.schedule_month;
-        if (s.schedule_year) calYear.value = s.schedule_year;
-        scheduleData = parseSchedule(s.schedule_days); updateScheduleHiddenInput();
-        document.getElementById('tests').value = s.tests || '';
-        document.getElementById('topics').value = s.topics || '';
-        document.getElementById('iom').value = s.iom || '';
-        document.getElementById('deleteBtn').style.display = 'block';
-        const notebookLink = document.getElementById('notebookLink');
-        notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
-        notebookLink.style.display = 'block';
-    } else {
-        document.getElementById('id').value = '';
-        document.getElementById('level').value = 3;
-        document.getElementById('levelVal').innerText = '3';
-        document.getElementById('deleteBtn').style.display = 'none';
-        document.getElementById('notebookLink').style.display = 'none';
-    }
-    renderCalendar(); modal.classList.add('active');
-};
-
-document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
-modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
-
-form.onsubmit = async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('id').value;
-    if (!id) {
-        const login = document.getElementById('login').value.trim();
-        const password = document.getElementById('password').value.trim();
-        const surname = document.getElementById('surname').value.trim();
-        const name = document.getElementById('name').value.trim();
-        const patronymic = document.getElementById('patronymic').value.trim();
-        const age = document.getElementById('age').value;
-        const grade = document.getElementById('grade').value;
-        const select = document.getElementById('subjects');
-        const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
-        const level = document.getElementById('level').value;
-        const hourly_rate = document.getElementById('hourly_rate').value;
-        const about_student = document.getElementById('about_student').value;
-        const tests = document.getElementById('tests').value;
-        const topics = document.getElementById('topics').value;
-        const iom = document.getElementById('iom').value;
-        const schedule_days = document.getElementById('schedule-days').value;
-        const schedule_month = calMonth.value;
-        const schedule_year = calYear.value;
-        
-        const btn = form.querySelector('button[type="submit"]');
-        btn.innerText = 'Создание...'; btn.disabled = true;
-
-        try {
-            const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, iom, schedule_days, schedule_month, schedule_year, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
-            });
-            if (error) throw error;
-            if (data && data.error) throw new Error(data.error);
-            alert('Ученик успешно создан!');
-            modal.classList.remove('active');
-            loadStudents();
-        } catch (err) { alert('ОШИБКА: ' + err.message); }
-        finally { btn.innerText = 'Сохранить'; btn.disabled = false; }
-        return;
-    }
-
-    const select = document.getElementById('subjects');
-    const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
-    const data = {
-        login: document.getElementById('login').value.trim(),
-        password: document.getElementById('password').value.trim(),
-        surname: document.getElementById('surname').value,
-        name: document.getElementById('name').value,
-        patronymic: document.getElementById('patronymic').value,
-        age: parseInt(document.getElementById('age').value) || null,
-        grade: document.getElementById('grade').value,
-        subjects: selectedSubjects,
-        level: parseInt(document.getElementById('level').value),
-        hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
-        about_student: document.getElementById('about_student').value,
-        schedule_month: calMonth.value,
-        schedule_year: calYear.value,
-        schedule_days: document.getElementById('schedule-days').value,
-        tests: document.getElementById('tests').value,
-        topics: document.getElementById('topics').value,
-        iom: document.getElementById('iom').value
-    };
-    const { error } = await supabaseClient.from('students').update(data).eq('id', id);
-    if (error) alert('Ошибка: ' + error.message);
-    else { modal.classList.remove('active'); loadStudents(); }
-};
-
-document.getElementById('deleteBtn').onclick = async () => {
-    if (currentRole !== 'admin') { alert('Удалять учеников может только администратор.'); return; }
-    const id = document.getElementById('id').value;
-    if (confirm('Удалить?')) {
-        const { error } = await supabaseClient.from('students').delete().eq('id', id);
-        if (error) alert('Ошибка: ' + error.message);
-        else { modal.classList.remove('active'); loadStudents(); }
-    }
-};
-
-function renderCalendar() {
-    const month = parseInt(calMonth.value);
-    const year = parseInt(calYear.value);
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-    calGrid.innerHTML = '';
-    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
-        const el = document.createElement('div'); el.className = 'cal-header'; el.innerText = d; calGrid.appendChild(el);
-    });
-    for (let i = 0; i < startOffset; i++) calGrid.appendChild(document.createElement('div'));
-    for (let day = 1; day <= daysInMonth; day++) {
-        const wrapper = document.createElement('div'); wrapper.className = 'cal-day-wrapper';
-        const dayBtn = document.createElement('div'); dayBtn.className = 'cal-day'; dayBtn.innerText = day;
-        const timeInput = document.createElement('input'); timeInput.type = 'text'; timeInput.className = 'time-input'; timeInput.placeholder = '--:--';
-        timeInput.style.display = scheduleData[day] !== undefined ? 'block' : 'none';
-        if (scheduleData[day]) timeInput.value = scheduleData[day];
-        if (scheduleData[day] !== undefined) dayBtn.classList.add('selected');
-        dayBtn.onclick = () => {
-            if (scheduleData[day] !== undefined) { delete scheduleData[day]; dayBtn.classList.remove('selected'); timeInput.style.display = 'none'; timeInput.value = ''; }
-            else { scheduleData[day] = ''; dayBtn.classList.add('selected'); timeInput.style.display = 'block'; timeInput.focus(); }
-            updateScheduleHiddenInput();
-        };
-        timeInput.oninput = (e) => { scheduleData[day] = e.target.value; updateScheduleHiddenInput(); };
-        wrapper.appendChild(dayBtn); wrapper.appendChild(timeInput); calGrid.appendChild(wrapper);
-    }
-}
-function updateScheduleHiddenInput() {
-    const str = Object.keys(scheduleData).map(day => `${day}=${scheduleData[day] || ''}`).join(',');
-    document.getElementById('schedule-days').value = str;
-}
-function parseSchedule(str) {
-    const obj = {}; if (!str) return obj;
-    str.split(',').forEach(item => { const [day, time] = item.split('='); if (day) obj[day] = time || ''; });
-    return obj;
-}
-calMonth.onchange = renderCalendar; calYear.onchange = renderCalendar;
-
-document.getElementById('addBtn').onclick = () => openStudentModal();
 document.getElementById('addTeacherBtn').onclick = () => openTeacherModal();
 
-
+// Запуск
 init();
