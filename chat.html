@@ -35,6 +35,7 @@
         
         .chat-avatar { width: 45px; height: 45px; background: var(--accent-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; overflow: hidden; }
         .chat-avatar.avatar-student { background: var(--accent-lime); color: var(--bg-color); }
+        .chat-avatar.avatar-admin { background: #f06292; color: white; }
 
         .chat-info { flex: 1; overflow: hidden; }
         .chat-info h4 { font-size: 1rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -385,7 +386,9 @@
                 if (chat.id === currentChatId) div.classList.add('active');
                 
                 const displayName = chat.displayName || 'Личный чат';
-                const avatarClass = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+                let avatarClass = 'chat-avatar';
+                if (chat.otherRole === 'student') avatarClass = 'chat-avatar avatar-student';
+                else if (chat.otherRole === 'admin') avatarClass = 'chat-avatar avatar-admin';
                 
                 let avatarHtml = displayName.charAt(0).toUpperCase();
                 if (chat.otherAvatar && avatars[chat.otherAvatar]) {
@@ -417,7 +420,10 @@
             const displayName = chat.displayName || 'Личный чат';
             const headerAvatar = document.getElementById('chat-header-avatar');
             
-            headerAvatar.className = chat.otherRole === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+            let headerClass = 'chat-avatar';
+            if (chat.otherRole === 'student') headerClass = 'chat-avatar avatar-student';
+            else if (chat.otherRole === 'admin') headerClass = 'chat-avatar avatar-admin';
+            headerAvatar.className = headerClass;
             if (chat.otherAvatar && avatars[chat.otherAvatar]) {
                 headerAvatar.innerHTML = avatars[chat.otherAvatar];
             } else {
@@ -528,7 +534,9 @@
             users.forEach(u => {
                 const div = document.createElement('div');
                 div.className = 'user-list-item';
-                const avatarClass = u.role === 'student' ? 'chat-avatar avatar-student' : 'chat-avatar';
+                let avatarClass = 'chat-avatar';
+                if (u.role === 'student') avatarClass = 'chat-avatar avatar-student';
+                else if (u.role === 'admin') avatarClass = 'chat-avatar avatar-admin';
                 
                 let avatarHtml = u.full_name.charAt(0);
                 if (u.avatar_id && avatars[u.avatar_id]) {
