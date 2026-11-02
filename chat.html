@@ -95,6 +95,34 @@
         .btn-emoji svg {
             pointer-events: none; /* Чтобы клик по иконке срабатывал на кнопку */
         }
+
+        /* Меню удаления сообщения */
+        .msg-menu {
+            position: fixed;
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 6px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 100000;
+            display: none;
+        }
+        .msg-menu.active { display: block; }
+        .msg-menu button {
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+        .msg-menu button:hover { background: rgba(255,107,107,0.15); }
+        .message.selectable { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -468,8 +496,70 @@
             
             const div = document.createElement('div');
             div.className = `message ${isSent ? 'sent' : 'received'}`;
+            div.dataset.msgId = msg.id;
+            div.dataset.senderId = msg.sender_id;
             div.innerHTML = `<div>${renderMessageContent(msg.content)}</div><div class="message-time">${time}</div>`;
             area.appendChild(div);
+
+            // Удаление: автор или админ
+            const canDelete = (msg.sender_id === currentUser.id) || (currentUserRole === 'admin');
+            if (canDelete && msg.id && !String(msg.id).startsWith('temp-')) {
+                div.classList.add('selectable');
+                attachDeleteHandlers(div, msg.id);
+            }
+        }
+
+        // --- УДАЛЕНИЕ СООБЩЕНИЙ ---
+        let deleteMenuEl = null;
+        let longPressTimer = null;
+
+        function ensureDeleteMenu() {
+            if (deleteMenuEl) return deleteMenuEl;
+            deleteMenuEl = document.createElement('div');
+            deleteMenuEl.className = 'msg-menu';
+            deleteMenuEl.innerHTML = '<button type="button">Удалить</button>';
+            document.body.appendChild(deleteMenuEl);
+            document.addEventListener('click', (e) => {
+                if (deleteMenuEl && !deleteMenuEl.contains(e.target)) hideDeleteMenu();
+            });
+            return deleteMenuEl;
+        }
+
+        function showDeleteMenu(x, y, msgId) {
+            const menu = ensureDeleteMenu();
+            const btn = menu.querySelector('button');
+            btn.onclick = () => { hideDeleteMenu(); deleteMessage(msgId); };
+            menu.style.left = Math.min(x, window.innerWidth - 140) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - 60) + 'px';
+            menu.classList.add('active');
+        }
+
+        function hideDeleteMenu() {
+            if (deleteMenuEl) deleteMenuEl.classList.remove('active');
+        }
+
+        function attachDeleteHandlers(el, msgId) {
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showDeleteMenu(e.clientX, e.clientY, msgId);
+            });
+            el.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 1) return;
+                const t = e.touches[0];
+                longPressTimer = setTimeout(() => {
+                    showDeleteMenu(t.clientX, t.clientY, msgId);
+                }, 500);
+            }, { passive: true });
+            el.addEventListener('touchend', () => { clearTimeout(longPressTimer); });
+            el.addEventListener('touchmove', () => { clearTimeout(longPressTimer); });
+        }
+
+        async function deleteMessage(msgId) {
+            if (!confirm('Удалить сообщение?')) return;
+            const { error } = await supabaseClient.from('messages').delete().eq('id', msgId);
+            if (error) { alert('Не удалось удалить: ' + error.message); return; }
+            const el = document.querySelector(`.message[data-msg-id="${msgId}"]`);
+            if (el) el.remove();
         }
 
         function scrollToBottom() {
@@ -510,6 +600,12 @@
                         scrollToBottom();
                         supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
                     }
+                })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, payload => {
+                    const oldId = payload.old && payload.old.id;
+                    if (!oldId) return;
+                    const el = document.querySelector(`.message[data-msg-id="${oldId}"]`);
+                    if (el) el.remove();
                 })
                 .subscribe();
         }
