@@ -120,6 +120,123 @@
             .intro-flex { flex-direction: column-reverse; text-align: center; }
             .payment-mascot { width: 150px; }
         }
+
+        /* Стили для блока ИОМ */
+        .iom-section {
+            margin-top: 40px;
+            background: linear-gradient(135deg, #313452 0%, #7455d9 100%);
+            border-radius: 24px;
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 30px;
+            box-shadow: 0 15px 40px rgba(116, 85, 217, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .iom-section::before {
+            content: 'ИОМ';
+            position: absolute;
+            top: -20px;
+            right: -10px;
+            font-size: 150px;
+            font-weight: 800;
+            color: rgba(255,255,255,0.05);
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .iom-content {
+            flex: 1;
+            z-index: 1;
+        }
+
+        .iom-content h3 {
+            font-size: 1.8rem;
+            color: var(--accent-lime);
+            margin-bottom: 15px;
+        }
+
+        .iom-content p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            max-width: 700px;
+        }
+
+        .iom-content ul {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .iom-content ul li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 8px;
+            opacity: 0.85;
+        }
+
+        .iom-content ul li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent-lime);
+            font-weight: bold;
+        }
+
+        .iom-price-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            min-width: 250px;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .iom-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .iom-price span {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.7;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .btn-iom {
+            display: inline-block;
+            background: var(--accent-lime);
+            color: var(--bg-color);
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 1rem;
+            transition: 0.3s;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .btn-iom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(197, 240, 90, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .iom-section { flex-direction: column; text-align: center; padding: 30px 20px; }
+            .iom-content ul li { text-align: left; }
+            .iom-price-block { width: 100%; min-width: auto; }
+            .iom-section::before { font-size: 100px; top: 50%; transform: translateY(-50%); right: -20px; }
+        }
     </style>
 </head>
 <body>
@@ -176,6 +293,27 @@
                 <h3>Полный курс</h3>
                 <div class="price">от 60 000 ₽</div>
                 <p>Абонемент на полный курс поставленной задачи — от подготовки к экзамену до глубокого освоения предмета.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Блок ИОМ -->
+    <section class="section" style="padding-top: 0;">
+        <div class="iom-section">
+            <div class="iom-content">
+                <h3>Индивидуальный образовательный маршрут (ИОМ)</h3>
+                <p>Это не просто занятия, а полная стратегия обучения. Мы анализируем текущие знания ученика, выявляем пробелы и составляем пошаговый план достижения цели.</p>
+                <ul>
+                    <li>Глубокий анализ уровня знаний</li>
+                    <li>Персональный план обучения под цель (ОГЭ, ЕГЭ, олимпиады)</li>
+                    <li>Подбор специалистов и материалов</li>
+                    <li>Ежемесячный отчет о прогрессе</li>
+                </ul>
+            </div>
+            <div class="iom-price-block">
+                <div class="iom-price">12 000 ₽ <span>разовая покупка</span></div>
+                <p style="font-size: 0.85rem; opacity: 0.7;">Разработка маршрута и сопровождение в течение месяца</p>
+                <a href="enroll.html" class="btn-iom">Оформить ИОМ</a>
             </div>
         </div>
     </section>
