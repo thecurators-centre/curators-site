@@ -346,17 +346,24 @@ window.openCalModal = function(dateStr) {
     document.getElementById('cal-modal-title').innerText = `Запись на ${dateStr}`;
     document.getElementById('calForm').reset();
     
-    // Ищем, есть ли уже запись на этот день
-    const existing = scheduleData.find(e => e.date_string === dateStr);
-    if (existing) {
-        document.getElementById('cal_student').value = existing.student_name || '';
-        document.getElementById('cal_subject').value = existing.subject;
-        document.getElementById('cal_time').value = existing.time || '';
-        document.getElementById('cal_note').value = existing.note || '';
-        document.getElementById('cal_delete_btn').style.display = 'block';
-        document.getElementById('cal_delete_btn').onclick = () => deleteCalEvent(existing.id);
+    // Отрисовываем список существующих записей
+    const list = document.getElementById('cal-events-list');
+    const dayEvents = scheduleData.filter(e => e.date_string === dateStr);
+    
+    if (dayEvents.length === 0) {
+        list.innerHTML = '<p style="opacity:0.5; font-size:0.9rem;">Нет записей на этот день.</p>';
     } else {
-        document.getElementById('cal_delete_btn').style.display = 'none';
+        list.innerHTML = '';
+        dayEvents.forEach(ev => {
+            const color = subjectColors[ev.subject] || '#313131';
+            const div = document.createElement('div');
+            div.style.cssText = `background: ${color}; color: var(--bg-color); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.9rem;`;
+            div.innerHTML = `
+                <span>${ev.time || ''} ${ev.student_name} <small style="opacity:0.7; font-weight:normal;">(${ev.note || 'без заметки'})</small></span>
+                <button onclick="deleteCalEvent('${ev.id}')" style="background: rgba(0,0,0,0.2); border: none; color: white; border-radius: 5px; padding: 5px 10px; cursor: pointer;">✕</button>
+            `;
+            list.appendChild(div);
+        });
     }
     
     calModal.classList.add('active');
@@ -373,13 +380,8 @@ document.getElementById('calForm').onsubmit = async (e) => {
     const time = document.getElementById('cal_time').value;
     const note = document.getElementById('cal_note').value;
     
-    const existing = scheduleData.find(e => e.date_string === dateStr);
-    
-    if (existing) {
-        await supabaseClient.from('teacher_schedule').update({ student_name, subject, time, note }).eq('id', existing.id);
-    } else {
-        await supabaseClient.from('teacher_schedule').insert([{ teacher_id: currentUser.id, date_string: dateStr, student_name, subject, time, note }]);
-    }
+    // Всегда добавляем новую запись
+    await supabaseClient.from('teacher_schedule').insert([{ teacher_id: currentUser.id, date_string: dateStr, student_name, subject, time, note }]);
     
     // Сбрасываем кэш и перерисовываем
     scheduleData = [];
@@ -387,14 +389,16 @@ document.getElementById('calForm').onsubmit = async (e) => {
     renderCalendar();
 };
 
-async function deleteCalEvent(id) {
+window.deleteCalEvent = async function(id) {
     if (confirm('Удалить запись?')) {
         await supabaseClient.from('teacher_schedule').delete().eq('id', id);
         scheduleData = [];
-        calModal.classList.remove('active');
+        // Перерисовываем календарь и обновляем список в модалке
         renderCalendar();
+        const currentDate = document.getElementById('cal_date').value;
+        openCalModal(currentDate);
     }
-}
+};
 
 // ==========================================
 // ВКЛАДКА УЧИТЕЛЯ

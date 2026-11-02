@@ -156,9 +156,18 @@
 
     <!-- Модалка календаря -->
     <div class="modal" id="calModal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 450px;">
             <button class="close-btn" id="closeCalModal">&times;</button>
-            <h2 style="margin-bottom: 20px;" id="cal-modal-title">Запись</h2>
+            <h2 style="margin-bottom: 10px;" id="cal-modal-title">Запись</h2>
+            
+            <!-- Список существующих записей на этот день -->
+            <div id="cal-events-list" style="margin-bottom: 20px; max-height: 200px; overflow-y: auto;">
+                <!-- Сюда JS вставит записи -->
+            </div>
+
+            <hr style="border-color: #444; margin: 20px 0;">
+            <h3 style="margin-bottom: 15px; font-size: 1rem; color: var(--accent-lime);">Добавить запись</h3>
+            
             <form id="calForm">
                 <input type="hidden" id="cal_date">
                 <div class="form-group"><label>Ученик</label><input type="text" id="cal_student" placeholder="Имя" required></div>
@@ -177,8 +186,7 @@
                 </div>
                 <div class="form-group"><label>Время</label><input type="text" id="cal_time" placeholder="15:00"></div>
                 <div class="form-group"><label>Заметка (до 20 символов)</label><input type="text" id="cal_note" maxlength="20"></div>
-                <button type="submit" class="btn-save">Сохранить</button>
-                <button type="button" class="btn" id="cal_delete_btn" style="width: 100%; margin-top: 10px; background: var(--danger); display: none;">Удалить</button>
+                <button type="submit" class="btn-save">Добавить</button>
             </form>
         </div>
     </div>
