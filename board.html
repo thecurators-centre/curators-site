@@ -492,7 +492,7 @@
         }
 
         stage.on('click tap', (e) => {
-            if (currentTool !== 'text' || isStudent) return;
+            if (currentTool !== 'text') return;
             if (activeTextInput) { activeTextInput.remove(); activeTextInput = null; }
 
             const pos = stage.getPointerPosition();
