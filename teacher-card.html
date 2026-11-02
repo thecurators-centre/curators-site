@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карточка преподавателя | The Curator’s</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            background: var(--bg-color);
+        }
+
+        .teacher-profile-card {
+            background: var(--card-bg);
+            border-radius: 30px;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Левая часть - фото */
+        .profile-photo-side {
+            width: 40%;
+            background: linear-gradient(135deg, var(--accent-purple) 0%, #4a34a3 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* Заглушка под фото */
+        .photo-placeholder {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            background: transparent;
+            border-radius: 20px;
+            border: 4px solid rgba(255,255,255,0.15); /* Толстая рамка */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Правая часть - текст */
+        .profile-info-side {
+            width: 60%;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        /* Кастомный скроллбар для правой части */
+        .profile-info-side::-webkit-scrollbar { width: 6px; }
+        .profile-info-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .profile-info-side::-webkit-scrollbar-thumb { background: var(--accent-lime); border-radius: 10px; }
+
+        .profile-name {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .profile-role {
+            font-size: 1.1rem;
+            color: var(--accent-lime);
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .profile-experience {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            line-height: 1.5;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--accent-lime);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 5px;
+        }
+
+        .section-text {
+            font-size: 1rem;
+            opacity: 0.85;
+            line-height: 1.6;
+        }
+
+        .directions-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .direction-item {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .direction-name {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .direction-desc {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            line-height: 1.5;
+        }
+
+        .approach-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .approach-list li {
+            position: relative;
+            padding-left: 20px;
+            font-size: 0.95rem;
+            opacity: 0.85;
+            line-height: 1.5;
+        }
+
+        .approach-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-lime);
+            font-weight: bold;
+        }
+
+        /* Адаптивность для мобильных */
+        @media (max-width: 768px) {
+            .teacher-profile-card { flex-direction: column; }
+            .profile-photo-side { width: 100%; padding: 30px; }
+            .photo-placeholder { max-width: 250px; margin: 0 auto; }
+            .profile-info-side { width: 100%; padding: 30px; max-height: none; }
+            .profile-name { font-size: 2rem; text-align: center; }
+            .profile-role { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Начало карточки -->
+    <div class="teacher-profile-card">
+        
+        <!-- Левая колонка: Место под фото -->
+        <div class="profile-photo-side">
+            <div class="photo-placeholder">
+                <!-- Сюда в будущем вставим <img src="..."> -->
+            </div>
+        </div>
+
+        <!-- Правая колонка: Информация -->
+        <div class="profile-info-side">
+            
+            <div>
+                <h1 class="profile-name">Туманова<br>Татьяна</h1>
+                <div class="profile-role">Преподаватель русского языка и литературы, обществознания, биологии и РКИ</div>
+                <div class="profile-experience">
+                    2 года в частной школе · 1 год в международных онлайн-школах
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-title">Образование</div>
+                <div class="section-text">Амурский государственный педагогический университет</div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-title">С кем работаю</div>
+                <div class="section-text">Ученики 5–11 классов</div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-title">Направления</div>
+                <div class="section-text" style="display: flex; flex-direction: column; gap: 12px;">
+                    <p><strong style="color: var(--accent-lime);">Русский язык и литература</strong> — 5–11 классы, ОГЭ, ЕГЭ, олимпиады.</p>
+                    <p><strong style="color: var(--accent-lime);">Обществознание</strong> — 5–11 классы, ОГЭ, ЕГЭ, олимпиады.</p>
+                    <p><strong style="color: var(--accent-lime);">Биология</strong> — 5–9 классы, ОГЭ.</p>
+                    <p><strong style="color: var(--accent-lime);">РКИ</strong> — русский язык как иностранный.</p>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-title">Мой подход</div>
+                <ul class="approach-list">
+                    <li>Элементы Русской Классической Школы.</li>
+                    <li>Понимание и практическое применение знаний.</li>
+                    <li>Развитие самостоятельного и творческого мышления.</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+    <!-- Конец карточки -->
+
+</body>
+</html>
