@@ -35,6 +35,20 @@ async function init() {
 
     loadStudents();
     loadUnreadCount(user.id);
+    subscribeUnreadRealtime();
+}
+
+// Realtime-обновление бейджа непрочитанных
+function subscribeUnreadRealtime() {
+    supabaseClient
+        .channel('admin-unread-' + currentUser.id)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+            loadUnreadCount(currentUser.id);
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, () => {
+            loadUnreadCount(currentUser.id);
+        })
+        .subscribe();
 }
 
 // --- НЕПРОЧИТАННЫЕ ---
@@ -43,10 +57,11 @@ async function loadUnreadCount(userId) {
     if (!myChats || myChats.length === 0) return;
     const chatIds = myChats.map(c => c.chat_id);
     const { count, error } = await supabaseClient.from('messages').select('*', { count: 'exact', head: true }).in('chat_id', chatIds).eq('is_read', false).neq('sender_id', userId);
-    if (!error && count > 0) {
+    if (!error) {
         const btn = document.querySelector('a[href="chat.html"]');
-        if (btn) {
-            let badge = btn.querySelector('.chat-badge');
+        if (!btn) return;
+        let badge = btn.querySelector('.chat-badge');
+        if (count > 0) {
             if (!badge) {
                 badge = document.createElement('span');
                 badge.className = 'chat-badge';
@@ -56,6 +71,8 @@ async function loadUnreadCount(userId) {
             }
             badge.innerText = count;
             badge.style.display = 'block';
+        } else if (badge) {
+            badge.style.display = 'none';
         }
     }
 }
