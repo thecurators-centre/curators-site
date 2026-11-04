@@ -567,7 +567,7 @@
       canvas.innerHTML = '<div class="loading">' +
         (canEdit ? 'Маршрут ещё не начат. Нажми «+ Добавить урок».' : 'Маршрут ещё не составлен.') +
         '</div>';
-      svg.innerHTML = '';
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
       stats.style.display = 'none';
       canvas.style.minHeight = '400px';
       return;
@@ -600,8 +600,16 @@
         path += ' C ' + midX + ' ' + prev.y + ', ' + midX + ' ' + cy + ', ' + cx + ' ' + cy;
       }
     });
-    svg.innerHTML =
-      '<path d="' + path + '" fill="none" stroke="rgba(197,240,90,0.85)" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 16" />';
+    // Очищаем SVG (без innerHTML — он не работает для SVG в Safari)
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', path);
+    pathEl.setAttribute('fill', 'none');
+    pathEl.setAttribute('stroke', 'rgba(197,240,90,0.85)');
+    pathEl.setAttribute('stroke-width', '8');
+    pathEl.setAttribute('stroke-linecap', 'round');
+    pathEl.setAttribute('stroke-dasharray', '2 16');
+    svg.appendChild(pathEl);
 
     // Зоны
     const zonesHtml = steps.map((step, i) => {
