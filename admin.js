@@ -14,6 +14,7 @@ const subjectColors = {
 
 let students = [];
 let teachers = [];
+let filterTeacherId = '';
 let currentUser = null;
 let currentRole = null;
 let scheduleData = []; // Записи календаря
@@ -40,6 +41,39 @@ async function init() {
     loadStudents();
     loadUnreadCount(user.id);
     subscribeUnreadRealtime();
+
+    if (currentRole === 'admin') {
+        initTeacherFilter();
+    }
+}
+
+// Заполняем фильтр по учителям (только для админа)
+async function initTeacherFilter() {
+    const sel = document.getElementById('filter-teacher');
+    if (!sel) return;
+    sel.style.display = 'inline-block';
+
+    const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('id, full_name, surname, name')
+        .eq('role', 'teacher')
+        .order('full_name', { ascending: true });
+
+    if (error) { console.error('Не удалось загрузить учителей для фильтра:', error); return; }
+
+    sel.innerHTML = '<option value="">Все учителя</option>';
+    (data || []).forEach(t => {
+        const name = t.full_name || [t.surname, t.name].filter(Boolean).join(' ') || 'Без имени';
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = name;
+        sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+        filterTeacherId = sel.value;
+        loadStudents();
+    });
 }
 
 // Realtime-обновление бейджа непрочитанных
@@ -103,7 +137,11 @@ window.switchTab = function(tabName) {
 async function loadStudents() {
     grid.innerHTML = '<div class="loading">Загрузка...</div>';
     let query = supabaseClient.from('students').select('*').order('id', { ascending: true });
-    if (currentRole === 'teacher') query = query.eq('teacher_id', currentUser.id);
+    if (currentRole === 'teacher') {
+        query = query.eq('teacher_id', currentUser.id);
+    } else if (currentRole === 'admin' && filterTeacherId) {
+        query = query.eq('teacher_id', filterTeacherId);
+    }
     const { data, error } = await query;
     if (error) { grid.innerHTML = '<div class="loading" style="color: red;">Ошибка базы</div>'; return; }
     students = data || [];
