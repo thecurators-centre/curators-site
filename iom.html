@@ -90,17 +90,21 @@
     pointer-events: none;
     opacity: 0.6;
   }
-  #map-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
   #map-canvas {
     position: relative;
     width: 100%;
     min-height: 400px;
+    overflow: visible;
+  }
+  #map-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: visible;
   }
 
   .loading {
@@ -408,8 +412,8 @@
   </div>
 
   <div class="map-wrapper" id="map-wrapper">
-    <svg id="map-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMin meet"></svg>
     <div id="map-canvas">
+      <svg id="map-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMinYMin meet"></svg>
       <div class="loading">Загрузка маршрута...</div>
     </div>
   </div>
@@ -593,7 +597,7 @@
       }
     });
     svg.innerHTML =
-      '<path d="' + path + '" fill="none" stroke="rgba(197,240,90,0.25)" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" />';
+      '<path d="' + path + '" fill="none" stroke="rgba(197,240,90,0.85)" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 16" />';
 
     // Зоны
     const zonesHtml = steps.map((step, i) => {
