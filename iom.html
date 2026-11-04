@@ -768,10 +768,21 @@
 
   // Удалить
   btnDelete.addEventListener('click', async () => {
-    if (!editingStep) return;
-    if (!confirm('Удалить этот шаг маршрута?')) return;
-    const { error } = await supabaseClient
-      .from('iom_steps').delete().eq('id', editingStep.id);
+    console.log('=== КЛИК УДАЛИТЬ ===');
+    console.log('editingStep:', editingStep);
+    if (!editingStep) {
+        console.log('editingStep пустой!');
+        return;
+    }
+    const confirmed = confirm('Удалить этот шаг маршрута?');
+    console.log('Результат confirm:', confirmed);
+    if (!confirmed) return;
+    
+    console.log('Отправляем DELETE для ID:', editingStep.id);
+    const { data, error } = await supabaseClient
+      .from('iom_steps').delete().eq('id', editingStep.id).select();
+      
+    console.log('Ответ от Supabase: data =', data, 'error =', error);
     if (error) { alert('Ошибка удаления: ' + error.message); return; }
     closeModal();
     await loadSteps();
