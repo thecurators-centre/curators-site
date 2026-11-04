@@ -308,13 +308,20 @@
   .zone:active { transform: translateY(0) scale(0.98); }
 
   .zone-test {
-    background: radial-gradient(circle at 30% 30%, #7a2a3a 0%, #4a1828 100%);
-    border-color: var(--danger);
-    box-shadow: 0 10px 24px rgba(0,0,0,0.45), 0 0 0 6px rgba(255,107,107,0.12), inset 0 -3px 0 rgba(0,0,0,0.25);
+    background: radial-gradient(circle at 30% 30%, #8c6df0 0%, #4a34a3 100%);
+    border-color: var(--accent-purple);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.45), 0 0 0 6px rgba(116,85,217,0.2), inset 0 -3px 0 rgba(0,0,0,0.25);
   }
   .zone-test:hover {
-    box-shadow: 0 16px 32px rgba(0,0,0,0.55), 0 0 0 8px rgba(255,107,107,0.22);
+    box-shadow: 0 16px 32px rgba(0,0,0,0.55), 0 0 0 8px rgba(116,85,217,0.35);
   }
+  .zone-test.passed {
+    background: radial-gradient(circle at 30% 30%, #c5f05a 0%, #8c6df0 100%);
+    border-color: var(--accent-lime);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.45), 0 0 0 6px rgba(197,240,90,0.2), inset 0 -3px 0 rgba(0,0,0,0.25);
+  }
+  .zone-test.passed .zone-num { border-color: var(--accent-lime); color: var(--accent-lime); }
+  .zone-test.passed .zone-label { color: #fff; }
 
   .zone-num {
     position: absolute;
@@ -335,8 +342,8 @@
     z-index: 3;
   }
   .zone-test .zone-num {
-    border-color: var(--danger);
-    color: var(--danger);
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
   }
 
   .zone-inner {
@@ -364,7 +371,7 @@
   }
   .zone-test .zone-label {
     font-size: 0.78rem;
-    color: #ffd9d9;
+    color: #ffffff;
   }
   .zone-sub {
     font-size: 0.85rem;
@@ -378,7 +385,7 @@
     text-overflow: ellipsis;
   }
   .zone-test .zone-sub {
-    color: #ffb3b3;
+    color: #e0d4ff;
     font-size: 1rem;
   }
 </style>
@@ -431,6 +438,12 @@
     <div class="form-group" id="group-result" style="display: none;">
       <label for="zone-input-result">Результат среза</label>
       <textarea id="zone-input-result" placeholder="Например: 12 из 15" rows="2" maxlength="120"></textarea>
+    </div>
+    <div class="form-group" id="group-passed" style="display: none; margin-top: 15px;">
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem;">
+        <input type="checkbox" id="zone-input-passed" style="width: 20px; height: 20px; accent-color: var(--accent-lime);">
+        Срез сдан (удовлетворительно)
+      </label>
     </div>
     <div class="modal-actions" id="modal-actions">
       <button class="btn-save" id="btn-save">Сохранить</button>
@@ -633,7 +646,7 @@
       const top = pos.y - size / 2;
       const label = step.title || (isTest ? 'Контрольный срез' : 'Без названия');
       const sub = isTest && step.result ? step.result : '';
-      const cls = isTest ? 'zone zone-test' : 'zone';
+      const cls = isTest ? (step.is_passed ? 'zone zone-test passed' : 'zone zone-test') : 'zone';
       
       const el = document.createElement('div');
       el.className = cls;
@@ -678,6 +691,8 @@
   const inputResult = document.getElementById('zone-input-result');
   const btnSave = document.getElementById('btn-save');
   const btnDelete = document.getElementById('btn-delete');
+  const groupPassed = document.getElementById('group-passed');
+  const inputPassed = document.getElementById('zone-input-passed');
 
   function nextStepNumber() {
     if (steps.length === 0) return 1;
@@ -698,6 +713,8 @@
       inputTitle.value = step.title || '';
       inputResult.value = step.result || '';
       groupResult.style.display = isTest ? 'block' : 'none';
+      groupPassed.style.display = isTest ? 'block' : 'none';
+      inputPassed.checked = step.is_passed || false;
       btnDelete.style.display = 'inline-block';
     } else {
       // Новая зона. Тип определяем по правилу: каждые 7 уроков — срез
@@ -711,6 +728,8 @@
       inputTitle.value = '';
       inputResult.value = '';
       groupResult.style.display = isTest ? 'block' : 'none';
+      groupPassed.style.display = isTest ? 'block' : 'none';
+      inputPassed.checked = false;
       btnDelete.style.display = 'none';
     }
 
@@ -727,6 +746,7 @@
     inputTitle.disabled = true;
     inputResult.disabled = true;
     groupResult.style.display = isTest ? 'block' : 'none';
+    groupPassed.style.display = 'none';
     btnSave.style.display = 'none';
     btnDelete.style.display = 'none';
 
@@ -752,7 +772,7 @@
 
     if (editingStep) {
       // Обновление
-      const payload = { title: title, result: result };
+      const payload = { title: title, result: result, is_passed: inputPassed.checked };
       const { error } = await supabaseClient
         .from('iom_steps').update(payload).eq('id', editingStep.id);
       if (error) { alert('Ошибка сохранения: ' + error.message); return; }
@@ -765,7 +785,8 @@
         step_number: next,
         type: isTest ? 'test' : 'lesson',
         title: title,
-        result: isTest ? result : ''
+        result: isTest ? result : '',
+        is_passed: isTest ? inputPassed.checked : false
       };
       const { error } = await supabaseClient.from('iom_steps').insert([payload]);
       if (error) { alert('Ошибка создания: ' + error.message); return; }

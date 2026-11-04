@@ -62,6 +62,40 @@
         
         .highlight-card { background: var(--card-bg); padding: 30px; border-radius: 24px; border-left: 4px solid var(--accent-purple); margin-bottom: 30px; }
         .highlight-card h3 { color: var(--accent-lime); margin-bottom: 15px; }
+        
+        .achievement-card {
+            background: linear-gradient(135deg, rgba(49, 52, 82, 0.8) 0%, rgba(116, 85, 217, 0.4) 100%);
+            border: 2px solid var(--accent-lime);
+            border-radius: 24px;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(197, 240, 90, 0.15);
+            animation: fadeIn 0.5s ease-out;
+        }
+        .achievement-img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+            animation: float 4s ease-in-out infinite;
+        }
+        .achievement-text h4 {
+            font-size: 1.5rem;
+            color: var(--accent-lime);
+            margin-bottom: 8px;
+            font-weight: 800;
+        }
+        .achievement-text p {
+            opacity: 0.85;
+            font-size: 1rem;
+        }
+        @media (max-width: 768px) {
+            .achievement-card { flex-direction: column; text-align: center; }
+        }
+
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
 
         .boards-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
@@ -319,6 +353,35 @@
 
             // Инициализация модалки аватарки
             setupAvatarModal();
+            
+            // Проверяем достижения
+            checkAchievements(s.id);
+        }
+
+        async function checkAchievements(studentId) {
+            const { data, error } = await supabaseClient
+                .from('iom_steps')
+                .select('id')
+                .eq('student_id', studentId)
+                .eq('is_passed', true);
+
+            if (!error && data && data.length > 0) {
+                const successTab = document.getElementById('tab-content-success');
+                // Проверяем, не добавлено ли уже
+                if (!document.getElementById('achievement-first-test')) {
+                    const achHtml = `
+                        <div class="achievement-card" id="achievement-first-test">
+                            <img src="mascot4.png" alt="Достижение" class="achievement-img">
+                            <div class="achievement-text">
+                                <h4>Первый контрольный срез!</h4>
+                                <p>Ты успешно прошел испытание и получил этот жетон. Так держать!</p>
+                            </div>
+                        </div>
+                    `;
+                    // Вставляем в самое начало вкладки "Успехи"
+                    successTab.insertAdjacentHTML('afterbegin', achHtml);
+                }
+            }
         }
 
         function setupAvatarModal() {
