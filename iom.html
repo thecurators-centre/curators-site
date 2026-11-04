@@ -612,8 +612,17 @@
     pathEl.setAttribute('stroke-dasharray', '2 16');
     svg.appendChild(pathEl);
 
+    // Ищем или создаем слой для зон (чтобы не стирать SVG)
+    let zoneLayer = canvas.querySelector('.zone-layer');
+    if (!zoneLayer) {
+      zoneLayer = document.createElement('div');
+      zoneLayer.className = 'zone-layer';
+      canvas.appendChild(zoneLayer);
+    }
+    zoneLayer.innerHTML = '';
+
     // Зоны
-    const zonesHtml = steps.map((step, i) => {
+    steps.forEach((step, i) => {
       const pos = calcPosition(i);
       const isTest = step.type === 'test';
       const size = isTest ? TEST_SIZE : ZONE_SIZE;
@@ -622,32 +631,29 @@
       const label = step.title || (isTest ? 'Контрольный срез' : 'Без названия');
       const sub = isTest && step.result ? step.result : '';
       const cls = isTest ? 'zone zone-test' : 'zone';
-      const style = [
-        'left:' + left + 'px',
-        'top:' + top + 'px',
-        'width:' + size + 'px',
-        'height:' + size + 'px'
-      ].join(';');
-      const numBadge = '<span class="zone-num">' + (i + 1) + '</span>';
-      const titleHtml = '<span class="zone-label">' + esc(label) + '</span>';
-      const subHtml = sub ? '<span class="zone-sub">' + esc(sub) + '</span>' : '';
-      return '<div class="' + cls + '" style="' + style + '" data-idx="' + i + '">' +
-        numBadge +
-        '<div class="zone-inner">' + titleHtml + subHtml + '</div>' +
-      '</div>';
-    }).join('');
+      
+      const el = document.createElement('div');
+      el.className = cls;
+      el.style.left = left + 'px';
+      el.style.top = top + 'px';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.setAttribute('data-idx', i);
 
-    canvas.innerHTML = '<div class="zone-layer">' + zonesHtml + '</div>';
+      el.innerHTML = '<span class="zone-num">' + (i + 1) + '</span>' +
+        '<div class="zone-inner"><span class="zone-label">' + esc(label) + '</span>' +
+        (sub ? '<span class="zone-sub">' + esc(sub) + '</span>' : '') + '</div>';
 
-    // Клики по зонам
-    canvas.querySelectorAll('.zone').forEach(el => {
+      // Вешаем клик сразу при создании
       el.addEventListener('click', () => {
-        const idx = parseInt(el.getAttribute('data-idx'), 10);
-        const step = steps[idx];
         if (canEdit) openModal(step);
         else openModalReadOnly(step);
       });
+
+      zoneLayer.appendChild(el);
     });
+
+
 
     // Статистика
     const lessonsCount = steps.filter(s => s.type === 'lesson').length;
