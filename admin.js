@@ -184,8 +184,10 @@ window.openStudentModal = function(s = null) {
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         document.getElementById('tests').value = s.tests || '';
         document.getElementById('topics').value = s.topics || '';
-        document.getElementById('iom').value = s.iom || '';
         document.getElementById('deleteBtn').style.display = 'block';
+        const iomLink = document.getElementById('iomLink');
+        iomLink.href = `iom.html?student_id=${s.id}`;
+        iomLink.style.display = 'block';
         const notebookLink = document.getElementById('notebookLink');
         notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
         notebookLink.style.display = 'block';
@@ -195,6 +197,7 @@ window.openStudentModal = function(s = null) {
         document.getElementById('levelVal').innerText = '3';
         document.getElementById('deleteBtn').style.display = 'none';
         document.getElementById('notebookLink').style.display = 'none';
+        document.getElementById('iomLink').style.display = 'none';
     }
     modal.classList.add('active');
 };
@@ -221,14 +224,13 @@ form.onsubmit = async (e) => {
         const about_student = document.getElementById('about_student').value;
         const tests = document.getElementById('tests').value;
         const topics = document.getElementById('topics').value;
-        const iom = document.getElementById('iom').value;
         
         const btn = form.querySelector('button[type="submit"]');
         btn.innerText = 'Создание...'; btn.disabled = true;
 
         try {
             const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, iom, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
+                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
             });
             if (error) throw error;
             if (data && data.error) throw new Error(data.error);
@@ -256,8 +258,7 @@ form.onsubmit = async (e) => {
         hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
         about_student: document.getElementById('about_student').value,
         tests: document.getElementById('tests').value,
-        topics: document.getElementById('topics').value,
-        iom: document.getElementById('iom').value
+        topics: document.getElementById('topics').value
     };
     const { error } = await supabaseClient.from('students').update(data).eq('id', id);
     if (error) alert('Ошибка: ' + error.message);

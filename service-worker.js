@@ -1,4 +1,4 @@
-const CACHE_NAME = 'curators-cache-v4';
+const CACHE_NAME = 'curators-cache-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,11 @@ const ASSETS_TO_CACHE = [
   './admin.html',
   './student.html',
   './chat.html',
+  './iom.html',
+  './notebook.html',
+  './board.html',
+  './materials.html',
+  './game.html',
   './style.css',
   './admin.css',
   './admin.js',
