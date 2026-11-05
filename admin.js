@@ -187,10 +187,10 @@ window.openStudentModal = function(s = null) {
         document.getElementById('deleteBtn').style.display = 'block';
         const iomLink = document.getElementById('iomLink');
         iomLink.href = `iom.html?student_id=${s.id}`;
-        iomLink.style.display = 'block';
+        iomLink.style.display = 'flex';
         const notebookLink = document.getElementById('notebookLink');
         notebookLink.href = `notebook.html?student_id=${s.id}&name=${encodeURIComponent(s.surname + ' ' + s.name)}`;
-        notebookLink.style.display = 'block';
+        notebookLink.style.display = 'flex';
     } else {
         document.getElementById('id').value = '';
         document.getElementById('level').value = 3;
