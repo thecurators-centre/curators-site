@@ -80,29 +80,43 @@
             margin-bottom: 5px;
         }
 
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
         .achievement-card {
             background: linear-gradient(135deg, rgba(49, 52, 82, 0.8) 0%, rgba(116, 85, 217, 0.4) 100%);
             border: 2px solid var(--accent-lime);
             border-radius: 20px;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(197, 240, 90, 0.15);
             animation: fadeIn 0.5s ease-out;
             width: 100%;
-            max-width: 200px; /* Уменьшили с 300 */
             aspect-ratio: 1 / 1;
-            margin-left: auto;
-            margin-right: auto;
+            position: relative;
         }
         .achievement-img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
-            animation: float 4s ease-in-out infinite;
+        }
+        .achievement-label {
+            position: absolute;
+            bottom: 8px;
+            right: 10px;
+            font-size: 0.75rem;
+            color: var(--accent-lime);
+            font-weight: 800;
+            background: rgba(37, 40, 61, 0.9);
+            padding: 3px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--accent-lime);
         }
 
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
@@ -381,23 +395,53 @@
         async function checkAchievements(studentId) {
             const { data, error } = await supabaseClient
                 .from('iom_steps')
-                .select('id')
+                .select('id, type, step_number, is_passed')
                 .eq('student_id', studentId)
-                .eq('is_passed', true);
+                .order('step_number', { ascending: true });
 
-            if (!error && data && data.length > 0) {
-                const successTab = document.getElementById('tab-content-success');
-                // Проверяем, не добавлено ли уже
-                if (!document.getElementById('achievement-first-test')) {
-                    const achHtml = `
-                        <div class="achievement-card" id="achievement-first-test">
-                            <img src="mascot4.png" alt="Достижение" class="achievement-img">
-                        </div>
-                    `;
-                    // Вставляем в самое начало вкладки "Успехи"
-                    successTab.insertAdjacentHTML('afterbegin', achHtml);
+            if (error) { console.error('Achievements load error:', error); return; }
+            if (!data || data.length === 0) return;
+
+            let testPosition = 0;
+            const passedAchievements = [];
+            data.forEach(step => {
+                if (step.type === 'test') {
+                    testPosition++;
+                    if (step.is_passed) {
+                        passedAchievements.push({ testIndex: testPosition, stepNumber: step.step_number });
+                    }
                 }
+            });
+
+            if (passedAchievements.length === 0) return;
+
+            const successTab = document.getElementById('tab-content-success');
+            let gridEl = document.getElementById('achievements-grid');
+            if (!gridEl) {
+                successTab.insertAdjacentHTML('afterbegin', '<div id="achievements-grid" class="achievements-grid"></div>');
+                gridEl = document.getElementById('achievements-grid');
             }
+            gridEl.innerHTML = '';
+
+            const MAX_MASCOT_NUM = 15;
+            const BASE_MASCOT_NUM = 4;
+
+            passedAchievements.forEach(ach => {
+                const mascotNum = BASE_MASCOT_NUM + (ach.testIndex - 1);
+                if (mascotNum > MAX_MASCOT_NUM) {
+                    console.warn('Нет файла маскота для среза №' + ach.testIndex + ' (mascot' + mascotNum + '.png)');
+                    return;
+                }
+                const imgSrc = `mascot${mascotNum}.png`;
+                const card = document.createElement('div');
+                card.className = 'achievement-card';
+                card.innerHTML = `
+                    <img src="${imgSrc}" alt="Срез №${ach.testIndex}" class="achievement-img"
+                         onerror="this.style.opacity='0.3'; this.src='mascot4.png';">
+                    <span class="achievement-label">#${ach.testIndex}</span>
+                `;
+                gridEl.appendChild(card);
+            });
         }
 
         function setupAvatarModal() {
