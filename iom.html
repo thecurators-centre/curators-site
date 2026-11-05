@@ -287,7 +287,7 @@
   }
   .zone {
     position: absolute;
-    border-radius: 50%;
+    border-radius: 40px; /* Овал */
     background: radial-gradient(circle at 30% 30%, #3d4170 0%, #2c2f52 100%);
     border: 3px solid var(--accent-lime);
     color: var(--text-main);
@@ -439,6 +439,10 @@
       <label for="zone-input-result">Результат среза</label>
       <textarea id="zone-input-result" placeholder="Например: 12 из 15" rows="2" maxlength="120"></textarea>
     </div>
+    <div class="form-group" id="group-desc">
+      <label for="zone-input-desc">Описание / Заметки</label>
+      <textarea id="zone-input-desc" placeholder="Что проходили, какие были трудности..." rows="3" maxlength="500"></textarea>
+    </div>
     <div class="form-group" id="group-passed" style="display: none; margin-top: 15px;">
       <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem;">
         <input type="checkbox" id="zone-input-passed" style="width: 20px; height: 20px; accent-color: var(--accent-lime);">
@@ -468,10 +472,12 @@
   let canEdit = false;
   let editingStep = null; // null = новая зона, иначе объект шага
 
-  const ZONE_SIZE = 64;
-  const TEST_SIZE = 92;
-  const COLS = 5;
-  const COL_GAP = 180;
+  const ZONE_W = 130; // Ширина урока (было 64)
+  const ZONE_H = 70;  // Высота урока
+  const TEST_W = 160; // Ширина среза (было 92)
+  const TEST_H = 90;  // Высота среза
+  const COLS = 4;     // Теперь 4 колонки, так как зоны шире
+  const COL_GAP = 200;
   const ROW_GAP = 160;
   const OFFSET_X = 100;
   const OFFSET_Y = 80;
@@ -593,8 +599,8 @@
     // Вычисляем размер полотна (в пикселях, как у #map-canvas)
     const lastIdx = steps.length - 1;
     const lastPos = calcPosition(lastIdx);
-    const width = Math.max(1000, OFFSET_X * 2 + (COLS - 1) * COL_GAP + TEST_SIZE);
-    const height = Math.max(400, lastPos.y + TEST_SIZE + OFFSET_Y);
+    const width = Math.max(1000, OFFSET_X * 2 + (COLS - 1) * COL_GAP + TEST_W);
+    const height = Math.max(400, lastPos.y + TEST_H + OFFSET_Y);
     // Задаем фиксированную ширину/высоту, чтобы SVG не масштабировался
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
@@ -641,9 +647,10 @@
     steps.forEach((step, i) => {
       const pos = calcPosition(i);
       const isTest = step.type === 'test';
-      const size = isTest ? TEST_SIZE : ZONE_SIZE;
-      const left = pos.x - size / 2;
-      const top = pos.y - size / 2;
+      const sizeW = isTest ? TEST_W : ZONE_W;
+      const sizeH = isTest ? TEST_H : ZONE_H;
+      const left = pos.x - sizeW / 2;
+      const top = pos.y - sizeH / 2;
       const label = step.title || (isTest ? 'Контрольный срез' : 'Без названия');
       const sub = isTest && step.result ? step.result : '';
       const cls = isTest ? (step.is_passed ? 'zone zone-test passed' : 'zone zone-test') : 'zone';
@@ -652,8 +659,8 @@
       el.className = cls;
       el.style.left = left + 'px';
       el.style.top = top + 'px';
-      el.style.width = size + 'px';
-      el.style.height = size + 'px';
+      el.style.width = sizeW + 'px';
+      el.style.height = sizeH + 'px';
       el.setAttribute('data-idx', i);
 
       el.innerHTML = '<span class="zone-num">' + (i + 1) + '</span>' +
@@ -689,6 +696,7 @@
   const groupResult = document.getElementById('group-result');
   const inputTitle = document.getElementById('zone-input-title');
   const inputResult = document.getElementById('zone-input-result');
+  const inputDesc = document.getElementById('zone-input-desc');
   const btnSave = document.getElementById('btn-save');
   const btnDelete = document.getElementById('btn-delete');
   const groupPassed = document.getElementById('group-passed');
@@ -712,6 +720,7 @@
       labelTitle.textContent = isTest ? 'Тема среза (необязательно)' : 'Тема урока';
       inputTitle.value = step.title || '';
       inputResult.value = step.result || '';
+      inputDesc.value = step.description || '';
       groupResult.style.display = isTest ? 'block' : 'none';
       groupPassed.style.display = isTest ? 'block' : 'none';
       inputPassed.checked = step.is_passed || false;
@@ -727,6 +736,7 @@
       labelTitle.textContent = isTest ? 'Тема среза (необязательно)' : 'Тема урока';
       inputTitle.value = '';
       inputResult.value = '';
+      inputDesc.value = '';
       groupResult.style.display = isTest ? 'block' : 'none';
       groupPassed.style.display = isTest ? 'block' : 'none';
       inputPassed.checked = false;
@@ -743,8 +753,10 @@
     labelTitle.textContent = isTest ? 'Тема среза' : 'Тема урока';
     inputTitle.value = step.title || '';
     inputResult.value = step.result || '';
+    inputDesc.value = step.description || '';
     inputTitle.disabled = true;
     inputResult.disabled = true;
+    inputDesc.disabled = true;
     groupResult.style.display = isTest ? 'block' : 'none';
     groupPassed.style.display = 'none';
     btnSave.style.display = 'none';
@@ -759,6 +771,7 @@
     editingStep = null;
     inputTitle.disabled = false;
     inputResult.disabled = false;
+    inputDesc.disabled = false;
     btnSave.style.display = 'inline-block';
   }
 
@@ -772,7 +785,7 @@
 
     if (editingStep) {
       // Обновление
-      const payload = { title: title, result: result, is_passed: inputPassed.checked };
+      const payload = { title: title, result: result, description: inputDesc.value.trim(), is_passed: inputPassed.checked };
       const { error } = await supabaseClient
         .from('iom_steps').update(payload).eq('id', editingStep.id);
       if (error) { alert('Ошибка сохранения: ' + error.message); return; }
@@ -786,6 +799,7 @@
         type: isTest ? 'test' : 'lesson',
         title: title,
         result: isTest ? result : '',
+        description: inputDesc.value.trim(),
         is_passed: isTest ? inputPassed.checked : false
       };
       const { error } = await supabaseClient.from('iom_steps').insert([payload]);

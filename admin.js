@@ -185,6 +185,13 @@ window.openStudentModal = function(s = null) {
         document.getElementById('tests').value = s.tests || '';
         document.getElementById('topics').value = s.topics || '';
         document.getElementById('deleteBtn').style.display = 'block';
+        const reportBtn = document.getElementById('reportBtn');
+        if (currentRole === 'admin') {
+            reportBtn.style.display = 'flex';
+            reportBtn.onclick = () => openReportModal(s.id, s.name);
+        } else {
+            reportBtn.style.display = 'none';
+        }
         const iomLink = document.getElementById('iomLink');
         iomLink.href = `iom.html?student_id=${s.id}`;
         iomLink.style.display = 'flex';
@@ -198,6 +205,7 @@ window.openStudentModal = function(s = null) {
         document.getElementById('deleteBtn').style.display = 'none';
         document.getElementById('notebookLink').style.display = 'none';
         document.getElementById('iomLink').style.display = 'none';
+        document.getElementById('reportBtn').style.display = 'none';
     }
     modal.classList.add('active');
 };
@@ -547,3 +555,59 @@ document.getElementById('addTeacherBtn').onclick = () => openTeacherModal();
 
 // Запуск
 init();
+
+// ==========================================
+// ОТЧЕТ ПО СРЕЗАМ
+// ==========================================
+const reportModal = document.getElementById('reportModal');
+document.getElementById('closeReportModal').onclick = () => reportModal.classList.remove('active');
+reportModal.onclick = (e) => { if (e.target === reportModal) reportModal.classList.remove('active'); };
+
+window.openReportModal = async function(studentId, studentName) {
+    reportModal.classList.add('active');
+    const content = document.getElementById('reportContent');
+    content.innerHTML = '<div style="text-align:center; opacity:0.5;">Загрузка...</div>';
+
+    const { data, error } = await supabaseClient
+        .from('iom_steps')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('type', 'test')
+        .order('step_number', { ascending: true });
+
+    if (error || !data) {
+        content.innerHTML = '<div style="color:red;">Ошибка загрузки данных.</div>';
+        return;
+    }
+
+    if (data.length === 0) {
+        content.innerHTML = '<div style="text-align:center; opacity:0.5;">У этого ученика еще нет срезов.</div>';
+        return;
+    }
+
+    content.innerHTML = '';
+    data.forEach((step, index) => {
+        const isPassed = step.is_passed;
+        const color = isPassed ? 'var(--accent-lime)' : 'var(--accent-purple)';
+        const statusText = isPassed ? 'Сдан' : 'Не сдан';
+        
+        const card = document.createElement('div');
+        card.style.cssText = `background: var(--bg-color); border-left: 4px solid ${color}; padding: 15px; border-radius: 12px;`;
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <strong style="color: var(--text-main);">Срез №${index + 1}</strong>
+                <span style="color: ${color}; font-weight: bold; font-size: 0.85rem;">${statusText}</span>
+            </div>
+            <div style="font-size: 0.9rem; margin-bottom: 5px; opacity: 0.8;">
+                Тема: ${step.title || 'Без названия'}
+            </div>
+            <div style="font-size: 0.9rem; margin-bottom: 5px; opacity: 0.8;">
+                Результат: ${step.result || '—'}
+            </div>
+            <div style="font-size: 0.85rem; opacity: 0.6; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                Описание: ${step.description || 'Нет описания'}
+            </div>
+        `;
+        content.appendChild(card);
+    });
+};
