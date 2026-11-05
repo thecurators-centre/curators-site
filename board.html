@@ -707,6 +707,81 @@
         stage.on('mouseup', () => { isPanning = false; });
         stage.container().addEventListener('contextmenu', (e) => e.preventDefault());
 
+        // ==========================================================
+        // УПРАВЛЕНИЕ КАСАНИЯМИ (ДВА ПАЛЬЦА: ПАНОРАМА И ЗУМ)
+        // ==========================================================
+        let lastTouchDist = 0;
+        let lastTouchCenter = null;
+        let isTouching = false;
+        let wasDrawingOnTouch = false;
+
+        function getTouchCenter(touches) {
+            const x = (touches[0].clientX + touches[1].clientX) / 2;
+            const y = (touches[0].clientY + touches[1].clientY) / 2;
+            return { x, y };
+        }
+        function getTouchDistance(touches) {
+            return Math.hypot(
+                touches[0].clientX - touches[1].clientX,
+                touches[0].clientY - touches[1].clientY
+            );
+        }
+        // Отменяем текущее рисование (если пользователь начал вторым пальцем)
+        function cancelCurrentDrawing() {
+            if (currentLine) { currentLine.destroy(); currentLine = null; }
+            if (currentShape) { currentShape.destroy(); currentShape = null; }
+            currentStrokeId = null;
+            drawLayer.batchDraw();
+        }
+
+        stage.container().addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Если до этого рисовали одним пальцем — отменяем линию
+                if (isDrawing) cancelCurrentDrawing();
+                isDrawing = false;
+                isTouching = true;
+                lastTouchDist = getTouchDistance(e.touches);
+                lastTouchCenter = getTouchCenter(e.touches);
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        stage.container().addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && isTouching) {
+                e.preventDefault();
+                const dist = getTouchDistance(e.touches);
+                const center = getTouchCenter(e.touches);
+                
+                // Зум
+                if (lastTouchDist > 0) {
+                    const scaleBy = dist / lastTouchDist;
+                    const oldScale = stage.scaleX();
+                    const newScale = Math.max(0.1, Math.min(oldScale * scaleBy, 5));
+                    stage.scale({ x: newScale, y: newScale });
+                }
+                
+                // Панорама
+                if (lastTouchCenter) {
+                    const dx = center.x - lastTouchCenter.x;
+                    const dy = center.y - lastTouchCenter.y;
+                    stage.position({ x: stage.x() + dx, y: stage.y() + dy });
+                }
+
+                lastTouchDist = dist;
+                lastTouchCenter = center;
+                stage.batchDraw();
+            }
+        }, { passive: false });
+
+        stage.container().addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isTouching = false;
+                lastTouchDist = 0;
+                lastTouchCenter = null;
+            }
+        });
+        
+
         document.getElementById('clearBtn').addEventListener('click', async () => {
             if (isStudent) return;
             if (confirm('Очистить доску?')) {
