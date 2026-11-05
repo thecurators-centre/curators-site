@@ -22,6 +22,46 @@
         .back-link { display: block; margin-top: 20px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; opacity: 0.6; }
         .back-link:hover { opacity: 1; }
         #error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; display: none; }
+
+        /* Модалка поворота экрана для PWA */
+        .rotate-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 30px;
+            text-align: center;
+        }
+        .rotate-modal.active { display: flex; }
+        .rotate-animation {
+            width: 120px;
+            height: 120px;
+            border: 4px solid var(--accent-lime);
+            border-radius: 16px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            margin-bottom: 40px;
+        }
+        @keyframes rotatePhone {
+            0%, 30% { transform: rotate(0deg); }
+            60%, 100% { transform: rotate(90deg); }
+        }
+        .rotate-modal button {
+            background: var(--accent-lime);
+            color: var(--bg-color);
+            border: none;
+            padding: 15px 50px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .rotate-modal button:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -36,6 +76,12 @@
             <div id="error-msg">Неверный логин или пароль</div>
         </form>
         <a href="index.html" class="back-link">← На главную</a>
+    </div>
+
+    <!-- Модалка "Поверни телефон" для PWA -->
+    <div class="rotate-modal" id="rotateModal">
+        <div class="rotate-animation"></div>
+        <button id="rotateOkBtn">ОК</button>
     </div>
 
     <script>
@@ -104,6 +150,26 @@
                 btn.innerText = 'Войти';
                 btn.disabled = false;
             }
+        });
+
+        // --- PWA: Показ "Поверни телефон" ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const rotateModal = document.getElementById('rotateModal');
+            const rotateOkBtn = document.getElementById('rotateOkBtn');
+            
+            // Проверяем, что это PWA (standalone) и телефон вертикально
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+            const wasShown = sessionStorage.getItem('rotate_modal_shown');
+
+            if (isStandalone && isPortrait && !wasShown) {
+                rotateModal.classList.add('active');
+            }
+
+            rotateOkBtn.addEventListener('click', () => {
+                rotateModal.classList.remove('active');
+                sessionStorage.setItem('rotate_modal_shown', 'true');
+            });
         });
     </script>
 </body>
