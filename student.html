@@ -87,30 +87,17 @@
             padding: 30px;
             display: flex;
             align-items: center;
-            gap: 30px;
+            justify-content: center;
             margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(197, 240, 90, 0.15);
             animation: fadeIn 0.5s ease-out;
         }
         .achievement-img {
-            width: 120px;
-            height: 120px;
+            width: 180px;
+            height: 180px;
             object-fit: contain;
             filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
             animation: float 4s ease-in-out infinite;
-        }
-        .achievement-text h4 {
-            font-size: 1.5rem;
-            color: var(--accent-lime);
-            margin-bottom: 8px;
-            font-weight: 800;
-        }
-        .achievement-text p {
-            opacity: 0.85;
-            font-size: 1rem;
-        }
-        @media (max-width: 768px) {
-            .achievement-card { flex-direction: column; text-align: center; }
         }
 
         .loading { text-align: center; padding: 50px; font-size: 1.2rem; opacity: 0.5; }
@@ -393,10 +380,6 @@
                     const achHtml = `
                         <div class="achievement-card" id="achievement-first-test">
                             <img src="mascot4.png" alt="Достижение" class="achievement-img">
-                            <div class="achievement-text">
-                                <h4>Первый контрольный срез!</h4>
-                                <p>Ты успешно прошел испытание и получил этот жетон. Так держать!</p>
-                            </div>
                         </div>
                     `;
                     // Вставляем в самое начало вкладки "Успехи"
