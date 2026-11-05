@@ -182,7 +182,6 @@ window.openStudentModal = function(s = null) {
         const subs = (s.subjects || '').split(',').map(x=>x.trim());
         const select = document.getElementById('subjects');
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
-        document.getElementById('tests').value = s.tests || '';
         document.getElementById('topics').value = s.topics || '';
         document.getElementById('deleteBtn').style.display = 'block';
         const reportBtn = document.getElementById('reportBtn');
@@ -230,7 +229,6 @@ form.onsubmit = async (e) => {
         const level = document.getElementById('level').value;
         const hourly_rate = document.getElementById('hourly_rate').value;
         const about_student = document.getElementById('about_student').value;
-        const tests = document.getElementById('tests').value;
         const topics = document.getElementById('topics').value;
         
         const btn = form.querySelector('button[type="submit"]');
@@ -238,7 +236,7 @@ form.onsubmit = async (e) => {
 
         try {
             const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, tests, topics, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
+                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, topics, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
             });
             if (error) throw error;
             if (data && data.error) throw new Error(data.error);
@@ -265,7 +263,6 @@ form.onsubmit = async (e) => {
         level: parseInt(document.getElementById('level').value),
         hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
         about_student: document.getElementById('about_student').value,
-        tests: document.getElementById('tests').value,
         topics: document.getElementById('topics').value
     };
     const { error } = await supabaseClient.from('students').update(data).eq('id', id);
