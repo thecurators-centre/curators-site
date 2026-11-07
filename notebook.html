@@ -227,10 +227,14 @@
             toolbar.className = 'admin-toolbar';
             toolbar.innerHTML = `
                 <label class="btn-tool">
-                    🖼️ Картинка
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    Картинка
                     <input type="file" id="imageInput" accept="image/*">
                 </label>
-                <button class="btn-tool" id="saveBtn">💾 Сохранить</button>
+                <button class="btn-tool" id="saveBtn">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Сохранить
+                </button>
             `;
             document.body.appendChild(toolbar);
 
