@@ -187,7 +187,7 @@ window.openStudentModal = function(s = null) {
         document.getElementById('schedule_month').value = sm;
         document.getElementById('schedule_year').value = s.schedule_year || '';
         document.getElementById('schedule_days').value = s.schedule_days || '';
-        renderStudentCalendar();
+        if (typeof renderStudentCalendar === 'function') renderStudentCalendar();
         document.getElementById('deleteBtn').style.display = 'block';
         const reportBtn = document.getElementById('reportBtn');
         if (currentRole === 'admin') {
@@ -619,3 +619,95 @@ window.openReportModal = async function(studentId, studentName) {
         content.appendChild(card);
     });
 };
+
+
+// ==========================================
+// КАЛЕНДАРЬ УЧЕНИКА (В КАРТОЧКЕ)
+// ==========================================
+var currentStudentSchedule = {};
+
+function parseScheduleStr(str) {
+    const res = {};
+    if (!str) return res;
+    str.split(',').forEach(part => {
+        const [day, time] = part.split('=');
+        if (day) res[day.trim()] = (time || '').trim();
+    });
+    return res;
+}
+function stringifySchedule(obj) {
+    return Object.keys(obj).map(day => `${day}=${obj[day]}`).join(',');
+}
+function updateScheduleTime(day, time) {
+    currentStudentSchedule[day] = time;
+    document.getElementById('schedule_days').value = stringifySchedule(currentStudentSchedule);
+}
+function toggleScheduleDay(day) {
+    if (currentStudentSchedule[day] !== undefined) {
+        delete currentStudentSchedule[day];
+    } else {
+        currentStudentSchedule[day] = '';
+    }
+    document.getElementById('schedule_days').value = stringifySchedule(currentStudentSchedule);
+    renderStudentCalendar();
+}
+function renderStudentCalendar() {
+    const monthEl = document.getElementById('schedule_month');
+    const yearEl = document.getElementById('schedule_year');
+    const calEl = document.getElementById('student-calendar');
+    if (!monthEl || !yearEl || !calEl) return;
+
+    const month = parseInt(monthEl.value);
+    const year = parseInt(yearEl.value);
+
+    if (!month || !year) {
+        calEl.innerHTML = '<div style="grid-column: 1/-1; text-align:center; opacity:0.5; padding: 20px; font-size: 0.9rem;">Выберите месяц и год для редактирования</div>';
+        return;
+    }
+
+    const m = month - 1;
+    const sDays = parseScheduleStr(document.getElementById('schedule_days').value);
+    currentStudentSchedule = sDays;
+
+    const firstDay = new Date(year, m, 1).getDay();
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    let startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    let html = '';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+        html += `<div style="text-align:center; font-size:0.7rem; opacity:0.5; padding: 5px 0;">${d}</div>`;
+    });
+    for (let i = 0; i < startOffset; i++) html += '<div></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const time = sDays[day];
+        const isSelected = time !== undefined;
+        html += `
+            <div style="background: ${isSelected ? 'var(--accent-lime)' : 'var(--card-bg)'}; color: ${isSelected ? 'var(--bg-color)' : 'var(--text-main)'}; border-radius: 8px; padding: 5px 3px; cursor: pointer; position: relative; min-height: 45px;" onclick="toggleScheduleDay('${day}')">
+                <div style="font-size: 0.9rem; font-weight: bold; text-align: center;">${day}</div>
+                ${isSelected ? `
+                    <input type="text" placeholder="15:00" value="${time || ''}" 
+                           onclick="event.stopPropagation()" 
+                           onchange="updateScheduleTime('${day}', this.value)" 
+                           style="width: 100%; font-size: 0.7rem; padding: 1px 3px; border-radius: 4px; border: none; background: var(--bg-color); color: var(--text-main); margin-top: 2px; text-align: center;">
+                ` : ''}
+            </div>
+        `;
+    }
+    calEl.innerHTML = html;
+}
+
+// Подключаем слушатели к select/input месяца и года (с защитой от повторной инициализации)
+function initScheduleCalendarListeners() {
+    const monthEl = document.getElementById('schedule_month');
+    const yearEl = document.getElementById('schedule_year');
+    if (monthEl && !monthEl.dataset.listenerAttached) {
+        monthEl.addEventListener('change', renderStudentCalendar);
+        monthEl.dataset.listenerAttached = '1';
+    }
+    if (yearEl && !yearEl.dataset.listenerAttached) {
+        yearEl.addEventListener('input', renderStudentCalendar);
+        yearEl.dataset.listenerAttached = '1';
+    }
+}
+initScheduleCalendarListeners();
