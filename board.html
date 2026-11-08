@@ -877,7 +877,9 @@
                     drawLayer.batchDraw();
 
                     // 5. Сохраняем в базу и отправляем ученику
-                    const objData = { type: 'image', x: imageNode.x(), y: imageNode.y(), width: w, height: h, src: imageUrl };
+                    const objData = { type: 'image', id: 'img_' + Date.now(), x: imageNode.x(), y: imageNode.y(), width: w, height: h, src: imageUrl };
+                    imageNode.id(objData.id);
+                    studentObjects[objData.id] = imageNode; // Запоминаем, чтобы не дублировать
                     saveObjectToDB(objData);
                     broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: objData });
                 };
@@ -955,14 +957,21 @@ async function saveObjectToDB(obj) {
                     broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
                 });
             } else if (obj.type === 'image') {
+                // Если картинка уже есть на доске (например, мы только что её загрузили), не дублируем её
+                if (obj.id && studentObjects[obj.id]) return; 
+
                 const imgObj = new Image();
                 imgObj.src = obj.src;
                 imgObj.onload = () => {
                     const imageNode = new Konva.Image({
                         image: imgObj, x: obj.x, y: obj.y, width: obj.width, height: obj.height, draggable: true
                     });
+                    if (obj.id) {
+                        imageNode.id(obj.id);
+                        studentObjects[obj.id] = imageNode;
+                    }
                     imageNode.on('dragend', () => {
-                        const d = { type: 'image', x: imageNode.x(), y: imageNode.y(), width: obj.width, height: obj.height, src: obj.src };
+                        const d = { type: 'image', id: imageNode.id(), x: imageNode.x(), y: imageNode.y(), width: obj.width, height: obj.height, src: obj.src };
                         saveObjectToDB(d, true);
                         broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
                     });
@@ -982,7 +991,15 @@ async function saveObjectToDB(obj) {
         async function loadBoard() {
             const { data } = await supabaseClient.from('board_objects').select('*').eq('board_id', subject).order('created_at', { ascending: true });
             if (data) {
-                data.forEach(item => drawObject(item.object_data));
+                const loadedImageSrcs = new Set(); // Защита от дубликатов картинок из базы
+                data.forEach(item => {
+                    const obj = item.object_data;
+                    if (obj.type === 'image') {
+                        if (loadedImageSrcs.has(obj.src)) return; // Уже загружали такую картинку
+                        loadedImageSrcs.add(obj.src);
+                    }
+                    drawObject(obj);
+                });
             }
         }
 
