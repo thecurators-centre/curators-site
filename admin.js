@@ -183,9 +183,11 @@ window.openStudentModal = function(s = null) {
         const select = document.getElementById('subjects');
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         document.getElementById('topics').value = s.topics || '';
-        document.getElementById('schedule_month').value = (s.schedule_month !== null && s.schedule_month !== undefined) ? (s.schedule_month + 1) : '';
+        const sm = (s.schedule_month !== null && s.schedule_month !== undefined) ? (s.schedule_month + 1) : '';
+        document.getElementById('schedule_month').value = sm;
         document.getElementById('schedule_year').value = s.schedule_year || '';
         document.getElementById('schedule_days').value = s.schedule_days || '';
+        renderStudentCalendar();
         document.getElementById('deleteBtn').style.display = 'block';
         const reportBtn = document.getElementById('reportBtn');
         if (currentRole === 'admin') {

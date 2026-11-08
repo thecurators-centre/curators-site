@@ -131,19 +131,33 @@
                 <hr style="border-color: #444; margin: 20px 0;">
                 <div class="form-group"><label>Пройденные темы</label><textarea id="topics"></textarea></div>
                 <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <label>Расписание занятий (месяц и год)</label>
+                    <label>Расписание занятий</label>
                     <div class="form-row" style="margin-bottom: 10px;">
                         <div class="form-group" style="margin:0; flex: 1;">
-                            <input type="number" id="schedule_month" min="1" max="12" placeholder="Месяц (1-12)">
+                            <select id="schedule_month">
+                                <option value="">Месяц</option>
+                                <option value="1">Январь</option>
+                                <option value="2">Февраль</option>
+                                <option value="3">Март</option>
+                                <option value="4">Апрель</option>
+                                <option value="5">Май</option>
+                                <option value="6">Июнь</option>
+                                <option value="7">Июль</option>
+                                <option value="8">Август</option>
+                                <option value="9">Сентябрь</option>
+                                <option value="10">Октябрь</option>
+                                <option value="11">Ноябрь</option>
+                                <option value="12">Декабрь</option>
+                            </select>
                         </div>
                         <div class="form-group" style="margin:0; flex: 1;">
-                            <input type="number" id="schedule_year" placeholder="Год (2026)">
+                            <input type="number" id="schedule_year" placeholder="Год" min="2024" max="2100">
                         </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Расписание занятий (дни и время)</label>
-                    <textarea id="schedule_days" placeholder="Формат: 12=15:00, 14=16:30" rows="2"></textarea>
+                    <div id="student-calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: var(--bg-color); padding: 10px; border-radius: 12px;">
+                        <!-- Сюда JS вставит дни -->
+                    </div>
+                    <input type="hidden" id="schedule_days">
                 </div>
                 <a href="#" id="iomLink" class="btn-notebook" style="display: none; margin-top:10px; text-align:center; text-decoration:none; color:white; background:var(--accent-lime); padding:15px; border-radius:8px; font-weight:bold; align-items:center; justify-content:center; gap:8px;">
     <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 4L3 7v13l6-3 6 3 6-3V4l-6 3-6-3z"/><line x1="9" y1="4" x2="9" y2="17"/><line x1="15" y1="7" x2="15" y2="20"/></svg>
