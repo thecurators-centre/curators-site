@@ -183,6 +183,9 @@ window.openStudentModal = function(s = null) {
         const select = document.getElementById('subjects');
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         document.getElementById('topics').value = s.topics || '';
+        document.getElementById('schedule_month').value = s.schedule_month !== null && s.schedule_month !== undefined ? s.schedule_month : '';
+        document.getElementById('schedule_year').value = s.schedule_year || '';
+        document.getElementById('schedule_days').value = s.schedule_days || '';
         document.getElementById('deleteBtn').style.display = 'block';
         const reportBtn = document.getElementById('reportBtn');
         if (currentRole === 'admin') {
@@ -230,13 +233,16 @@ form.onsubmit = async (e) => {
         const hourly_rate = document.getElementById('hourly_rate').value;
         const about_student = document.getElementById('about_student').value;
         const topics = document.getElementById('topics').value;
+        const schedule_month = document.getElementById('schedule_month').value;
+        const schedule_year = document.getElementById('schedule_year').value;
+        const schedule_days = document.getElementById('schedule_days').value;
         
         const btn = form.querySelector('button[type="submit"]');
         btn.innerText = 'Создание...'; btn.disabled = true;
 
         try {
             const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
-                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, topics, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
+                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, topics, schedule_month, schedule_year, schedule_days, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
             });
             if (error) throw error;
             if (data && data.error) throw new Error(data.error);
@@ -263,7 +269,10 @@ form.onsubmit = async (e) => {
         level: parseInt(document.getElementById('level').value),
         hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
         about_student: document.getElementById('about_student').value,
-        topics: document.getElementById('topics').value
+        topics: document.getElementById('topics').value,
+        schedule_month: document.getElementById('schedule_month').value ? parseInt(document.getElementById('schedule_month').value) : null,
+        schedule_year: document.getElementById('schedule_year').value ? parseInt(document.getElementById('schedule_year').value) : null,
+        schedule_days: document.getElementById('schedule_days').value.trim()
     };
     const { error } = await supabaseClient.from('students').update(data).eq('id', id);
     if (error) alert('Ошибка: ' + error.message);
