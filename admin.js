@@ -183,7 +183,7 @@ window.openStudentModal = function(s = null) {
         const select = document.getElementById('subjects');
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         document.getElementById('topics').value = s.topics || '';
-        document.getElementById('schedule_month').value = s.schedule_month !== null && s.schedule_month !== undefined ? s.schedule_month : '';
+        document.getElementById('schedule_month').value = (s.schedule_month !== null && s.schedule_month !== undefined) ? (s.schedule_month + 1) : '';
         document.getElementById('schedule_year').value = s.schedule_year || '';
         document.getElementById('schedule_days').value = s.schedule_days || '';
         document.getElementById('deleteBtn').style.display = 'block';
@@ -270,7 +270,7 @@ form.onsubmit = async (e) => {
         hourly_rate: parseInt(document.getElementById('hourly_rate').value) || null,
         about_student: document.getElementById('about_student').value,
         topics: document.getElementById('topics').value,
-        schedule_month: document.getElementById('schedule_month').value ? parseInt(document.getElementById('schedule_month').value) : null,
+        schedule_month: document.getElementById('schedule_month').value ? (parseInt(document.getElementById('schedule_month').value) - 1) : null,
         schedule_year: document.getElementById('schedule_year').value ? parseInt(document.getElementById('schedule_year').value) : null,
         schedule_days: document.getElementById('schedule_days').value.trim()
     };
