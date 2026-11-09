@@ -180,7 +180,7 @@ window.openStudentModal = function(s = null) {
         document.getElementById('hourly_rate').value = s.hourly_rate || '';
         document.getElementById('about_student').value = s.about_student || '';
         const subs = (s.subjects || '').split(',').map(x=>x.trim());
-        const select = document.getElementById('subjects');
+        
         for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         const sm = (s.schedule_month !== null && s.schedule_month !== undefined) ? (s.schedule_month + 1) : '';
         document.getElementById('schedule_month').value = sm;
@@ -205,6 +205,7 @@ window.openStudentModal = function(s = null) {
         document.getElementById('id').value = '';
         document.getElementById('level').value = 3;
         document.getElementById('levelVal').innerText = '3';
+        setSelectedSubjects(''); // Сбрасываем предметы
         document.getElementById('deleteBtn').style.display = 'none';
         document.getElementById('notebookLink').style.display = 'none';
         document.getElementById('iomLink').style.display = 'none';
@@ -228,7 +229,7 @@ form.onsubmit = async (e) => {
         const patronymic = document.getElementById('patronymic').value.trim();
         const age = document.getElementById('age').value;
         const grade = document.getElementById('grade').value;
-        const select = document.getElementById('subjects');
+        
         const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
         const level = document.getElementById('level').value;
         const hourly_rate = document.getElementById('hourly_rate').value;
@@ -255,7 +256,7 @@ form.onsubmit = async (e) => {
     }
 
     // Обновление
-    const select = document.getElementById('subjects');
+    
     const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
     const data = {
         login: document.getElementById('login').value.trim(),
