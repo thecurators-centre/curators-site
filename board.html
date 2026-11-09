@@ -400,6 +400,11 @@
                 e.currentTarget.classList.add('active');
                 currentTool = e.currentTarget.dataset.tool;
                 removeRotateAnchor();
+                
+                // Переключаем draggable у картинок и текста
+                drawLayer.find('Image').forEach(img => img.draggable(currentTool === 'cursor'));
+                // Текст всегда можно двигать, но чтобы рисовать поверх, лучше отключать тоже
+                drawLayer.find('Text').forEach(txt => txt.draggable(currentTool === 'cursor' || currentTool === 'text'));
             });
         });
 
@@ -547,10 +552,22 @@
                     
                     const text = textarea.value.trim();
                     if (text) {
-                        const textNode = new Konva.Text({ x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: true });
+                        const textId = 'text_' + Date.now();
+                        const textNode = new Konva.Text({ id: textId, x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value, fontFamily: 'Inter', draggable: true });
+                        
+                        // Сохраняем при перетаскивании
+                        textNode.on('dragend', () => {
+                            const d = { type: 'text', id: textNode.id(), x: textNode.x(), y: textNode.y(), text: text, fontSize: currentFontSize, fill: colorPicker.value };
+                            saveObjectToDB(d, true);
+                            broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
+                        });
+                        
                         drawLayer.add(textNode); drawLayer.batchDraw();
-                        saveObjectToDB({ type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value });
-                        broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: { type: 'text', x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value } });
+                        studentObjects[textId] = textNode;
+                        
+                        const textData = { type: 'text', id: textId, x: localX, y: localY, text: text, fontSize: currentFontSize, fill: colorPicker.value };
+                        saveObjectToDB(textData);
+                        broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: textData });
                     }
                     overlayWrapper.remove(); activeTextInput = null;
                 }, 100);
@@ -872,7 +889,7 @@
                         y: stageCenterY - h / 2,
                         width: w,
                         height: h,
-                        draggable: true
+                        draggable: currentTool === 'cursor' // Картинка двигается только Курсором
                     });
                     
                     drawLayer.add(imageNode);
@@ -952,10 +969,11 @@ async function saveObjectToDB(obj) {
                     updateArrowHead(node);
                 }
             } else if (obj.type === 'text') {
-                node = new Konva.Text({ x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: true });
+                if (obj.id && studentObjects[obj.id]) return; // Защита от дублей
+                node = new Konva.Text({ id: obj.id, x: obj.x, y: obj.y, text: obj.text, fontSize: obj.fontSize, fill: obj.fill, fontFamily: 'Inter', draggable: true });
                 node.on('dragend', () => {
-                    const d = { type: 'text', x: node.x(), y: node.y(), text: obj.text, fontSize: obj.fontSize, fill: obj.fill };
-                    saveObjectToDB(d, true); // true = обновить, а не создавать дубль
+                    const d = { type: 'text', id: node.id(), x: node.x(), y: node.y(), text: obj.text, fontSize: obj.fontSize, fill: obj.fill };
+                    saveObjectToDB(d, true); // true = обновить
                     broadcastChannel.send({ type: 'broadcast', event: 'draw', payload: d });
                 });
             } else if (obj.type === 'image') {
