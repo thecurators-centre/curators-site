@@ -306,7 +306,18 @@ form.onsubmit = async (e) => {
             alert('Ученик создан!');
             modal.classList.remove('active');
             loadStudents();
-        } catch (err) { alert('ОШИБКА: ' + err.message); }
+        } catch (err) { 
+            alert('ОШИБКА: ' + err.message); 
+            console.error('Детали ошибки Edge Function:', err);
+            if (err.context) {
+                console.error('Контекст функции:', err.context);
+                // Попытка вытащить текст ошибки из ответа, если он есть
+                try {
+                    const body = await err.context.json();
+                    console.error('Ответ сервера:', body);
+                } catch(e) {}
+            }
+        }
         finally { btn.innerText = 'Сохранить'; btn.disabled = false; }
         return;
     }
