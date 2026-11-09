@@ -298,46 +298,15 @@ form.onsubmit = async (e) => {
         btn.innerText = 'Создание...'; btn.disabled = true;
 
         try {
-            // 1. Создаем пользователя в Auth
-            const email = login.includes('@') ? login : `${login}@student.curators.local`;
-            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-                email: email,
-                password: password
+            const { data, error } = await supabaseClient.functions.invoke('create-teacher', {
+                body: { login, password, surname, name, patronymic, age, grade, subjects, level, hourly_rate, about_student, schedule_month, schedule_year, schedule_days, full_name: `${surname} ${name}`, role: 'student', teacher_id: currentRole === 'teacher' ? currentUser.id : null }
             });
-            if (authError) throw authError;
-
-            // 2. Записываем данные в таблицу students
-            const studentId = authData.user.id;
-            const { error: dbError } = await supabaseClient.from('students').insert([{
-                id: studentId,
-                login, surname, name, patronymic, 
-                age: parseInt(age) || null, 
-                grade, subjects, 
-                level: parseInt(level), 
-                hourly_rate: parseInt(hourly_rate) || null, 
-                about_student,
-                schedule_month: schedule_month ? parseInt(schedule_month) - 1 : null,
-                schedule_year: schedule_year ? parseInt(schedule_year) : null,
-                schedule_days,
-                teacher_id: currentRole === 'teacher' ? currentUser.id : null
-            }]);
-            
-            // 3. Создаем профиль (для отображения в чатах и т.д.)
-            await supabaseClient.from('profiles').insert([{
-                id: studentId,
-                role: 'student',
-                full_name: `${surname} ${name}`
-            }]);
-
-            if (dbError) throw dbError;
-
+            if (error) throw error;
+            if (data && data.error) throw new Error(data.error);
             alert('Ученик создан!');
             modal.classList.remove('active');
             loadStudents();
-        } catch (err) { 
-            alert('ОШИБКА: ' + err.message); 
-            console.error(err);
-        }
+        } catch (err) { alert('ОШИБКА: ' + err.message); }
         finally { btn.innerText = 'Сохранить'; btn.disabled = false; }
         return;
     }
