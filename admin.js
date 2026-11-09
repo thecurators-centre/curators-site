@@ -174,14 +174,12 @@ window.openStudentModal = function(s = null) {
         document.getElementById('name').value = s.name || '';
         document.getElementById('patronymic').value = s.patronymic || '';
         document.getElementById('age').value = s.age || '';
+        setSelectedSubjects(s.subjects);
         document.getElementById('grade').value = s.grade || '';
         document.getElementById('level').value = s.level || 3;
         document.getElementById('levelVal').innerText = s.level || 3;
         document.getElementById('hourly_rate').value = s.hourly_rate || '';
         document.getElementById('about_student').value = s.about_student || '';
-        const subs = (s.subjects || '').split(',').map(x=>x.trim());
-        
-        for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
         const sm = (s.schedule_month !== null && s.schedule_month !== undefined) ? (s.schedule_month + 1) : '';
         document.getElementById('schedule_month').value = sm;
         document.getElementById('schedule_year').value = s.schedule_year || '';
@@ -225,12 +223,13 @@ form.onsubmit = async (e) => {
         const login = document.getElementById('login').value.trim();
         const password = document.getElementById('password').value.trim();
         const surname = document.getElementById('surname').value.trim();
+        const subjects = getSelectedSubjects();
         const name = document.getElementById('name').value.trim();
         const patronymic = document.getElementById('patronymic').value.trim();
         const age = document.getElementById('age').value;
         const grade = document.getElementById('grade').value;
         
-        const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+        
         const level = document.getElementById('level').value;
         const hourly_rate = document.getElementById('hourly_rate').value;
         const about_student = document.getElementById('about_student').value;
@@ -257,7 +256,8 @@ form.onsubmit = async (e) => {
 
     // Обновление
     
-    const selectedSubjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+    
+    const selectedSubjects = getSelectedSubjects();
     const data = {
         login: document.getElementById('login').value.trim(),
         password: document.getElementById('password').value.trim(),
@@ -503,7 +503,7 @@ window.openTeacherModal = function(t = null) {
         document.getElementById('teacher_phone').value = t.phone || '';
         const subs = (t.subject || '').split(',').map(x=>x.trim());
         const select = document.getElementById('teacher_subjects');
-        for (let i = 0; i < select.options.length; i++) select.options[i].selected = subs.includes(select.options[i].value);
+        
         document.getElementById('teacherSaveBtn').innerText = 'Сохранить изменения';
         document.getElementById('teacher_email').disabled = true;
     } else {
@@ -526,7 +526,7 @@ document.getElementById('teacherForm').onsubmit = async (e) => {
     const rate = document.getElementById('teacher_rate').value;
     const phone = document.getElementById('teacher_phone').value;
     const select = document.getElementById('teacher_subjects');
-    const subjects = Array.from(select.selectedOptions).map(opt => opt.value).join(',');
+    
     const btn = document.getElementById('teacherSaveBtn');
 
     if (id) {
