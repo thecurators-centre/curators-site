@@ -2,6 +2,55 @@ const SUPABASE_URL = 'https://kajvldevytbrkeomwlms.supabase.co';
 const SUPABASE_KEY = 'sb_publishable__PdBbe6y-EKJ0z4DfPrKKQ_ru9yogqW';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ==========================================
+// КАСТОМНЫЙ МУЛЬТИСЕЛЕКТ ДЛЯ ПРЕДМЕТОВ (в начале файла)
+// ==========================================
+function updateTriggerText() {
+    const trigger = document.getElementById('subjectsTrigger');
+    if (!trigger) return;
+    const checked = Array.from(document.querySelectorAll('#subjectsWrapper input[type="checkbox"]:checked'));
+    if (checked.length === 0) trigger.textContent = 'Выберите предметы';
+    else if (checked.length === 1) trigger.textContent = checked[0].value;
+    else trigger.textContent = `Выбрано: ${checked.length}`;
+}
+
+function getSelectedSubjects() {
+    const checked = Array.from(document.querySelectorAll('#subjectsWrapper input[type="checkbox"]:checked'));
+    return checked.map(cb => cb.value).join(',');
+}
+
+function setSelectedSubjects(str) {
+    const arr = (str || '').split(',').map(x => x.trim());
+    document.querySelectorAll('#subjectsWrapper input[type="checkbox"]').forEach(cb => {
+        cb.checked = arr.includes(cb.value);
+    });
+    updateTriggerText();
+}
+
+// Инициализация слушателей для выпадающего списка
+document.addEventListener('DOMContentLoaded', () => {
+    const wrapper = document.getElementById('subjectsWrapper');
+    const trigger = document.getElementById('subjectsTrigger');
+    
+    if (trigger) {
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            wrapper.classList.toggle('open');
+        });
+    }
+    if (wrapper) {
+        wrapper.addEventListener('click', (e) => e.stopPropagation());
+        wrapper.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', updateTriggerText);
+        });
+    }
+    document.addEventListener('click', () => {
+        if (wrapper) wrapper.classList.remove('open');
+    });
+});
+
+
+
 const subjectColors = {
     'Русский язык': '#ef4444', 'Японский язык': '#f1f5f9', 'Английский язык': '#0ea5e9',
     'Литература': '#d97706', 'Обществознание': '#4f46e5', 'История': '#84cc16',
