@@ -679,19 +679,18 @@
 
         stage.on('wheel', (e) => {
             e.evt.preventDefault();
-            if (e.evt.ctrlKey) {
-                const oldScale = stage.scaleX();
-                const pointer = stage.getPointerPosition();
-                const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
-                let direction = e.evt.deltaY > 0 ? -1 : 1;
-                const scaleBy = 1.05;
-                let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-                newScale = Math.max(0.1, Math.min(newScale, 5));
-                stage.scale({ x: newScale, y: newScale });
-                stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
-            } else {
-                stage.position({ x: stage.x() - e.evt.deltaX, y: stage.y() - e.evt.deltaY });
-            }
+            // Колесико мыши = Зум (приближение/отдаление)
+            const oldScale = stage.scaleX();
+            const pointer = stage.getPointerPosition();
+            const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+            
+            let direction = e.evt.deltaY > 0 ? -1 : 1;
+            const scaleBy = 1.05;
+            let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+            newScale = Math.max(0.1, Math.min(newScale, 5));
+            
+            stage.scale({ x: newScale, y: newScale });
+            stage.position({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
         });
 
         let isPanning = false;
