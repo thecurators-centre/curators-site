@@ -21,13 +21,16 @@ function getSelectedSubjects() {
 
 function setSelectedSubjects(str) {
     const arr = (str || '').split(',').map(x => x.trim());
-    
-    // Для кастомного
     document.querySelectorAll('#subjectsWrapper input[type="checkbox"]').forEach(cb => {
         cb.checked = arr.includes(cb.value);
     });
-    updateTriggerText();
-
+    const trigger = document.getElementById('subjectsTrigger');
+    if (trigger) {
+        const checked = Array.from(document.querySelectorAll('#subjectsWrapper input[type="checkbox"]:checked'));
+        if (checked.length === 0) trigger.textContent = 'Выберите предметы';
+        else if (checked.length === 1) trigger.textContent = checked[0].value;
+        else trigger.textContent = `Выбрано: ${checked.length}`;
+    }
 }
 
 // Инициализация слушателей для выпадающего списка

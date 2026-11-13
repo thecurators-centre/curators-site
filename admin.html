@@ -130,22 +130,23 @@
                     <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Класс</label><input type="text" id="grade"></div>
                     <div class="form-group" style="flex: 2; margin-bottom: 0;">
                         <label>Предметы</label>
-                        <select id="subjects" multiple size="1" style="height: 42px; overflow-y: auto;">
-                        <option value="Русский язык">Русский язык</option>
-                        <option value="Японский язык">Японский язык</option>
-                        <option value="Английский язык">Английский язык</option>
-                        <option value="Литература">Литература</option>
-                        <option value="Обществознание">Обществознание</option>
-                        <option value="История">История</option>
-                        <option value="Физика">Физика</option>
-                        <option value="Подготовка к школе">Подготовка к школе</option>
-                        <option value="Нач. русский">Нач. русский</option>
-                        <option value="Нач. математика">Нач. математика</option>
-                        <option value="Нач. окружающий мир">Нач. окружающий мир</option>
-                        <option value="Нач. чтение">Нач. чтение</option>
-                        </select>
-                    </div>
-                </div>
+    <div class="custom-select-wrapper" id="subjectsWrapper" style="display: block;">
+        <div class="custom-select-trigger" id="subjectsTrigger">Выберите предметы</div>
+        <div class="custom-select-options">
+            <label class="custom-select-option"><input type="checkbox" value="Русский язык"> Русский язык</label>
+            <label class="custom-select-option"><input type="checkbox" value="Японский язык"> Японский язык</label>
+            <label class="custom-select-option"><input type="checkbox" value="Английский язык"> Английский язык</label>
+            <label class="custom-select-option"><input type="checkbox" value="Литература"> Литература</label>
+            <label class="custom-select-option"><input type="checkbox" value="Обществознание"> Обществознание</label>
+            <label class="custom-select-option"><input type="checkbox" value="История"> История</label>
+            <label class="custom-select-option"><input type="checkbox" value="Физика"> Физика</label>
+            <label class="custom-select-option"><input type="checkbox" value="Подготовка к школе"> Подготовка к школе</label>
+            <label class="custom-select-option"><input type="checkbox" value="Нач. русский"> Нач. русский</label>
+            <label class="custom-select-option"><input type="checkbox" value="Нач. математика"> Нач. математика</label>
+            <label class="custom-select-option"><input type="checkbox" value="Нач. окружающий мир"> Нач. окружающий мир</label>
+            <label class="custom-select-option"><input type="checkbox" value="Нач. чтение"> Нач. чтение</label>
+        </div>
+    </div>
                 <div class="form-group">
                     <label>Уровень (1-5)</label>
                     <input type="range" id="level" min="1" max="5" value="3" oninput="document.getElementById('levelVal').innerText = this.value">
