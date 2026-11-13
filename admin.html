@@ -342,7 +342,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const isMobile = window.innerWidth <= 768;
+            const isMobile = window.innerWidth <= 500; /* Только для реальных телефонов */
             const nativeSelect = document.getElementById('subjectsNative');
             const customSelect = document.getElementById('subjectsWrapper');
             
