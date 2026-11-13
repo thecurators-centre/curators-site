@@ -15,16 +15,33 @@ function updateTriggerText() {
 }
 
 function getSelectedSubjects() {
+    // Если это PWA/мобильный, берем из нативного селекта
+    const nativeSelect = document.getElementById('subjectsNative');
+    if (nativeSelect && nativeSelect.style.display !== 'none') {
+        const selected = Array.from(nativeSelect.selectedOptions).map(opt => opt.value);
+        return selected.join(',');
+    }
+    // Иначе из кастомного
     const checked = Array.from(document.querySelectorAll('#subjectsWrapper input[type="checkbox"]:checked'));
     return checked.map(cb => cb.value).join(',');
 }
 
 function setSelectedSubjects(str) {
     const arr = (str || '').split(',').map(x => x.trim());
+    
+    // Для кастомного
     document.querySelectorAll('#subjectsWrapper input[type="checkbox"]').forEach(cb => {
         cb.checked = arr.includes(cb.value);
     });
     updateTriggerText();
+
+    // Для нативного
+    const nativeSelect = document.getElementById('subjectsNative');
+    if (nativeSelect) {
+        for (let i = 0; i < nativeSelect.options.length; i++) {
+            nativeSelect.options[i].selected = arr.includes(nativeSelect.options[i].value);
+        }
+    }
 }
 
 // Инициализация слушателей для выпадающего списка
