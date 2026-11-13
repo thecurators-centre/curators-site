@@ -48,6 +48,7 @@
         }
     </style>
     
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
     <div class="container">
@@ -304,20 +305,7 @@
     <label>Предметы</label>
     
     <!-- Нативный селект для PWA и мобильных -->
-    <select id="subjectsNative" multiple size="4" style="display: none; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #555; background: var(--card-bg); color: white;">
-        <option value="Русский язык">Русский язык</option>
-        <option value="Японский язык">Японский язык</option>
-        <option value="Английский язык">Английский язык</option>
-        <option value="Литература">Литература</option>
-        <option value="Обществознание">Обществознание</option>
-        <option value="История">История</option>
-        <option value="Физика">Физика</option>
-        <option value="Подготовка к школе">Подготовка к школе</option>
-        <option value="Нач. русский">Нач. русский</option>
-        <option value="Нач. математика">Нач. математика</option>
-        <option value="Нач. окружающий мир">Нач. окружающий мир</option>
-        <option value="Нач. чтение">Нач. чтение</option>
-    </select>
+    
 
     <!-- Кастомный селект для десктопа -->
     <div class="custom-select-wrapper" id="subjectsWrapper">
@@ -339,19 +327,7 @@
     </div>
 </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const isMobile = window.innerWidth <= 500; /* Только для реальных телефонов */
-            const nativeSelect = document.getElementById('subjectsNative');
-            const customSelect = document.getElementById('subjectsWrapper');
-            
-            if (isPWA || isMobile) {
-                if (nativeSelect) nativeSelect.style.display = 'block';
-                if (customSelect) customSelect.style.display = 'none';
-            }
-        });
-    </script>
+    
     
 </body>
 </html>

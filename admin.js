@@ -15,13 +15,6 @@ function updateTriggerText() {
 }
 
 function getSelectedSubjects() {
-    const nativeSelect = document.getElementById('subjectsNative');
-    // Если нативный селект виден на экране (display не none), берем из него
-    if (nativeSelect && nativeSelect.offsetParent !== null) {
-        const selected = Array.from(nativeSelect.selectedOptions).map(opt => opt.value);
-        return selected.join(',');
-    }
-    // Иначе из кастомного селекта
     const checked = Array.from(document.querySelectorAll('#subjectsWrapper input[type="checkbox"]:checked'));
     return checked.map(cb => cb.value).join(',');
 }
@@ -35,13 +28,6 @@ function setSelectedSubjects(str) {
     });
     updateTriggerText();
 
-    // Для нативного
-    const nativeSelect = document.getElementById('subjectsNative');
-    if (nativeSelect) {
-        for (let i = 0; i < nativeSelect.options.length; i++) {
-            nativeSelect.options[i].selected = arr.includes(nativeSelect.options[i].value);
-        }
-    }
 }
 
 // Инициализация слушателей для выпадающего списка
